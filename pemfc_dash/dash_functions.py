@@ -8,7 +8,7 @@ import collections
 from glom import glom
 
 from pemfc.data import input_dicts
-from pemfc import gui
+import pemfc_gui as gui
 
 
 def unstringify(val):

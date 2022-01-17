@@ -1,9 +1,9 @@
 
 from dash import html
 
-from pemfc import gui
-from pemfc.dash import dash_layout as dl
+import pemfc_gui.input as gui_input
+from pemfc_dash import dash_layout as dl
 
 
-tab_layout = html.Div(dl.frame(gui.input.main_frame_dicts[3]))
+tab_layout = html.Div(dl.frame(gui_input.main_frame_dicts[3]))
 

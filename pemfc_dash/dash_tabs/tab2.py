@@ -3,11 +3,11 @@ from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import html
 
 # local imports
-from pemfc import gui
-from pemfc.dash.dash_app import app
-from pemfc.dash import dash_layout as dl
+from pemfc_dash.dash_app import app
+import pemfc_gui.input as gui_input
+from pemfc_dash import dash_layout as dl
 
-tab_layout = html.Div(dl.frame(gui.input.main_frame_dicts[1]))
+tab_layout = html.Div(dl.frame(gui_input.main_frame_dicts[1]))
 
 
 @app.callback(

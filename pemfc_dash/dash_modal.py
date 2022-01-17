@@ -4,7 +4,7 @@ from dash import html
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
-from pemfc.dash.dash_app import app
+from pemfc_dash.dash_app import app
 
 
 modal_axes = html.Div([
