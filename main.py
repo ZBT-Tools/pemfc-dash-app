@@ -658,4 +658,5 @@ def update_graph(dropdown_key, dropdown_key_2, data):
 
 if __name__ == "__main__":
     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-    app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    # app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    app.run_server(debug=True, use_reloader=False)
