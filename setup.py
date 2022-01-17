@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='pemfc_model_lufire',
+    name='pemfc_dash',
     version="0.0.1",
     author="Lukas Feierabend",
     author_email="lukas.feierabend@gmail.com",
-    description="PEM Fuel Cell Stack Simulation Model",
+    description="Web App for PEM Fuel Cell Stack Simulation Model",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ZBT-Tools/PEMFC-Model",
+    url="https://github.com/ZBT-Tools/pemfc-dash-app",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
