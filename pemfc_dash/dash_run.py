@@ -14,14 +14,15 @@ import numpy as np
 from pemfc.src import interpolation as ip
 from flask_caching import Cache
 
-from pemfc.gui import data_transfer
+pemfc_tkinter = __import__('pemfc-tkinter')
+from pemfc_tkinter.src import data_transfer
 from pemfc.data import input_dicts
 from pemfc import main_app
-from pemfc.dash import dash_modal as dm
-from pemfc.dash import dash_functions as df
-from pemfc.dash import dash_layout as dl
+from . import dash_modal as dm
+from . import dash_functions as df
+from . import dash_layout as dl
 
-from pemfc.dash.dash_app import app
+from .dash_app import app
 from dash_tabs import tab1, tab2, tab3, tab4, tab5, tab6
 
 from pemfc import gui

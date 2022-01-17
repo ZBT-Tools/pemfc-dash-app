@@ -7,7 +7,7 @@ dependencies:
                 - scipy
                 - matplotlib
                 - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
-                - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc
+                - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
                 - dash
                 - dash-bootstrap-components
                 - flask-caching
