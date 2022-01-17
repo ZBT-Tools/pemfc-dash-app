@@ -1,12 +1,13 @@
 name: dash_app
 dependencies:
         - python=3.9.7
+        - pip
         - pip:
                 - numpy
                 - scipy
                 - matplotlib
+                - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
                 - dash
-                - dash-core-components
                 - dash-bootstrap-components
                 - flask-caching
                 - plotly
