@@ -49,12 +49,14 @@ cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
 # cache2 = Cache()
 # cache2.init_app(app.server, config=CACHE_CONFIG)
+app._favicon = 'logo-zbt.ico'
+app.title = 'PEMFC Model'
 
 app.layout = html.Div(
     [html.Div(  # HEADER
         [html.Div(
             html.Div(html.Img(
-                    src=app.get_asset_url("logo-zbt-duisburg.png"),
+                    src=app.get_asset_url("logo-zbt.png"),
                     id="zbt-image",
                     style={  # "min-height": "60px",
                            "height": "auto",  # "60px",
