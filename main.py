@@ -32,8 +32,8 @@ tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
 # get relative data folder
-# PATH = pathlib.Path(__file__).parent
-# DATA_PATH = PATH.joinpath("data").resolve()
+PATH = pathlib.Path(__file__).parent
+DATA_PATH = PATH.joinpath("data").resolve()
 # app = dash.Dash(__name__)
 
 # server = app.server
@@ -49,8 +49,8 @@ cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
 # cache2 = Cache()
 # cache2.init_app(app.server, config=CACHE_CONFIG)
-app._favicon = 'logo-zbt.ico'
-app.title = 'PEMFC Model'
+# app._favicon = 'logo-zbt.ico'
+# app.title = 'PEMFC Model'
 
 app.layout = html.Div(
     [html.Div(  # HEADER
