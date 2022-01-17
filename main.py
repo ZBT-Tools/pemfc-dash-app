@@ -32,8 +32,8 @@ tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
 # get relative data folder
-PATH = pathlib.Path(__file__).parent
-DATA_PATH = PATH.joinpath("data").resolve()
+# PATH = pathlib.Path(__file__).parent
+# DATA_PATH = PATH.joinpath("data").resolve()
 # app = dash.Dash(__name__)
 
 # server = app.server
@@ -658,4 +658,4 @@ def update_graph(dropdown_key, dropdown_key_2, data):
 
 if __name__ == "__main__":
     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-    app.run_server(debug=True, use_reloader=False)
+    app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)

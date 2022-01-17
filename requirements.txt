@@ -24,9 +24,8 @@ MarkupSafe==2.0.1
 matplotlib==3.5.1
 numpy==1.22.1
 packaging==21.3
-pemfc @ git+https://github.com/ZBT-Tools/pemfc-core.git@b1b8b48b56ead74dae6e899c480b1e5f54f697a2
-pemfc-gui @ git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@f4985fff5daa252dd346bbf5ed2e644f6e2c58a4
-pemfc-tkinter @ git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@ffd9dd9972b55bf82272f939e862515382164f2e
+pemfc @ git+https://github.com/ZBT-Tools/pemfc-core.git@master
+pemfc-gui @ git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master
 Pillow==9.0.0
 plotly==5.5.0
 pyparsing==3.0.6
