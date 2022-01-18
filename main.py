@@ -5,11 +5,11 @@ from dash import html
 from flask_caching import Cache
 
 from pemfc_dash.dash_app import app
-from pemfc_dash.dash_tabs import tab1, tab2, tab3, tab4, tab5, tab6
-
-
-tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
-             tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
+# from pemfc_dash.dash_tabs import tab1, tab2, tab3, tab4, tab5, tab6
+#
+#
+# tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
+#              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
 # get relative data folder
 PATH = pathlib.Path(__file__).parent
@@ -48,5 +48,5 @@ app.layout = html.Div(
 
 if __name__ == "__main__":
     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-    # app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    # app.run_server(host='127.0.0.1', port=8080, debug=True, use_reloader=False)
     app.run_server(debug=True, use_reloader=False)
