@@ -1,0 +1,14 @@
+Dockerfile
+README.md
+.gitignore
+.gitignore
+.idea
+environment.yml
+app.yaml
+Procfile
+setup.py
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+.pytest_cache
