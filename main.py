@@ -16,7 +16,7 @@ PATH = pathlib.Path(__file__).parent
 DATA_PATH = PATH.joinpath("data").resolve()
 # app = dash.Dash(__name__)
 
-# server = app.server
+server = app.server
 
 
 # Setup caching
