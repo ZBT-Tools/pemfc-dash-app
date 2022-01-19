@@ -1,7 +1,6 @@
 # import copy
 import pathlib
 import re
-import os
 import dash
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import dcc
@@ -18,17 +17,17 @@ from flask_caching import Cache
 from pemfc_gui import data_transfer
 from pemfc.data import input_dicts
 from pemfc import main_app
-from pemfc_dash import dash_modal as dm
-from pemfc_dash import dash_functions as df
-from pemfc_dash import dash_layout as dl
+
+from pemfc_dash import dash_functions as df, dash_layout as dl, dash_modal as dm
 
 from pemfc_dash.dash_app import app
-from pemfc_dash.dash_tabs import tab1, tab2, tab3, tab4, tab5, tab6
+from pemfc_dash.dash_tabs import tab3
+from pemfc_dash.dash_tabs import tab1, tab2, tab4, tab6, tab5
 
 import pemfc_gui as gui
 
 import json
-import collections
+
 tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
@@ -48,10 +47,9 @@ CACHE_CONFIG = {
 }
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
-# cache2 = Cache()
-# cache2.init_app(app.server, config=CACHE_CONFIG)
-# app._favicon = 'logo-zbt.ico'
-# app.title = 'PEMFC Model'
+
+app._favicon = 'logo-zbt.ico'
+app.title = 'PEMFC Model'
 
 app.layout = html.Div(
     [html.Div(  # HEADER
@@ -657,9 +655,8 @@ def update_graph(dropdown_key, dropdown_key_2, data):
     return fig
 
 
-if __name__ == "__main__":
-    # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-    # app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
-    # app.run_server(debug=True, use_reloader=False)
-    app.run_server(debug=True, use_reloader=False,
-                   host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+# if __name__ == "__main__":
+#     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
+#     app.run_server(debug=True, use_reloader=False)
+#     # app.run_server(debug=True, use_reloader=False,
+#     #                host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

@@ -1,5 +1,5 @@
 # global imports
-from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
+from dash.dependencies import Input, Output, ALL  # ClientsideFunction
 from dash import html
 
 # local imports

@@ -1,4 +1,5 @@
 Dockerfile
+Dockerfile_base
 README.md
 .gitignore
 .gitignore
@@ -6,7 +7,6 @@ README.md
 environment.yml
 app.yaml
 Procfile
-setup.py
 *.pyc
 *.pyo
 *.pyd

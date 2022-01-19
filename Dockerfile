@@ -1,42 +1,42 @@
-# Copyright 2020 Google, LLC.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+FROM python:3.10 AS build
+RUN python3 -m venv /venv
 
-# [START cloudrun_helloworld_dockerfile]
-# [START run_helloworld_dockerfile]
+# example of a development library package that needs to be installed
+# RUN apt-get -qy update && apt-get -qy install libldap2-dev && \
+#     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
-# Use the official lightweight Python image.
-# https://hub.docker.com/_/python
-FROM python:3.10
+# install requirements separately to prevent pip from downloading and
+# installing pypi dependencies every time a file in your project changes
+ADD ./requirements /project/requirements
+ARG REQS=requirements
+RUN /venv/bin/pip install -r project/requirements/$REQS.txt
 
-# Allow statements and log messages to immediately appear in the Knative logs
-ENV PYTHONUNBUFFERED True
+# install the project, basically copying its code, into the virtualenv.
+# this assumes the project has a functional setup.py
+# ADD . ./project
+# WORKDIR /project
+ADD . /project
+RUN /venv/bin/pip install /project
+
+# this won't have any effect on our production image, is only meant for
+# if we want to run commands like pytest in the build image
+# WORKDIR /project
+
+
+# the second, production stage can be much more lightweight:
+FROM python:3.10-slim AS production
+COPY --from=build /venv /venv
+
+ENV PATH="/venv/bin:$PATH"
 
 # Copy local code to the container image.
 ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY . ./
 
-# Install production dependencies.
-# RUN apt install git
-RUN pip install --no-cache-dir -r requirements.txt
+# install runtime libraries (different from development libraries!)
+# RUN apt-get -qy update && apt-get -qy install libldap-2.4-2 && \
+#     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
-# Run the web service on container startup. Here we use the gunicorn
-# webserver, with one worker process and 8 threads.
-# For environments with multiple CPU cores, increase the number of workers
-# to be equal to the cores available.add
-# Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:server
-
-# [END run_helloworld_dockerfile]
-# [END cloudrun_helloworld_dockerfile]
+# remember to run python from the virtualenv
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 pemfc_dash.main:server

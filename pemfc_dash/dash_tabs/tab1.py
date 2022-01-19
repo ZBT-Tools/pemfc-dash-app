@@ -1,5 +1,5 @@
 
-from dash.dependencies import Input, Output, State, ALL
+from dash.dependencies import Input, Output, ALL
 from dash import html
 
 from pemfc_dash.dash_app import app
