@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name='src',
+    name='pemfc_dash',
     packages=setuptools.find_packages(),
 )
 
@@ -9,7 +9,7 @@ setuptools.setup(
 #     long_description = fh.read()
 #
 # setuptools.setup(
-#     name='src',
+#     name='pemfc_dash',
 #     version="0.0.1",
 #     author="Lukas Feierabend",
 #     author_email="lukas.feierabend@gmail.com",

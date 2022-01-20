@@ -1,4 +1,4 @@
-name: dash_app
+name: dash_app_2
 dependencies:
         - python=3.9.7
         - pip

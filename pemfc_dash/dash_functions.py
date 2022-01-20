@@ -1,5 +1,4 @@
 from functools import wraps
-from flask_caching import Cache
 import base64
 import io
 import json
