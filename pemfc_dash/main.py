@@ -28,10 +28,6 @@ import pemfc_gui as gui
 
 import json
 
-import __main__ as main
-main_name = os.path.basename(main.__file__)
-print(main_name)
-
 tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
