@@ -1,0 +1,21 @@
+- Initiate Ubuntu Instance
+- update packages
+- create dir for app "mkdir app"
+- clone repository 
+- Install: sudo apt install python3.8-venv
+- Install: pip install wheel
+- Create environment python3 -m venv environment
+- activate environment
+- install packages: git install -r requirements/requirements.txt
+- check if dash app runs standalone: python3 main.py 
+- Install and prepare uWSG
+- sudo apt-get install build-essential python-dev
+- sudo apt install uwsgi-core
+- sudo apt install  uwsgi-plugin-python3
+- (pip install uwsgi)
+- Move wsgi file
+- mv aws_specific/wsgi.py wsgi.py
+- restart 
+- run server:
+- uwsgi --http-socket :8080 --plugin python3 --wsgi-file wsgi.py
+- 
