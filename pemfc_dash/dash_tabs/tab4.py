@@ -1,6 +1,6 @@
-
 from dash import html
 
+from dash_app import app
 import pemfc_gui.input as gui_input
 import dash_layout as dl
 

@@ -1,95 +1,61 @@
-import dash
-from dash.dependencies import Input, Output, State
+# import dash
+# from dash.dependencies import Input, Output, State
 from dash import html
 import dash_bootstrap_components as dbc
-from dash.exceptions import PreventUpdate
+# from dash.exceptions import PreventUpdate
 
-from dash_app import app
+# from dash_app import app
 
-
-modal_axes = html.Div([
-    # Progress Modal
-    dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle("Work in Progress!",
-                                        style={'font-weight': 'bold'})),
-         dbc.ModalBody([
-             html.Div("Data from JSON file has been loaded!"),
-             html.Div("You can click 'Run Simulation' to simulate the loaded "
-                      "parameter or continue to change the loaded parameter "
-                      "value")
-         ]),
-         dbc.ModalFooter(
-             dbc.Button("Close", id="progress-close",
-                        className="ms-auto", n_clicks=0)), ],
-        id="progress-modal", is_open=False),
-
-    # Load Error Modal
-    dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle("Attention!", style={'font-weight':
-                                                                 'bold'})),
-         dbc.ModalBody("Upload function only accepts JSON file!"),
-         dbc.ModalFooter(
-             dbc.Button("Close", id="load-error-close",
-                        className="ms-auto", n_clicks=0)), ],
-        id="load-error-modal", is_open=False),
-    # Load wrong File
-    dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle("Attention!",
-                                        style={'font-weight': 'bold'})),
-         dbc.ModalBody([
-             html.Div("IDs from JSON file is not compatible/does not match up"),
-             html.Div("Please review the uploaded JSON file again")
-         ]),
-         dbc.ModalFooter(
-             dbc.Button("Close", id="load-wrong-error-close",
-                        className="ms-auto", n_clicks=0)), ],
-        id="load-wrong-modal", is_open=False),
-
-    # Append Error Modal
-    dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle("Attention!", style={'font-weight':
-                                                             'bold'})),
-         dbc.ModalBody([
-             html.Div("Data cannot be appended to an empty table."),
-             html.Div("Please export the data first to the table!")
-         ]),
-         dbc.ModalFooter(
-             dbc.Button("Close", id="append-error-close",
-                        className="ms-auto", n_clicks=0)),],
-        id="append-error-modal", is_open=False)])
+modal_axes = \
+    html.Div(dbc.Modal(
+        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title',
+                                        style={'font-weight': 'bold',
+                                               'font-size': '20px'})),
+         dbc.ModalBody(id='modal-body')],
+        id="modal", is_open=False, size="lg"))
 
 
-@app.callback(
-    [Output("load-error-modal", "is_open"),
-     Output("progress-modal", "is_open")],
-    [Input('upload-file', 'contents'),
-     Input("load-error-close", "n_clicks"),
-     Input("progress-close", "n_clicks")],
-    [State('upload-file', 'filename'),
-     State("load-error-modal", "is_open"),
-     State("progress-modal", "is_open")],
-)
-def toggle_modal(contents, n1, n2, state, is_open, is_open2):
-    if contents is not None:
-        if 'json' not in state or n1:
-            return not is_open, is_open2
-        if 'json' in state or n2:
-            return is_open, not is_open2
-        return is_open, is_open2
-    else:
-        raise PreventUpdate
+def modal_process(error_type, error=''):
+    ids_str = ', '.join([str(index) for index in error]) if error else ''
+    space = {'margin-top': '10px'}
+    bold = {'font-weight': 'bold'}
+    contents = \
+        {'loaded':
+            {'title': 'JSON file has been loaded!',
+             'body':
+                  [html.Div("Data from JSON file has been loaded!"),
+                   html.Div(style=space),
+                   html.Div("You can click 'Run Simulation' to simulate the "
+                            "loaded parameter or continue to change the loaded "
+                            "parameter value", style=space)]},
+         'id-not-loaded':
+             {'title': 'Attention! Missing value for some component ID!',
+              'body':
+                  [html.Div("Data from JSON file has been loaded!"),
+                   html.Div(style=space),
+                   html.Div(
+                      "However, Dash's component IDs below could not be found "
+                      "or could not be matched with IDs from JSON file"),
+                   html.Div(ids_str, style={**space, **bold}),
+                   html.Div(style=space),
+                   html.Div("You can still simulate the loaded parameter by "
+                            "either clicking 'Run Simulation', ", style=space),
+                   html.Div('change manually the unloaded parameter or '
+                            'review the JSON file again!')]},
+         'error':
+             {'title': 'Error!',
+              'body': [
+                  html.Div('There has been an error while uploading the JSON '
+                           'file!'),
+                  html.Div(style=space),
+                  html.Div('Please review the JSON file again or try '
+                           'using another file!', style=space)],
+              },
+         'wrong-file':
+             {'title': 'Error! Wrong File!',
+              'body': [
+                  html.Div('Upload function only accepts JSON file!'),
+                  html.Div(style=space),
+                  html.Div('Please select another file!', style=space)]}}
 
-
-@app.callback(
-    Output("append-error-modal", "is_open"),
-    [Input('append_b', 'n_clicks'), Input("append-error-close", "n_clicks")],
-    [State('table', 'data'), State("append-error-modal", "is_open")],
-)
-def toggle_modal(appended, n1, state, is_open):
-    ctx = dash.callback_context.triggered[0]['prop_id']
-    if state is None or state == []:
-        if 'append_b.n_clicks' in ctx or n1:
-            return not is_open
-    return is_open
-
-
+    return contents[error_type]['title'], contents[error_type]['body']

@@ -1,5 +1,5 @@
 # global imports
-from dash.dependencies import Input, Output, ALL  # ClientsideFunction
+from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import html
 
 # local imports
@@ -20,8 +20,8 @@ tab_layout = html.Div(dl.frame(gui_input.main_frame_dicts[1]))
 )
 def activate_column(input1, input2):
     len_state = len(input2)
-    list_state = [True for x in range(len_state)]
-    for num, val in enumerate(input1):
+    list_state = [True for x in range(len_state)]  # disable=True for all inputs
+    for num, val in enumerate(input1):  # 3 inputs in input1 for 3 rows
         if val == [1]:
             list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
                 list_state[18 + num] = list_state[30 + num] = False

@@ -28,10 +28,12 @@ body {
   position: relative;
   box-shadow: 2px 2px 2px lightgrey;
 }
+
+/*Global Value Container*/
 .val_container {
   border-radius: 5px;
   background-color: white; /*#f9f9f9;*/
-  align-items: center;
+  /*align-items: center;*/
   justify-content: space-between;
   position: relative;
   min-height: 100.5px;
@@ -39,9 +41,10 @@ body {
   margin-bottom: 10px;
   border: 1px solid lightgrey;
   box-shadow: 2px 2px 2px lightgrey;
-  display: none;
+  /*display: flex;*/
+  /*min-width: 20.0%;*/
+  /*flex-grow: 1;*/
 }
-
 .gd-desc{
   border-bottom-style: solid;
   border-bottom-width: thin;
@@ -49,7 +52,6 @@ body {
   font-weight: bold;
   font-size: 11px;
 }
-
 .fval{font-size: 25px}
 .gd-val{
   margin-top: 1px;
@@ -66,6 +68,10 @@ body {
   text-align: right;
   font-weight: bold;
   font-size: 15px;
+}
+.row-break{
+  flex-basis: 100%;
+  height: 0;
 }
 
 .another_pretty_container{
@@ -122,7 +128,7 @@ body {
 .dcc_control {
   margin: 0;
   padding: 3px;
-  width: calc(100%-40px);
+  width: calc(100% - 40px);
 }
 .dcc_control2 {
   margin: 0;
@@ -135,7 +141,7 @@ body {
   padding: 10px;
   padding-bottom: 0px;
   margin-bottom: 0px;
-  width: calc(100%-40px);
+  width: calc(100% - 40px);
 }
 
 .rc-slider {
@@ -143,7 +149,7 @@ body {
   padding-left: 0px;
 }
 
-.tab_style = {
+.tab_style{
    background: #323130;
    text-transform: uppercase;
    color: white;
@@ -156,7 +162,7 @@ body {
    padding:3px;
 }
 
-.tab_selected_style = {
+.tab_selected_style{
   background: grey;
   text-transform: uppercase;
   color: white;
@@ -203,16 +209,18 @@ body {
 #global-data {
   margin: auto;
   width: 100%;
-  justify-content: space-between;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  display: none;
 }
-#dragndrop{
+.dragndrop{
   width: 100%;
   height: 60px;
-  lineHeight: 60px;
-  borderWidth: 1px;
-  borderStyle: dashed;
-  borderRadius: 5px;
-  textAlign: center;
+  line-height: 60px;
+  border-width: 1px;
+  border-style: dashed;
+  border-radius: 5px;
+  text-align: center;
   margin: auto;
 }
 
@@ -338,7 +346,9 @@ body {
 }
 .input-style-dropdown {
   font-size: 11px;
-  margin: auto;
+  /*margin: auto;*/
+  margin-left: 1px;
+  margin-right: 1px;
 }
 /*
 .box-style{
@@ -421,6 +431,15 @@ body {
   margin-top: 1px;
   margin-bottom: 1px;
 }
+.loading_spinner{
+  width: 10rem;
+  height: 10rem;
+  color: #0a60c2
+}
+.loading_spinner_bg{
+  opacity: 0.5;
+  color: lightgrey;
+}
 
 .c_flex{
   width: 25%;
@@ -435,8 +454,8 @@ body {
 }
 
 #right-column {
-  /*margin: auto;
-  border: 1px solid green;*/
+  /*!*margin: auto;*/
+  /*border: 1px solid green;*!*/
   display: flex;
   flex-direction: column;
 }
@@ -446,6 +465,10 @@ body {
   align-items: center !important;
   justify-content: center !important;
   /*border: 1px solid red;*/
+}
+
+#load_save_setting{
+  min-height: 170px;
 }
 
 #left-column{
@@ -462,7 +485,7 @@ body {
   /*border: 1px solid lightgrey;*/
   text-align: center;
   display: flex;
-  justify-content: center !important
+  justify-content: center !important;
   margin: auto;
   /*flex: 3;*/
 }
@@ -470,7 +493,13 @@ body {
 #tabs-content {
   min-height: 820px;
 }
-
+#collapse_save{
+  width: 100%;
+  height: 60px;
+  line-height: 60px;
+  justify-content: space-between;
+  margin: auto;
+}
 #setting_container {
   /*min-width:270px;*/
 
