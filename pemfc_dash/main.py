@@ -18,7 +18,8 @@ from pemfc_gui import data_transfer
 from pemfc.data import input_dicts
 from pemfc import main_app
 
-import dash_functions as df, dash_layout as dl, dash_modal as dm
+import dash_functions as df, dash_layout as dl, \
+    dash_modal as dm, dash_collapse as dc
 
 from dash_app import app
 from dash_tabs import tab3
@@ -28,6 +29,7 @@ import pemfc_gui as gui
 
 import json
 
+import collections
 tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
@@ -37,7 +39,6 @@ DATA_PATH = PATH.joinpath("data").resolve()
 # app = dash.Dash(__name__)
 
 server = app.server
-
 
 # Setup caching
 CACHE_CONFIG = {
@@ -84,8 +85,8 @@ app.layout = html.Div(
      #             style={"backgroundColor": "transparent"}, type='circle',
      #             color="#0a60c2"),
      dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
-                 spinner_style={"width": "10rem", "height": "10rem",
-                                "color": "#0a60c2"}),
+                 spinner_class_name='loading_spinner',
+                 fullscreen_class_name='loading_spinner_bg'),
                  # color="#0a60c2"),
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
@@ -98,7 +99,8 @@ app.layout = html.Div(
                  [html.Div(
                      html.Button('Run Simulation', id='run_button',
                                  style={'font-size': '11px', 'margin': 'auto'}),
-                     style={'width': '40% !important', 'display': 'flex',
+                     style={'width': '40% !important',
+                            'display': 'flex',
                             'align-items': 'center'}),
                      # dcc.Loading(
                      #     id="run_loading",
@@ -108,8 +110,10 @@ app.layout = html.Div(
                      # ),
                   html.Div(
                       [dcc.Dropdown(id='results_dropdown',
+                                    placeholder='Choose Heatmap',
                                     className='dropdown_input centered'),
                        dcc.Dropdown(id='results_dropdown_2',
+                                    style={'visibility': 'hidden'},
                                     className='dropdown_input centered')],
                       style={'min-width': '60% ', 'min-height': '80px',
                              'display': 'flex', 'flex-direction': 'column',
@@ -122,8 +126,7 @@ app.layout = html.Div(
                           [k['title'] for k in gui.input.main_frame_dicts],
                           ids=[f'tab{num + 1}' for num in
                                range(len(gui.input.main_frame_dicts))])],
-
-              id='setting_container'),
+              id='setting_container', style={'flex': '1'}),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
                        [html.Div('Settings', className='title'),
@@ -133,38 +136,20 @@ app.layout = html.Div(
                             style={'display': 'flex', 'margin': '5px',
                                    'justify-content': 'space-around'}),
                         dcc.Download(id="savefile-json"),
-                        html.Div(dbc.Collapse([
-                            dcc.Upload(
-                                id='upload-file',
-                                children=html.Div([
-                                    'Drag and Drop or ',
-                                    html.A('Select Files',
-                                           style={
-                                               'font-weight': 'bold',
-                                               'text-decoration': 'underline'})
-                                ]), style={'width': '100%',
-                                           'height': '60px',
-                                           'lineHeight': '60px',
-                                           'borderWidth': '1px',
-                                           'borderStyle': 'dashed',
-                                           'borderRadius': '5px',
-                                           'textAlign': 'center',
-                                           'margin': 'auto'},
-                                # accept='.json',
-                                className='dragndrop'),
-                            html.Div(id="loading-output-1",
-                                     className='output-loading')],
-                            id='collapse', is_open=False),)],
-                       className='neat-spacing')],
-                  className='pretty_container')],
+                        dc.collapses],
+                       className='neat-spacing')], style={'flex': '1'},
+                  id='load_save_setting', className='pretty_container')],
              id="left-column", className='four columns'),
 
           html.Div(  # RIGHT MIDDLE
-              [html.Div(  # RIGHT MIDDLE TOP
-                  dl.val_container(
+              [dl.val_container(  # RIGHT MIDDLE TOP
                       ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
                            'gd8', 'gd9', 'gd10']),
-                  id="global-data", className='flex-display', ),
+                  # html.Div(  # RIGHT MIDDLE TOP
+                  # dl.val_container(
+                  #     ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
+                  #          'gd8', 'gd9', 'gd10']),
+                  # id="global-data", className='flex-display', ),
 
                html.Div(  # RIGHT MIDDLE BOTTOM
                    dcc.Graph(id="heatmap_graph"),
@@ -205,9 +190,9 @@ app.layout = html.Div(
                              'flex': 1}),
                   dcc.Store(id='cells_data'),
                   html.Div(dcc.Graph(id='line_graph'),
-                           style={'flex': 4, 'flex-direction': 'column'})],
+                           style={'flex': '4', 'flex-direction': 'column' })],
                  className="pretty_container",
-                 style={'display': 'flex',  'flex': '1',
+                 style={'display': 'flex', 'flex': '1',
                         'justify-content': 'space-evenly'}), ],
               className="eight columns", id='right-column', )],
 
@@ -221,7 +206,8 @@ app.layout = html.Div(
              # columns=[{'filter_options': 'sensitive'}]),
              id='div_table', style={'overflow': 'auto'},
              className='pretty_container')],
-     style={'position': 'relative', 'margin': '0 0.05% 0 0.7%'})],
+     style={'position': 'relative',
+            'margin': '0 0.05% 0 0.7%'})],
     id="mainContainer",
     style={'padding': '5px'})
 
@@ -235,7 +221,6 @@ def simulation_store(**kwargs):
 
 @app.callback(
     Output('ret_data', 'data'),
-    # Output('run_button', 'n_clicks'),
     Input("run_button", "n_clicks"),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -247,7 +232,7 @@ def compute_simulation(n_click, inputs, inputs2, ids, ids2):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'run_button' in changed_id and n_click is not None:
         dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
-        # print(dict_data)
+
         datas = {}
         for k, v in dict_data.items():
             datas[k] = {'sim_name': k.split('-'), 'value': v}
@@ -261,61 +246,82 @@ def compute_simulation(n_click, inputs, inputs2, ids, ids2):
     Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     Output('upload-file', 'contents'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input('upload-file', 'contents'),
+    State('upload-file', 'filename'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')
+    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+    State('modal', 'is_open'),
 )
-def upload_settings(contents, state1, state2, ids, ids2):
+def upload_settings(contents, filename, value, multival, ids, ids2,
+                    modal_state):
     if contents is None:
         raise PreventUpdate
     else:
-        try:
-            j_file = df.parse_contents(contents)
+        if 'json' in filename:
+            try:
+                j_file, err_l = df.parse_contents(contents)
 
-            list_ids = [id_l['id'] for id_l in ids]
-            list_ids2 = [id_l['id'] for id_l in ids2]
+                dict_ids = {id_l: val for id_l, val in
+                            zip([id_l['id'] for id_l in ids], value)}
+                dict_ids2 = {id_l: val for id_l, val in
+                             zip([id_l['id'] for id_l in ids2], multival)}
 
-            dict_ids = {id_l: num for num, id_l in enumerate(list_ids)}
-            dict_ids2 = {id_l: num for num, id_l in enumerate(list_ids2)}
+                id_match = set.union(set(dict_ids),
+                                     set([item[:-2] for item in dict_ids2]))
 
-            id_match = set.union(set(list_ids),
-                                 set([item[:-2] for item in list_ids2]))
-
-            for k, v in j_file.items():
-                if k in id_match:
-                    if isinstance(v, list):
-                        for num, val in enumerate(v):
-                            dict_ids2[k+f'_{num}'] = val
-                    else:
-                        if isinstance(v, bool):
-                            if v is True:
-                                dict_ids[k] = [1]
-                            else:
-                                dict_ids[k] = []
+                for k, v in j_file.items():
+                    if k in id_match:
+                        if isinstance(v, list):
+                            for num, val in enumerate(v):
+                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
                         else:
-                            dict_ids[k] = v
-                else:
-                    continue
+                            dict_ids[k] = df.check_ifbool(v)
+                    else:
+                        continue
 
-            return list(dict_ids.values()), list(dict_ids2.values()), None
-        except Exception as e:
-            print(e)
-            return state1, state2, None
+                if not err_l:
+                    # All JSON settings match Dash IDs
+                    modal_title, modal_body = dm.modal_process('loaded')
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+                else:
+                    # Some JSON settings do not match Dash IDs; return values
+                    # that matched with Dash IDs
+                    modal_title, modal_body = \
+                        dm.modal_process('id-not-loaded', err_l)
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+            except Exception as e:
+                # print(e)
+                # Error / JSON file cannot be processed; return old value
+                modal_title, modal_body = \
+                    dm.modal_process('error')
+                return value, multival, None, modal_title, modal_body, \
+                    not modal_state
+        else:
+            # Not JSON file; return old value
+            modal_title, modal_body = dm.modal_process('wrong-file')
+            return value, multival, None, modal_title, modal_body, \
+                not modal_state
 
 
 @app.callback(
     Output("savefile-json", "data"),
-    Output('save-button', "n_clicks"),
-    Input('save-button', "n_clicks"),
+    Output('save-as-button', "n_clicks"),
+    Input('save-as-button', "n_clicks"),
+    State('save_as_input', 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id'),
     prevent_initial_call=True,
 )
-def save_settings(n_clicks, val1, val2, ids, ids2):
+def save_settings(n_clicks, name, val1, val2, ids, ids2):
     if n_clicks is not None:
         dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
         sep_id_list = [joined_id.split('-') for joined_id in
@@ -332,16 +338,21 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
                     else:
                         current_level[id_l] = vals
                 current_level = current_level[id_l]
+        if name:
+            setting_name = name if '.json' in name else name + '.json'
+        else:
+            setting_name = 'settings.json'
 
         return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                    filename="settings.json"), None
+                    filename=setting_name), None
 
 
 @app.callback(
     [Output({'type': 'global_children', 'id': ALL}, 'children'),
      Output({'type': 'global_value', 'id': ALL}, 'children'),
      Output({'type': 'global_unit', 'id': ALL}, 'children'),
-     Output({'type': 'global_container', 'id': ALL}, 'style')],
+     # Output({'type': 'global_container', 'id': ALL}, 'style'),
+     Output('global-data', 'style')],
     Input('ret_data', 'data')
 )
 def global_outputs(data):
@@ -355,9 +366,9 @@ def global_outputs(data):
     val = \
         ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
          for gl in glob]
-    disp = {'display': 'initial'}
-    disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
-    return desc, val, unit, disps
+    disp = {'display': 'flex'}
+    # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
+    return desc, val, unit, disp
 
 
 @app.callback(
@@ -377,7 +388,8 @@ def get_dropdown_options(data):
 
 @app.callback(
     [Output('results_dropdown_2', 'options'),
-     Output('results_dropdown_2', 'value')],
+     Output('results_dropdown_2', 'value'),
+     Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
      Input('ret_data', 'data')]
 )
@@ -388,12 +400,12 @@ def get_dropdown_options_2(dropdown_key, data):
         results = simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
-            return [], None
+            return [], None, {'visibility': 'hidden'}
         else:
             options = [{'label': key, 'value': key} for key in
                        local_data[dropdown_key]]
             value = options[0]['value']
-            return options, value
+            return options, value, {'visibility': 'visible'}
 
 
 @app.callback(
@@ -416,17 +428,6 @@ def dropdown_line2(dropdown_key, data):
                        local_data[dropdown_key]]
             value = options[0]['value']
             return options, value, {'visibility': 'visible'}
-
-
-@app.callback(
-    Output("collapse", "is_open"),
-    Input("load-button", "n_clicks"),
-    State("collapse", "is_open"),
-)
-def toggle_collapse(n, is_open):
-    if n:
-        return not is_open
-    return is_open
 
 
 @app.callback(
