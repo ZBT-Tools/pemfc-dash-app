@@ -14,8 +14,8 @@
   - sudo apt install uwsgi-core
   - sudo apt install  uwsgi-plugin-python3
   - (pip install uwsgi)
-  - Move wsgi.py from pemfc_dash/aws_specific to pemfc_dash
-  - Move index.ini file from pemfc_dash/aws_specific to pemfc_dash
+  - Move wsgi.py from pemfc_dash/ubuntu_specific to pemfc_dash
+  - Move index.ini file from pemfc_dash/ubuntu_specific to pemfc_dash
   - Modify virtualenv path in index.ini
   - restart 
 - run server
