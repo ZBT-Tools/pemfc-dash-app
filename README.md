@@ -30,7 +30,7 @@ Prerequisites: git, Python (>=3.9.7), pip
   ```python app.py```
 - Open browser and paste specified local url
 
-### Create and run docker container
+### Create web-host with gunicorn in docker container
 
 Prerequisites: docker
 
@@ -44,7 +44,7 @@ Prerequisites: docker
 
 ### Specific hosting on Ubuntu with uWSGI
 
-Prerequisites: None
+Prerequisites: Ubuntu, git
 
 - follow instructions in ubuntu_specific/Manual.md
 
