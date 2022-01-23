@@ -1,9 +1,10 @@
 # PEMFC-Dash-App
-Web-interface for the PEMFC-Model core module (github.com/zbt-tools/pemfc-core)
+Web-interface for the PEMFC-Model core module
+([github.com/zbt-tools/pemfc-core](https://github.com/zbt-tools/pemfc-core))
 
 ### Local installation using Anaconda
 
-Prerequisites: git, Anaconda (anaconda.org)
+Prerequisites: git, Anaconda ([anaconda.org](https://www.anaconda.org))
 
 - Clone this repository
 - Navigate into your local directory of this repo with Anaconda prompt
@@ -22,9 +23,9 @@ Prerequisites: git, Python (>=3.9.7), pip
 - Clone this repository
 - Navigate into your local directory of this repo with console
 - Install dependencies via pip:
-  - Windows:
+  - Windows: \
     ```pip install -r requirements\requirements.txt```
-  - Linux:
+  - Linux: \
     ```pip install -r requirements/requirements.txt```
 - Run: \
   ```python app.py```
@@ -36,9 +37,9 @@ Prerequisites: docker
 
 - Clone (git required) or download this repository
 - Navigate into your local directory of this repo with console
-- Create docker container:
+- Create docker container: \
   ```docker build --tag pemfc-dash-app .```
-- Run docker container:
+- Run docker container: \
   ```docker run --rm -p 9090:8080 -e PORT=8080 pemfc-dash-app```
 - Open browser and paste specified local url
 
