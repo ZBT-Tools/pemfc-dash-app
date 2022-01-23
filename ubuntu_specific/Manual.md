@@ -5,17 +5,17 @@
 - Clone repository https://github.com/ZBT-Tools/pemfc-dash-app
 - Install: sudo apt install python3.8-venv
 - Install: pip install wheel
-- Create environment python3 -m venv environment
-- Activate environment
-- Install packages: git install -r requirements/requirements.txt
+- Create environment python3 -m venv your_env_name
+- Activate your_env_name
+- Install packages: pip install -r requirements/requirements.txt
 - check if dash app runs standalone: python3 main.py 
-- Install and prepare uWSG
+- Install and prepare uWSGI
   - sudo apt-get install build-essential python-dev
   - sudo apt install uwsgi-core
   - sudo apt install  uwsgi-plugin-python3
   - (pip install uwsgi)
-  - Move wsgi.py from pemfc_dash/ubuntu_specific to pemfc_dash
-  - Move index.ini file from pemfc_dash/ubuntu_specific to pemfc_dash
+  - Move wsgi.py from ubuntu_specific to working dir (pemfc-dash-app)
+  - Move index.ini file from ubuntu_specific to working dir (pemfc-dash-app)
   - Modify virtualenv path in index.ini
   - restart 
 - run server
