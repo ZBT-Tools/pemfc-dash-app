@@ -3,7 +3,7 @@ from dash import html
 from dash import dcc
 import dash_bootstrap_components as dbc
 
-from dash_app import app
+from .dash_app import app
 
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 

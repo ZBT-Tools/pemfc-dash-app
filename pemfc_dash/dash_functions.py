@@ -7,7 +7,7 @@ import copy
 import collections
 from glom import glom
 
-import dash_layout as dl
+from . import dash_layout as dl
 
 
 def unstringify(val):
