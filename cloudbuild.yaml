@@ -21,7 +21,12 @@ steps:
   # Install dependencies
   - name: python
     entrypoint: pip
-    args: ["install", "-r", "requirements.txt", "--user"]
+    args: ["install", "-r", "requirements/requirements.txt", "--user"]
+
+  - name: python
+    entrypoint: pip
+    args: ["install", "pytest"]
+
 # [END cloudbuild_python_dependencies_yaml]
 
   # [START cloudbuild_python_tests_yaml]
