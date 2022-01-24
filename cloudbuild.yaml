@@ -40,20 +40,20 @@ steps:
   # Docker Build
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t',
-           'eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}', '.']
+           'eu-central3-docker.pkg.dev/${PROJECT_ID}/${SHORT_SHA}', '.']
   # [END cloudbuild_python_image_yaml]
 
   # [START cloudbuild_python_push_yaml]
   # Docker push to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push',  'eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}']
+    args: ['push',  'eu-central3-docker.pkg.dev/${PROJECT_ID}/${SHORT_SHA}']
   # [END cloudbuild_python_push_yaml]
 
   # [START cloudbuild_python_deploy_yaml]
   # Deploy to Cloud Run
   - name: google/cloud-sdk
     args: ['gcloud', 'run', 'deploy', 'pemfc-model',
-           '--image=eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}',
+           '--image=eu-central3-docker.pkg.dev/${PROJECT_ID}/${SHORT_SHA}',
            '--region', 'eu-central3', '--platform', 'managed',
            '--allow-unauthenticated']
   # [END cloudbuild_python_deploy_yaml]
