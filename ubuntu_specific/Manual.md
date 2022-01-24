@@ -13,7 +13,6 @@
   - sudo apt-get install build-essential python-dev
   - sudo apt install uwsgi-core
   - sudo apt install  uwsgi-plugin-python3
-  - (pip install uwsgi)
   - Move wsgi.py from ubuntu_specific to working dir (pemfc-dash-app)
   - Move index.ini file from ubuntu_specific to working dir (pemfc-dash-app)
   - Modify virtualenv path in index.ini
