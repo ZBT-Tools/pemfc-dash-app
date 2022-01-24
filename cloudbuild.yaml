@@ -18,10 +18,10 @@
 #_REPO_NAME = pemfc-model
 
 steps:
-  # Install dependencies
-  - name: python
-    entrypoint: pip
-    args: ["install", "-r", "requirements/requirements.txt", "--user"]
+#  # Install dependencies
+#  - name: python
+#    entrypoint: pip
+#    args: ["install", "-r", "requirements/requirements.txt", "--user"]
 
 #  - name: python
 #    entrypoint: pip
