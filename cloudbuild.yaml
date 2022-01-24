@@ -52,7 +52,7 @@ steps:
   # [START cloudbuild_python_deploy_yaml]
   # Deploy to Cloud Run
   - name: google/cloud-sdk
-    args: ['gcloud', 'run', 'deploy', 'helloworld-${SHORT_SHA}',
+    args: ['gcloud', 'run', 'deploy', 'pemfc-model-${SHORT_SHA}',
            '--image=eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}',
            '--region', 'eu-central3', '--platform', 'managed',
            '--allow-unauthenticated']
