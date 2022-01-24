@@ -18,12 +18,12 @@ from pemfc_gui import data_transfer
 from pemfc.data import input_dicts
 from pemfc import main_app
 
-import dash_functions as df, dash_layout as dl, \
+from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm, dash_collapse as dc
 
-from dash_app import app
-from dash_tabs import tab3
-from dash_tabs import tab1, tab2, tab4, tab6, tab5
+from .dash_app import app
+from .dash_tabs import tab3
+from .dash_tabs import tab1, tab2, tab4, tab6, tab5
 
 import pemfc_gui.input as gui_input
 
@@ -681,8 +681,8 @@ def update_graph(dropdown_key, dropdown_key_2, data):
     return fig
 
 
-if __name__ == "__main__":
-    # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-    app.run_server(debug=True, use_reloader=False)
-    # app.run_server(debug=True, use_reloader=False,
-    #                host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+# if __name__ == "__main__":
+#     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
+#     app.run_server(debug=True, use_reloader=False)
+#     # app.run_server(debug=True, use_reloader=False,
+#     #                host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

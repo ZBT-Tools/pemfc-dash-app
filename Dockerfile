@@ -39,4 +39,4 @@ COPY . ./
 #     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # remember to run python from the virtualenv
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 pemfc_dash.main:server
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:server
