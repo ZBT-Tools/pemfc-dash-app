@@ -40,21 +40,21 @@ steps:
   # Docker Build
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t',
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}', '.']
+           'eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}', '.']
   # [END cloudbuild_python_image_yaml]
 
   # [START cloudbuild_python_push_yaml]
   # Docker push to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push',  'us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}']
+    args: ['push',  'eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}']
   # [END cloudbuild_python_push_yaml]
 
   # [START cloudbuild_python_deploy_yaml]
   # Deploy to Cloud Run
   - name: google/cloud-sdk
     args: ['gcloud', 'run', 'deploy', 'helloworld-${SHORT_SHA}',
-           '--image=us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}',
-           '--region', 'us-central1', '--platform', 'managed',
+           '--image=eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}',
+           '--region', 'eu-central3', '--platform', 'managed',
            '--allow-unauthenticated']
   # [END cloudbuild_python_deploy_yaml]
 
@@ -68,7 +68,7 @@ artifacts:
 # [END cloudbuild_python_logs_yaml]
 # Store images in Google Artifact Registry
 images:
-  - eu-centrale-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}
+  - eu-central3-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/myimage:${SHORT_SHA}
 # [END cloudbuild_python_yaml]
 options:
   logging: CLOUD_LOGGING_ONLY
