@@ -25,7 +25,7 @@ from dash_app import app
 from dash_tabs import tab3
 from dash_tabs import tab1, tab2, tab4, tab6, tab5
 
-import pemfc_gui as gui
+import pemfc_gui.input as gui_input
 
 import json
 
@@ -91,7 +91,18 @@ app.layout = html.Div(
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
      # modal for any warning
-     dm.modal_axes,
+     html.Div(dbc.Modal(
+        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-load',
+                                        style={'font-weight': 'bold',
+                                               'font-size': '20px'})),
+         dbc.ModalBody(id='modal-body-load')],
+        id="modal-load", is_open=False, size="lg")),
+     html.Div(dbc.Modal(
+        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-run',
+                                        style={'font-weight': 'bold',
+                                               'font-size': '20px'})),
+         dbc.ModalBody(id='modal-body-run')],
+        id="modal-run", is_open=False, size="lg")),
 
      html.Div(  # MIDDLE
          [html.Div(  # LEFT MIDDLE
@@ -123,9 +134,9 @@ app.layout = html.Div(
               html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
                           tabs_list, label=
-                          [k['title'] for k in gui.input.main_frame_dicts],
+                          [k['title'] for k in gui_input.main_frame_dicts],
                           ids=[f'tab{num + 1}' for num in
-                               range(len(gui.input.main_frame_dicts))])],
+                               range(len(gui_input.main_frame_dicts))])],
               id='setting_container', style={'flex': '1'}),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
@@ -218,17 +229,27 @@ def simulation_store(**kwargs):
     global_data, local_data, sim = main_app.main()
     return [global_data[0], local_data[0]]
 
+def try_simulation_store(**kwargs):
+    try:
+        results = simulation_store(**kwargs)
+    except Exception as E:
+        raise PreventUpdate
+    return results
+
 
 @app.callback(
     Output('ret_data', 'data'),
+    Output('modal-title-run', 'children'),
+    Output('modal-body-run', 'children'),
+    Output('modal-run', 'is_open'),
     Input("run_button", "n_clicks"),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')
-
+    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+    State('modal-run', 'is_open'),
 )
-def compute_simulation(n_click, inputs, inputs2, ids, ids2):
+def compute_simulation(n_click, inputs, inputs2, ids, ids2, modal_state):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'run_button' in changed_id and n_click is not None:
         dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
@@ -236,26 +257,31 @@ def compute_simulation(n_click, inputs, inputs2, ids, ids2):
         datas = {}
         for k, v in dict_data.items():
             datas[k] = {'sim_name': k.split('-'), 'value': v}
-        simulation_store(**datas)
+        try:
+            simulation_store(**datas)
+        except Exception as E:
+            modal_title, modal_body = \
+                dm.modal_process('input-error', error=repr(E))
+            return datas, modal_title, modal_body, not modal_state
     else:
         raise PreventUpdate
-    return datas
+    return datas, None, None, modal_state
 
 
 @app.callback(
     Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     Output('upload-file', 'contents'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    Output('modal-title-load', 'children'),
+    Output('modal-body-load', 'children'),
+    Output('modal-load', 'is_open'),
     Input('upload-file', 'contents'),
     State('upload-file', 'filename'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-    State('modal', 'is_open'),
+    State('modal-load', 'is_open'),
 )
 def upload_settings(contents, filename, value, multival, ids, ids2,
                     modal_state):
@@ -299,8 +325,7 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
             except Exception as e:
                 # print(e)
                 # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = \
-                    dm.modal_process('error')
+                modal_title, modal_body = dm.modal_process('error')
                 return value, multival, None, modal_title, modal_body, \
                     not modal_state
         else:
@@ -356,7 +381,7 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
     Input('ret_data', 'data')
 )
 def global_outputs(data):
-    results = simulation_store(**data)
+    results = try_simulation_store(**data)
     g = results[0]
     glob = list(results[0])
     glob_len = len(glob)
@@ -378,7 +403,7 @@ def global_outputs(data):
     Input('ret_data', 'data')
 )
 def get_dropdown_options(data):
-    results = simulation_store(**data)
+    results = try_simulation_store(**data)
     local_data = results[1]
     values = [{'label': key, 'value': key} for key in local_data if key not in
               ["Channel Location", "Cells", "Cathode",
@@ -397,7 +422,7 @@ def get_dropdown_options_2(dropdown_key, data):
     if dropdown_key is None:
         raise PreventUpdate
     else:
-        results = simulation_store(**data)
+        results = try_simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -419,7 +444,7 @@ def dropdown_line2(dropdown_key, data):
     if dropdown_key is None:
         raise PreventUpdate
     else:
-        results = simulation_store(**data)
+        results = try_simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None,  {'visibility': 'hidden'}
@@ -453,7 +478,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         raise PreventUpdate
     else:
 
-        results = simulation_store(**data)
+        results = try_simulation_store(**data)
         local_data = results[1]
 
         x_key = 'Channel Location'
@@ -560,7 +585,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
     if val is None:
         raise PreventUpdate
     else:
-        results = simulation_store(**state)
+        results = try_simulation_store(**data)
         local_data = results[1]
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
@@ -630,7 +655,7 @@ def update_graph(dropdown_key, dropdown_key_2, data):
     if dropdown_key is None:
         raise PreventUpdate
     else:
-        results = simulation_store(**data)
+        results = try_simulation_store(**data)
         local_data = results[1]
         x_key = 'Channel Location'
         y_key = 'Cells'

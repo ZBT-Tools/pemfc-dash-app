@@ -16,11 +16,22 @@ modal_axes = \
 
 
 def modal_process(error_type, error=''):
-    ids_str = ', '.join([str(index) for index in error]) if error else ''
+    if isinstance(error, list):
+        ids_str = ', '.join([str(index) for index in error])
+    else:
+        ids_str = ''
     space = {'margin-top': '10px'}
     bold = {'font-weight': 'bold'}
     contents = \
-        {'loaded':
+        {
+         'input-error':
+            {'title': 'Simulation Error',
+             'body':
+                [html.Div("Simulation returned an error, "
+                          "please check inputs!"),
+                 html.Div(style=space),
+                 html.Div(error, style=space)]},
+         'loaded':
             {'title': 'JSON file has been loaded!',
              'body':
                   [html.Div("Data from JSON file has been loaded!"),
