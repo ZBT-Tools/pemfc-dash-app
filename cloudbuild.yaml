@@ -25,7 +25,7 @@ steps:
 
   - name: python
     entrypoint: pip
-    args: ["install", "pytest"]
+    args: ["install", "pytest", "--user"]
 
 # [END cloudbuild_python_dependencies_yaml]
 
