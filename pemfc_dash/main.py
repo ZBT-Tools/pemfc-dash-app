@@ -87,22 +87,23 @@ app.layout = html.Div(
      dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
                  spinner_class_name='loading_spinner',
                  fullscreen_class_name='loading_spinner_bg'),
-                 # color="#0a60c2"),
+        # color="#0a60c2"),
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
      # modal for any warning
-     html.Div(dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-load',
-                                        style={'font-weight': 'bold',
-                                               'font-size': '20px'})),
-         dbc.ModalBody(id='modal-body-load')],
-        id="modal-load", is_open=False, size="lg")),
-     html.Div(dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-run',
-                                        style={'font-weight': 'bold',
-                                               'font-size': '20px'})),
-         dbc.ModalBody(id='modal-body-run')],
-        id="modal-run", is_open=False, size="lg")),
+     dm.modal_axes,
+     # html.Div(dbc.Modal(
+     #    [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-load',
+     #                                    style={'font-weight': 'bold',
+     #                                           'font-size': '20px'})),
+     #     dbc.ModalBody(id='modal-body-load')],
+     #    id="modal-load", is_open=False, size="lg")),
+     # html.Div(dbc.Modal(
+     #    [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-run',
+     #                                    style={'font-weight': 'bold',
+     #                                           'font-size': '20px'})),
+     #     dbc.ModalBody(id='modal-body-run')],
+     #    id="modal-run", is_open=False, size="lg")),
 
      html.Div(  # MIDDLE
          [html.Div(  # LEFT MIDDLE
@@ -156,11 +157,6 @@ app.layout = html.Div(
               [dl.val_container(  # RIGHT MIDDLE TOP
                       ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
                            'gd8', 'gd9', 'gd10']),
-                  # html.Div(  # RIGHT MIDDLE TOP
-                  # dl.val_container(
-                  #     ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
-                  #          'gd8', 'gd9', 'gd10']),
-                  # id="global-data", className='flex-display', ),
 
                html.Div(  # RIGHT MIDDLE BOTTOM
                    dcc.Graph(id="heatmap_graph"),
@@ -229,6 +225,7 @@ def simulation_store(**kwargs):
     global_data, local_data, sim = main_app.main()
     return [global_data[0], local_data[0]]
 
+
 def try_simulation_store(**kwargs):
     try:
         results = simulation_store(**kwargs)
@@ -239,15 +236,15 @@ def try_simulation_store(**kwargs):
 
 @app.callback(
     Output('ret_data', 'data'),
-    Output('modal-title-run', 'children'),
-    Output('modal-body-run', 'children'),
-    Output('modal-run', 'is_open'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("run_button", "n_clicks"),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-    State('modal-run', 'is_open'),
+    State('modal', 'is_open'),
 )
 def compute_simulation(n_click, inputs, inputs2, ids, ids2, modal_state):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
@@ -272,16 +269,16 @@ def compute_simulation(n_click, inputs, inputs2, ids, ids2, modal_state):
     Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     Output('upload-file', 'contents'),
-    Output('modal-title-load', 'children'),
-    Output('modal-body-load', 'children'),
-    Output('modal-load', 'is_open'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input('upload-file', 'contents'),
     State('upload-file', 'filename'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-    State('modal-load', 'is_open'),
+    State('modal', 'is_open'),
 )
 def upload_settings(contents, filename, value, multival, ids, ids2,
                     modal_state):
@@ -323,7 +320,6 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
                     return list(dict_ids.values()), list(dict_ids2.values()), \
                         None, modal_title, modal_body, not modal_state
             except Exception as e:
-                # print(e)
                 # Error / JSON file cannot be processed; return old value
                 modal_title, modal_body = dm.modal_process('error')
                 return value, multival, None, modal_title, modal_body, \
@@ -447,7 +443,7 @@ def dropdown_line2(dropdown_key, data):
         results = try_simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
-            return [], None,  {'visibility': 'hidden'}
+            return [], None, {'visibility': 'hidden'}
         else:
             options = [{'label': key, 'value': key} for key in
                        local_data[dropdown_key]]
