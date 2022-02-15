@@ -114,6 +114,11 @@ body {
   margin-right: 1px;
   text-align: right;
 }
+
+.local_data_buttons{
+  margin: 1px;
+}
+
 .dropdown_input{
   font-size: 11px;
   margin: auto;

@@ -72,8 +72,14 @@ app.layout = html.Div(
              html.Div(html.H3("Fuel Cell Stack Model",
                               style={"margin": "auto",
                                      "min-height": "47px",
+                                     "font-weight": "bold",
+                                     # "-webkit-text-stroke-width": "1px",
+                                     # "-webkit-text-stroke-color": "#0a60c2",
+                                     "color": "#0a60c2",
+                                     "font-size": "40px",
                                      # "height": "auto",  # "60px",
-                                     "width": "auto",}),
+                                     "width": "auto"
+                                     }),
                       className="pretty_container", id="title"),
              # style={'border': '1px solid grey'},
              className="eight columns",)],
@@ -120,16 +126,17 @@ app.layout = html.Div(
                      #     fullscreen=True,
                      #     children=html.Div(id="run_button")
                      # ),
-                  html.Div(
-                      [dcc.Dropdown(id='results_dropdown',
-                                    placeholder='Choose Heatmap',
-                                    className='dropdown_input centered'),
-                       dcc.Dropdown(id='results_dropdown_2',
-                                    style={'visibility': 'hidden'},
-                                    className='dropdown_input centered')],
-                      style={'min-width': '60% ', 'min-height': '80px',
-                             'display': 'flex', 'flex-direction': 'column',
-                             'justify-content': 'space-around'}), ],
+                  # html.Div(
+                  #     [dcc.Dropdown(id='results_dropdown',
+                  #                   placeholder='Choose Heatmap',
+                  #                   className='dropdown_input centered'),
+                  #      dcc.Dropdown(id='results_dropdown_2',
+                  #                   style={'visibility': 'hidden'},
+                  #                   className='dropdown_input centered')],
+                  #     style={'min-width': '60% ', 'min-height': '80px',
+                  #            'display': 'flex', 'flex-direction': 'column',
+                  #            'justify-content': 'space-around'}),
+                 ],
                  id='cross-filter-options-new',
                  className='another_pretty_container flex-display'),
               html.Div(  # LEFT MIDDLE MIDDLE
@@ -158,8 +165,37 @@ app.layout = html.Div(
                       ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
                            'gd8', 'gd9', 'gd10']),
 
-               html.Div(  # RIGHT MIDDLE BOTTOM
-                   dcc.Graph(id="heatmap_graph"),
+               html.Div(
+                   html.Div(
+                        dt.DataTable(id='global_data_table',
+                                     editable=True,
+                                     column_selectable='multi'),
+                   #               id='sub_div_global_table',
+                   #               className='pretty_container'),
+                   #      columns=[{'filter_options': 'sensitive'}]
+                        ),
+                   id='div_global_table',  # style={'overflow': 'auto'},
+                   className='pretty_container'),
+
+               html.Div(
+                   [
+                       html.Div(
+                           [dcc.Dropdown(id='results_dropdown',
+                                         placeholder='Choose Heatmap',
+                                         className='dropdown_input'),
+                            html.Div(dcc.Dropdown(id='results_dropdown_2',
+                                                  className='dropdown_input'),
+                                     id='dresults_div',
+                                     style={'visibility': 'hidden'})],
+                            # dcc.Dropdown(id='results_dropdown_2',
+                            #              style={'visibility': 'hidden'},
+                            #              className='dropdown_input')],
+                           style={'margin-bottom': '10px', 'display': 'flex',
+                                  'flex-direction': 'column', 'flex': 1,
+                                  'width': '22%'},),
+                  # RIGHT MIDDLE BOTTOM
+                       dcc.Graph(id="heatmap_graph")
+                   ],
                    id='countGraphContainer',
                    className='graph pretty_container'),
 
@@ -173,7 +209,7 @@ app.layout = html.Div(
                                                  className='dropdown_input'),
                                     id='dline_div',
                                     style={'visibility': 'hidden'})],
-                          style={'margin-bottom': '10px'}),
+                          style={'margin-bottom': '10px'},),
                        html.Div(
                            dcc.Checklist(id='disp_data',
                                          style={'overflow': 'auto'}),
@@ -182,14 +218,19 @@ app.layout = html.Div(
                        dcc.Store(id='disp_clicked'),
                        dcc.Store(id='append_check'),
                        html.Div(
-                           [html.Button('Clear List', id='clear_button'),
-                            html.Button('Export Data to Table', id='export_b')],
+                           [html.Button('Clear List', id='clear_button',
+                                        className='local_data_buttons'),
+                            html.Button('Export Data to Table',
+                                        id='export_b',
+                                        className='local_data_buttons')],
                            style={'display': 'flex', 'flex-direction': 'column',
                                   'margin-bottom': '15px'}),
                        html.Div(
                            [html.Button('Append New Data to Table',
-                                        id='append_b'),
-                            html.Button('Clear Table', id='clear_table_b')],
+                                        id='append_b',
+                                        className='local_data_buttons'),
+                            html.Button('Clear Table', id='clear_table_b',
+                                        className='local_data_buttons')],
                            style={
                                'display': 'flex', 'flex-direction': 'column',
                                'margin-bottom': '5px'})],
@@ -197,11 +238,11 @@ app.layout = html.Div(
                              'flex': 1}),
                   dcc.Store(id='cells_data'),
                   html.Div(dcc.Graph(id='line_graph'),
-                           style={'flex': '4', 'flex-direction': 'column' })],
+                           style={'flex': '4', 'flex-direction': 'column'})],
                  className="pretty_container",
                  style={'display': 'flex', 'flex': '1',
                         'justify-content': 'space-evenly'}), ],
-              className="eight columns", id='right-column', )],
+              className="eight columns", id='right-column',)],
 
          className="flex-display",
          style={'flex-direction': 'row',
@@ -393,6 +434,30 @@ def global_outputs(data):
 
 
 @app.callback(
+    [Output('global_data_table', 'columns'),
+     Output('global_data_table', 'data'),
+     Output('global_data_table', 'export_format')],
+    Input('ret_data', 'data')
+)
+def global_outputs_table(data):
+    results = simulation_store(**data)
+    global_result_dict = results[0]
+    names = list(global_result_dict.keys())
+    values = [v['value'] for k, v in global_result_dict.items()]
+    units = [v['units'] for k, v in global_result_dict.items()]
+
+    column_names = ['Quantity', 'Value', 'Units']
+    columns = [{'deletable': True, 'renamable': True,
+                'selectable': True, 'name': col, 'id': col}
+               for col in column_names]
+    datas = [{column_names[0]: names[i],
+              column_names[1]: values[i],
+              column_names[2]: units[i]} for i in range(len(values))]
+
+    return columns, datas, 'csv',
+
+
+@app.callback(
     [Output('results_dropdown', 'options'),
      Output('results_dropdown', 'value'),
      Output('dropdown_line', 'options')],
@@ -410,7 +475,7 @@ def get_dropdown_options(data):
 @app.callback(
     [Output('results_dropdown_2', 'options'),
      Output('results_dropdown_2', 'value'),
-     Output('results_dropdown_2', 'style')],
+     Output('dresults_div', 'style')],
     [Input('results_dropdown', 'value'),
      Input('ret_data', 'data')]
 )
