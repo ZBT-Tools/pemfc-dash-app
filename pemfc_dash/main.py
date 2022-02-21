@@ -73,10 +73,11 @@ app.layout = html.Div(
                               style={"margin": "auto",
                                      "min-height": "47px",
                                      "font-weight": "bold",
-                                     # "-webkit-text-stroke-width": "1px",
-                                     # "-webkit-text-stroke-color": "#0a60c2",
-                                     "color": "#0a60c2",
+                                     "-webkit-text-shadow-width": "1px",
+                                     "-webkit-text-shadow-color": "#aabad6",
+                                     "color": "#0062af",
                                      "font-size": "40px",
+                                     # "text-stroke": "5px 5px 5px 5px #aabad6",
                                      # "height": "auto",  # "60px",
                                      "width": "auto"
                                      }),
@@ -202,14 +203,14 @@ app.layout = html.Div(
                html.Div(
                  [html.Div(
                       [html.Div(
-                          [dcc.Dropdown(id='dropdown_line',
-                                        placeholder='Choose Plots',
-                                        className='dropdown_input'),
-                           html.Div(dcc.Dropdown(id='dropdown_line2',
-                                                 className='dropdown_input'),
-                                    id='dline_div',
-                                    style={'visibility': 'hidden'})],
-                          style={'margin-bottom': '10px'},),
+                              [dcc.Dropdown(id='dropdown_line',
+                                            placeholder='Choose Plots',
+                                            className='dropdown_input'),
+                               html.Div(dcc.Dropdown(id='dropdown_line2',
+                                                     className='dropdown_input'),
+                                        id='dline_div',
+                                        style={'visibility': 'hidden'})],
+                              style={'margin-bottom': '10px'},),
                        html.Div(
                            dcc.Checklist(id='disp_data',
                                          style={'overflow': 'auto'}),

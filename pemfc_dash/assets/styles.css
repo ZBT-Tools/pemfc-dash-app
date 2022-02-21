@@ -20,6 +20,7 @@ body {
 .graph{
  margin-top: 0px !important;
 }
+
 .pretty_container {
   border-radius: 5px;
   background-color: white; /*#f9f9f9;*/
@@ -45,6 +46,7 @@ body {
   /*min-width: 20.0%;*/
   /*flex-grow: 1;*/
 }
+
 .gd-desc{
   border-bottom-style: solid;
   border-bottom-width: thin;
@@ -53,14 +55,15 @@ body {
   font-size: 11px;
 }
 .fval{font-size: 25px}
+
 .gd-val{
   margin-top: 1px;
   font-weight: bold;
   /*text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
                 -1px 1px 0 #000, 1px 1px 0 #000;*/
-  -webkit-text-stroke-width: 1px;
-  -webkit-text-stroke-color: #0a60c2;
-  color: #0a60c2;
+  /*-webkit-text-stroke-width: 1px;
+  -webkit-text-stroke-color: #0a60c2;*/
+  color: #0062af;
   font-size: 25px;
 }
 .funit{font-size: 25px}
@@ -123,6 +126,8 @@ body {
   font-size: 11px;
   margin: auto;
   text-align: left;
+  margin-bottom: 1px;
+  margin-top: 1px;
 }
 
 .bare_container {
@@ -306,7 +311,7 @@ body {
   /*box-shadow: 1px 1px 0px white;*/
   border-left: 1px solid lightgrey !important;
   border-right: 1px solid lightgrey !important;
-  border-top: 3px solid #0a60c2 !important;
+  border-top: 3px solid #0062af !important;
   /*float: left;*/
 }
 .box-style {
@@ -439,7 +444,7 @@ body {
 .loading_spinner{
   width: 10rem;
   height: 10rem;
-  color: #0a60c2
+  color: #0062af
 }
 .loading_spinner_bg{
   opacity: 0.5;
@@ -564,6 +569,6 @@ body {
 *[class="output-loading"][data-dash-is-loading="true"]::before{
     content: "Loading...";
     display: inline-block;
-    color: #0a60c2;
+    color: #0062af;
     visibility: visible;
 }
