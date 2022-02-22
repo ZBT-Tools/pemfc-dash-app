@@ -100,7 +100,7 @@ body {
   border-radius: 0 0 5px 5px;
   background-color: white; /*#f9f9f9;*/
   /*width: auto;*/
-  min-height: 870px;
+  /*min-height: 870px;*/
   margin: 0 0 5px;
   padding: 0 0 10px; /*0 10px 10px;*/
   /*border-right: 1px solid lightgrey;
@@ -513,7 +513,7 @@ body {
 #setting_container {
   /*min-width:270px;*/
 
-  min-height: 880px;
+  /*min-height: 880px;*/
   /*padding: 5px;*/
 }
 #cross-filter-options {
