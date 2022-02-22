@@ -10,6 +10,7 @@ from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
+import plotly.express as px
 import numpy as np
 from pemfc.src import interpolation as ip
 from flask_caching import Cache
@@ -207,16 +208,21 @@ app.layout = html.Div(
          style={'flex-direction': 'row',
                 # 'border': '1px solid black',
                 'justify-content': 'space-evenly'}, ),
-     html.Div(
-         [html.Div(dt.DataTable(
-             id='table', editable=True, column_selectable='multi'),
+     # html.Div(
+     #     [],
+     #     style={'position': 'relative',
+     #            'margin': '0 0.05% 0 0.7%'})
+     html.Div(dt.DataTable(id='table', editable=True,
+                           column_selectable='multi'),
              # columns=[{'filter_options': 'sensitive'}]),
-             id='div_table', style={'overflow': 'auto'},
-             className='pretty_container')],
-     style={'position': 'relative',
-            'margin': '0 0.05% 0 0.7%'})],
+              id='div_table', style={'overflow': 'auto',
+                                     'position': 'relative',
+                                     'margin': '0 0.05% 0 0.7%'},
+              className='pretty_container')
+    ],
     id="mainContainer",
-    style={'padding': '5px'})
+    # className='dbc',
+    style={'padding': '0px'})
 
 
 @cache.memoize()
@@ -502,7 +508,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         fig.update_layout(xaxis_title='Channel Location [m]',
                           yaxis_title='{} - {}'.format(drop1, drop2))
 
-        options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
+        options = [{'label': ' ' + cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
         val = sorted([k for k in cells])
         value = [f'Cell {num}' for num in val]
@@ -657,6 +663,7 @@ def update_graph(dropdown_key, dropdown_key_2, data):
         y_key = 'Cells'
         xvalues = ip.interpolate_1d(local_data[x_key]['value'])
         yvalues = local_data[y_key]['value']
+        print(local_data[y_key])
         if dropdown_key is None:
             zvalues = np.zeros((len(xvalues), len(yvalues)))
         else:
@@ -669,8 +676,30 @@ def update_graph(dropdown_key, dropdown_key_2, data):
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
-        fig = go.Figure(go.Heatmap(z=zvalues, x=xvalues, y=yvalues,
-                                   xgap=1, ygap=1))
+
+
+        z_title = dropdown_key
+        if dropdown_key_2 is not None:
+            z_title += ' - ' + dropdown_key_2
+        z_title += ' / ' + local_data[dropdown_key]['units']
+
+        layout = go.Layout(
+            font={'color': 'black', 'family': 'Arial'},
+            # title='Local Results in Heat Map',
+            titlefont={'size': 11, 'color': 'black'},
+            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': x_key + ' / ' + local_data[x_key]['units']},
+            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': y_key + ' / ' + local_data[y_key]['units']})
+
+        heatmap = go.Heatmap(z=zvalues, x=xvalues, y=yvalues, xgap=1, ygap=1,
+                             colorbar={'tickfont': {'size': 11},
+                                       'title': {'text': z_title,
+                                                 'font': {'size': 14},
+                                                 'side': 'right'}})
+
+        fig = go.Figure(data=heatmap, layout=layout)
+
         fig.update_xaxes(showgrid=True, tickmode='array',
                          tickvals=local_data[x_key]['value'])
         fig.update_yaxes(showgrid=True, tickmode='array', tickvals=yvalues)

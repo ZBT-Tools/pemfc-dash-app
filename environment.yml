@@ -1,17 +1,21 @@
 name: dash_app
+channels:
+    - conda-forge
 dependencies:
-        - python>=3.9.7
-        - pip
-        - pip:
-                - numpy
-                - scipy
-                - matplotlib
-                - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
-                - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
-                - dash
-                - dash-bootstrap-components
-                - dash-extensions
-                - flask-caching
-                - plotly
-                - glom
-                - gunicorn
+    - python>=3.9.7
+    - numpy
+    - scipy
+    - matplotlib
+    - dash
+    - dash-bootstrap-components
+    - dash-extensions
+    - flask-caching
+    - plotly
+    - glom
+    - pip
+    - pip:
+        - gunicorn
+        - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
+        - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
+
+
