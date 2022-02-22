@@ -161,21 +161,22 @@ app.layout = html.Div(
              id="left-column", className='four columns'),
 
           html.Div(  # RIGHT MIDDLE
-              [dl.val_container(  # RIGHT MIDDLE TOP
-                      ids=['gd1', 'gd2', 'gd3', 'gd4', 'gd5', 'gd6', 'gd7',
-                           'gd8', 'gd9', 'gd10']),
-
-               html.Div(
+              [
+                  # html.Div(
                    html.Div(
-                        dt.DataTable(id='global_data_table',
+                        [html.H3('Global Data', className='text-center '
+                                                          'text-primary, '
+                                                          'mb-1'),
+                            dt.DataTable(id='global_data_table',
                                      editable=True,
-                                     column_selectable='multi'),
+                                     column_selectable='multi')],
                    #               id='sub_div_global_table',
                    #               className='pretty_container'),
                    #      columns=[{'filter_options': 'sensitive'}]
-                        ),
-                   id='div_global_table',  # style={'overflow': 'auto'},
-                   className='pretty_container'),
+                        id='div_global_table',
+                        className='pretty_container', style={'overflow': 'auto'}),
+                   # id='div_global_table',  # style={'overflow': 'auto'},
+                   # className='pretty_container'),
 
                html.Div(
                    [
