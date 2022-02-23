@@ -10,7 +10,6 @@ from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-import plotly.express as px
 import numpy as np
 from pemfc.src import interpolation as ip
 from flask_caching import Cache
@@ -165,9 +164,7 @@ app.layout = html.Div(
               [
                   # html.Div(
                    html.Div(
-                        [html.H3('Global Data', className='text-center '
-                                                          'text-primary, '
-                                                          'mb-1'),
+                        [html.H3('Global Data', className='text-center'),
                             dt.DataTable(id='global_data_table',
                                      editable=True,
                                      column_selectable='multi')],
@@ -182,19 +179,26 @@ app.layout = html.Div(
                html.Div(
                    [
                        html.Div(
-                           [dcc.Dropdown(id='results_dropdown',
-                                         placeholder='Choose Heatmap',
-                                         className='dropdown_input'),
-                            html.Div(dcc.Dropdown(id='results_dropdown_2',
-                                                  className='dropdown_input'),
-                                     id='dresults_div',
-                                     style={'visibility': 'hidden'})],
+                           [html.Div(
+                               dcc.Dropdown(
+                                   id='results_dropdown',
+                                   placeholder='Choose Heatmap',
+                                   className='dropdown_input'),
+                               id='div_results_dropdown',
+                               style={'width': '25%', 'padding': '1px'}),
+                            html.Div(
+                               dcc.Dropdown(id='results_dropdown_2',
+                                            className='dropdown_input',
+                                            style={'visibility': 'hidden'}),
+                               id='div_results_dropdown_2',
+                               style={'width': '25%', 'padding': '1px'})],
                             # dcc.Dropdown(id='results_dropdown_2',
                             #              style={'visibility': 'hidden'},
                             #              className='dropdown_input')],
-                           style={'margin-bottom': '10px', 'display': 'flex',
-                                  'flex-direction': 'column', 'flex': 1,
-                                  'width': '22%'},),
+                           style={'display': 'flex',
+                                  'flex-direction': 'row',
+                                  'justify-content': 'left'},
+                       ),
                   # RIGHT MIDDLE BOTTOM
                        dcc.Graph(id="heatmap_graph")
                    ],
@@ -482,7 +486,7 @@ def get_dropdown_options(data):
 @app.callback(
     [Output('results_dropdown_2', 'options'),
      Output('results_dropdown_2', 'value'),
-     Output('dresults_div', 'style')],
+     Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
      Input('ret_data', 'data')]
 )
@@ -729,7 +733,7 @@ def update_graph(dropdown_key, dropdown_key_2, data):
         y_key = 'Cells'
         xvalues = ip.interpolate_1d(local_data[x_key]['value'])
         yvalues = local_data[y_key]['value']
-        print(local_data[y_key])
+
         if dropdown_key is None:
             zvalues = np.zeros((len(xvalues), len(yvalues)))
         else:
@@ -742,12 +746,11 @@ def update_graph(dropdown_key, dropdown_key_2, data):
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
-
-
-        z_title = dropdown_key
-        if dropdown_key_2 is not None:
-            z_title += ' - ' + dropdown_key_2
-        z_title += ' / ' + local_data[dropdown_key]['units']
+        if dropdown_key_2 is None:
+            z_title = dropdown_key +  ' / ' + local_data[dropdown_key]['units']
+        else:
+            z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
+                       + local_data[dropdown_key][dropdown_key_2]['units']
 
         layout = go.Layout(
             font={'color': 'black', 'family': 'Arial'},
