@@ -48,6 +48,7 @@
 .columns {
   width: 100%;
   float: left;
+  display: flex;
   box-sizing: border-box;
 }
 
