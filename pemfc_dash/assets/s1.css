@@ -49,6 +49,7 @@
   width: 100%;
   float: left;
   box-sizing: border-box;
+  display: flex;
 }
 
 /* For devices larger than 400px */
@@ -67,6 +68,7 @@
   .column,
   .columns {
     margin-left: 4%;
+    display: unset;
   }
 
   .one.column,
