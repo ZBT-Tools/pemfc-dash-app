@@ -52,40 +52,48 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
-app.layout = html.Div(
-    [html.Div(  # HEADER
-        [html.Div(
-            html.Div(html.Img(
-                    src=app.get_asset_url("logo-zbt.png"),
-                    id="zbt-image",
-                    style={  # "min-height": "60px",
-                           "height": "auto",  # "60px",
-                           "object-fit": 'contain',
-                           'position': 'relative',
-                           "width": "auto",
-                           "margin": "auto"
-                    }),
-                id="logoContainer", className="pretty_container"),
-            # style={'border': '1px solid grey'},
-            className="four columns"),
-         html.Div(html.H3("Fuel Cell Stack Model",
-                          style={"margin": "auto",
-                                 "min-height": "47px",
-                                 "font-weight": "bold",
-                                 "-webkit-text-shadow-width": "1px",
-                                 "-webkit-text-shadow-color": "#aabad6",
-                                 "color": "#0062af",
-                                 "font-size": "40px",
-                                     # "text-stroke": "5px 5px 5px 5px #aabad6",
-                                     # "height": "auto",  # "60px",
-                                 "width": "auto"}),
-                  className="pretty_container eight columns", id="title"),
-             # style={'border': '1px solid grey'},
+app.layout = dbc.Container(
+    [dbc.Row(  # HEADER
+        [dbc.Col(html.Div(html.Img(
+                        src=app.get_asset_url("logo-zbt.png"),
+                        id="zbt-image",
+                        style={  # "min-height": "60px",
+                               #"height": "auto",  # "60px",
+                               "object-fit": 'contain',
+                               'position': 'center',
+                               "width": "auto",
+                               "margin": "auto"
+                        }),
+                        id="logoContainer", className="pretty_container",
+                    style={
+                           'text-align': 'center',
+                           'height': 'auto', 'min-height': '100% !important',
+                           }),# , 'overflow': 'hidden'}),
+                    width={'size': 4}, align='center'),
+         dbc.Col(html.Div(html.H3("Fuel Cell Stack Model",
+                              style={"margin": "auto",
+                                     "min-height": "47px",
+                                     "font-weight": "bold",
+                                     "-webkit-text-shadow-width": "1px",
+                                     "-webkit-text-shadow-color": "#aabad6",
+                                     "color": "#0062af",
+                                     "font-size": "40px",
+                                         # "text-stroke": "5px 5px 5px 5px #aabad6",
+                                         # "height": "auto",  # "60px",
+                                     "width": "auto"}),
+                     className="pretty_container", id="title",
+                     style={'justify-content': 'center',
+                            }),
+                 width={'size': 8}, align='center', style={
+                           'justify-content': 'space-evenly'}),
+                           # 'overflow': 'auto', 'display': 'block'}),
+             # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
              # className="eight columns",)
         ],
         id="header",
-        style={  # 'border': '1px solid blue',
-               'justify-content': 'space-evenly'}),
+        align='start',
+        style={'justify-content': 'center'}
+    ),
 
      # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
      #             style={"backgroundColor": "transparent"}, type='circle',
@@ -98,47 +106,10 @@ app.layout = html.Div(
      html.Div(id="output-clientside"),
      # modal for any warning
      dm.modal_axes,
-     # html.Div(dbc.Modal(
-     #    [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-load',
-     #                                    style={'font-weight': 'bold',
-     #                                           'font-size': '20px'})),
-     #     dbc.ModalBody(id='modal-body-load')],
-     #    id="modal-load", is_open=False, size="lg")),
-     # html.Div(dbc.Modal(
-     #    [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-run',
-     #                                    style={'font-weight': 'bold',
-     #                                           'font-size': '20px'})),
-     #     dbc.ModalBody(id='modal-body-run')],
-     #    id="modal-run", is_open=False, size="lg")),
 
-     html.Div(  # MIDDLE
-         [html.Div(  # LEFT MIDDLE
-             [html.Div(      # LEFT MIDDLE TOP
-                 [html.Div(
-                     html.Button('Run Simulation', id='run_button',
-                                 style={'font-size': '11px', 'margin': 'auto'}),
-                     style={'width': '40% !important',
-                            'display': 'flex',
-                            'align-items': 'center'}),
-                     # dcc.Loading(
-                     #     id="run_loading",
-                     #     type="circle",
-                     #     fullscreen=True,
-                     #     children=html.Div(id="run_button")
-                     # ),
-                  # html.Div(
-                  #     [dcc.Dropdown(id='results_dropdown',
-                  #                   placeholder='Choose Heatmap',
-                  #                   className='dropdown_input centered'),
-                  #      dcc.Dropdown(id='results_dropdown_2',
-                  #                   style={'visibility': 'hidden'},
-                  #                   className='dropdown_input centered')],
-                  #     style={'min-width': '60% ', 'min-height': '80px',
-                  #            'display': 'flex', 'flex-direction': 'column',
-                  #            'justify-content': 'space-around'}),
-                 ],
-                 id='cross-filter-options-new',
-                 className='another_pretty_container flex-display'),
+     dbc.Row(  # MIDDLE
+         [dbc.Col(  # LEFT MIDDLE
+             [
               html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
                           tabs_list, label=
@@ -148,23 +119,35 @@ app.layout = html.Div(
               id='setting_container', style={'flex': '1'}),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
-                       [html.Div('Settings', className='title'),
-                        html.Div(
-                           [html.Button('Load', id='load-button'),
-                            html.Button('Save', id='save-button')],
-                            style={'display': 'flex', 'margin': '5px',
-                                   'justify-content': 'space-around'}),
+                       [html.Div(
+                           [html.Button('Load Settings', id='load-button',
+                                        className='settings_button',
+                                        style={'display': 'flex'}),
+                            html.Button('Save Settings', id='save-button',
+                                        className='settings_button',
+                                        style={'display': 'flex'}),
+                            html.Button('Run Simulation', id='run_button',
+                                        className='settings_button',
+                                        style={'display': 'flex'})
+                            ],
+                            style={
+                                   'display': 'flex',
+                                    'flex-wrap': 'wrap',
+                                   # 'flex-direction': 'column',
+                                   # 'margin': '5px',
+                                   'justify-content': 'center'}
+                       ),
                         dcc.Download(id="savefile-json"),
                         dc.collapses],
                        className='neat-spacing')], style={'flex': '1'},
                   id='load_save_setting', className='pretty_container')],
-             id="left-column", className='four columns'),
+             id="left-column", width={'size': 4}, align='start'),
 
-          html.Div(  # RIGHT MIDDLE
+          dbc.Col(  # RIGHT MIDDLE
               [
                   # html.Div(
                    html.Div(
-                        [html.H3('Global Data', className='text-center'),
+                        [html.Div('Global Results', className='title'),
                             dt.DataTable(id='global_data_table',
                                      editable=True,
                                      column_selectable='multi')],
@@ -185,70 +168,95 @@ app.layout = html.Div(
                                    placeholder='Choose Heatmap',
                                    className='dropdown_input'),
                                id='div_results_dropdown',
-                               style={'width': '25%', 'padding': '1px'}),
+                               style={'padding': '1px', 'min-width': '200px'}),
                             html.Div(
                                dcc.Dropdown(id='results_dropdown_2',
                                             className='dropdown_input',
                                             style={'visibility': 'hidden'}),
                                id='div_results_dropdown_2',
-                               style={'width': '25%', 'padding': '1px'})],
+                               style={'padding': '1px', 'min-width': '200px'})
+                           ],
                             # dcc.Dropdown(id='results_dropdown_2',
                             #              style={'visibility': 'hidden'},
                             #              className='dropdown_input')],
                            style={'display': 'flex',
                                   'flex-direction': 'row',
+                                  'flex-wrap': 'wrap',
                                   'justify-content': 'left'},
                        ),
                   # RIGHT MIDDLE BOTTOM
                        dcc.Graph(id="heatmap_graph")
                    ],
-                   id='countGraphContainer',
+                   id='heatmap_container',
                    className='graph pretty_container'),
 
                html.Div(
-                 [html.Div(
-                      [html.Div(
-                              [dcc.Dropdown(id='dropdown_line',
-                                            placeholder='Choose Plots',
-                                            className='dropdown_input'),
-                               html.Div(dcc.Dropdown(id='dropdown_line2',
-                                                     className='dropdown_input'),
-                                        id='dline_div',
-                                        style={'visibility': 'hidden'})],
-                              style={'margin-bottom': '10px'},),
-                       html.Div(
-                           dcc.Checklist(id='disp_data',
-                                         style={'overflow': 'auto'}),
-                           className='display_checklist'),
-                       dcc.Store(id='disp_chosen'),
-                       dcc.Store(id='disp_clicked'),
-                       dcc.Store(id='append_check'),
-                       html.Div(
-                           [html.Button('Clear List', id='clear_button',
-                                        className='local_data_buttons'),
-                            html.Button('Export Data to Table',
-                                        id='export_b',
-                                        className='local_data_buttons')],
-                           style={'display': 'flex', 'flex-direction': 'column',
-                                  'margin-bottom': '15px'}),
-                       html.Div(
-                           [html.Button('Append New Data to Table',
-                                        id='append_b',
-                                        className='local_data_buttons'),
-                            html.Button('Clear Table', id='clear_table_b',
-                                        className='local_data_buttons')],
-                           style={
-                               'display': 'flex', 'flex-direction': 'column',
-                               'margin-bottom': '5px'})],
-                      style={'display': 'flex', 'flex-direction': 'column',
-                             'flex': 1}),
-                  dcc.Store(id='cells_data'),
-                  html.Div(dcc.Graph(id='line_graph'),
-                           style={'flex': '4', 'flex-direction': 'column'})],
+                 [
+                     html.Div(
+                         [html.Div(
+                             dcc.Dropdown(
+                                 id='dropdown_line',
+                                 placeholder='Choose Plots',
+                                 className='dropdown_input'),
+                             id='div_dropdown_line',
+                             style={'padding': '1px', 'min-width': '200px'}),
+                             html.Div(
+                             dcc.Dropdown(id='dropdown_line2',
+                                          className='dropdown_input',
+                                          style={'visibility': 'hidden'}),
+                             id='div_dropdown_line_2',
+                             style={'padding': '1px', 'min-width': '200px'})],
+                         # dcc.Dropdown(id='results_dropdown_2',
+                         #              style={'visibility': 'hidden'},
+                         #              className='dropdown_input')],
+                         style={'display': 'flex', 'flex-direction': 'row',
+                                'flex-wrap': 'wrap',
+                                'justify-content': 'left',
+                                'margin-bottom': '10px'},
+                     ),
+                  html.Div(
+                      [
+                      html.Div(
+                          [
+                           html.Div(
+                               dcc.Checklist(id='disp_data',
+                                             style={'overflow': 'auto'}),
+                               className='display_checklist'),
+                           dcc.Store(id='disp_chosen'),
+                           dcc.Store(id='disp_clicked'),
+                           dcc.Store(id='append_check'),
+                           html.Div(
+                               [html.Button('Clear List', id='clear_button',
+                                            className='local_data_buttons'),
+                                html.Button('Export Data to Table',
+                                            id='export_b',
+                                            className='local_data_buttons'),
+                                html.Button('Append New Data to Table',
+                                            id='append_b',
+                                            className='local_data_buttons'),
+                                html.Button('Clear Table', id='clear_table_b',
+                                            className='local_data_buttons')],
+                               style={
+                                   'display': 'flex',
+                                   'flex-direction': 'column',
+                                   'margin-bottom': '5px'}
+                           )],
+                          style={'width': '200px'}
+                      ),
+                      dcc.Store(id='cells_data'),
+                      html.Div(dcc.Graph(id='line_graph',
+                                         style={'flex': 'auto'}),
+                               style={'display': 'flex', 'flex-direction': 'row',
+                                      'width': 'calc(100% - 200px)'})
+                    ],
+                    style={'display': 'flex', 'flex-direction': 'row',
+                           'justify-content': 'space-evenly'}),
+                 ],
                  className="pretty_container",
-                 style={'display': 'flex', 'flex': '1',
-                        'justify-content': 'space-evenly'}), ],
-              className="eight columns", id='right-column',)],
+                 style={'display': 'flex', 'flex': '1', 'flex-direction':
+                        'column', 'justify-content': 'space-evenly'}
+              ),],
+              id='right-column', width={'size': 8}, align='center')],
 
          className="flex-display",
          style={'flex-direction': 'row',
@@ -267,7 +275,8 @@ app.layout = html.Div(
               className='pretty_container')
     ],
     id="mainContainer",
-    # className='dbc',
+    # className='twelve columns',
+    fluid=True,
     style={'padding': '0px'})
 
 
@@ -508,7 +517,7 @@ def get_dropdown_options_2(dropdown_key, data):
 @app.callback(
     [Output('dropdown_line2', 'options'),
      Output('dropdown_line2', 'value'),
-     Output('dline_div', 'style')],
+     Output('dropdown_line2', 'style')],
     [Input('dropdown_line', 'value'),
      Input('ret_data', 'data')]
 )
@@ -575,8 +584,25 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                                      name=f'Cell {num+1}'))
             cells.update({num+1: {'name': f'Cell {num+1}', 'data': yval}})
 
-        fig.update_layout(xaxis_title='Channel Location [m]',
-                          yaxis_title='{} - {}'.format(drop1, drop2))
+
+        if drop2 is None:
+            y_title = drop1 +  ' / ' + local_data[drop1]['units']
+        else:
+            y_title = drop1 + ' - ' + drop2 + ' / ' \
+                       + local_data[drop1][drop2]['units']
+
+        layout = go.Layout(
+            font={'color': 'black', 'family': 'Arial'},
+            # title='Local Results in Heat Map',
+            titlefont={'size': 11, 'color': 'black'},
+            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': x_key + ' / ' + local_data[x_key]['units']},
+            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': y_title},
+            margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
+
+
+        fig.update_layout(layout)
 
         options = [{'label': ' ' + cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
@@ -759,7 +785,8 @@ def update_graph(dropdown_key, dropdown_key_2, data):
             xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
                    'title': x_key + ' / ' + local_data[x_key]['units']},
             yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': y_key + ' / ' + local_data[y_key]['units']})
+                   'title': y_key + ' / ' + local_data[y_key]['units']},
+            margin={'l': 75, 'r': 20, 't': 20, 'b': 20})
 
         heatmap = go.Heatmap(z=zvalues, x=xvalues, y=yvalues, xgap=1, ygap=1,
                              colorbar={'tickfont': {'size': 11},

@@ -30,6 +30,12 @@ body {
   box-shadow: 2px 2px 2px lightgrey;
 }
 
+/*.btn-primary {
+    background-color: #FC7F66;
+    border-color: #FC7F66;
+}*/
+
+
 /*Global Value Container*/
 .val_container {
   border-radius: 5px;
@@ -122,12 +128,18 @@ body {
   margin: 1px;
 }
 
+.settings_button{
+  margin: 5px;
+}
+
 .dropdown_input{
   font-size: 11px;
   margin: auto;
   text-align: left;
-  margin-bottom: 1px;
-  margin-top: 1px;
+  margin: 1px;
+  /*background-color: #FC7F66;*/
+  /*border-color: #FC7F66;*/
+  primary-color: #0062af
 }
 
 .bare_container {
@@ -202,13 +214,13 @@ body {
   position: relative;
 }
 
-#run_button{
+/*#run_button{
   padding:3px;
   height: calc(100% - 5px);
   margin: 5px;
   width: 100%;
   text-align: center;
-}
+}*/
 
 #individual_graph,
 #aggregate_graph {
@@ -265,7 +277,8 @@ body {
   box-shadow: 1px 1px 5px  #555 inset;
   padding: 10px;
   margin-bottom: 5px;
-  max-height: 230px;
+  max-height: 300px;
+  min-height: 100px;
 }
 
 .mini_container {
@@ -489,16 +502,16 @@ body {
   /*border: 1px solid green;*/
 }
 
-#logoContainer {
+/*#logoContainer {
   /*background-color: #f9f9f9;
   min-width: 270px;*/
   /*border: 1px solid lightgrey;*/
   text-align: center;
   display: flex;
   justify-content: center !important;
-  margin: auto;
+  /*margin: auto;*/
   /*flex: 3;*/
-}
+}*/
 
 #tabs-content {
   min-height: 820px;
