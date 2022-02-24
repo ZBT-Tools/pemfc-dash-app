@@ -54,46 +54,46 @@ app.title = 'PEMFC Model'
 
 app.layout = dbc.Container(
     [dbc.Row(  # HEADER
-        [dbc.Col(html.Div(html.Img(
-                        src=app.get_asset_url("logo-zbt.png"),
-                        id="zbt-image",
-                        style={  # "min-height": "60px",
-                               #"height": "auto",  # "60px",
-                               "object-fit": 'contain',
-                               'position': 'center',
-                               "width": "auto",
-                               "margin": "auto"
+        [dbc.Col(
+            html.Div(
+                html.Img(
+                    src=app.get_asset_url("logo-zbt.png"),
+                    id="zbt-image",
+                    style={  # "min-height": "60px",
+                        #"height": "auto",  # "60px",
+                        "object-fit": 'contain',
+                        'position': 'center',
+                        "width": "auto",
+                        "margin": "auto"
                         }),
-                        id="logoContainer", className="pretty_container",
-                    style={
-                           'text-align': 'center',
-                           'height': 'auto', 'min-height': '100% !important',
-                           }),# , 'overflow': 'hidden'}),
-                    width={'size': 4}, align='center'),
+                id="logo_container", className="pretty_container",
+                style={'justify-content': 'center', 'align-items': 'center',
+                       # 'display': 'flex'
+                       }),
+            width={'size': 4}, align='start',
+            # style={'justify-content': 'center'}
+        ),
          dbc.Col(html.Div(html.H3("Fuel Cell Stack Model",
-                              style={"margin": "auto",
-                                     "min-height": "47px",
-                                     "font-weight": "bold",
-                                     "-webkit-text-shadow-width": "1px",
-                                     "-webkit-text-shadow-color": "#aabad6",
-                                     "color": "#0062af",
-                                     "font-size": "40px",
-                                         # "text-stroke": "5px 5px 5px 5px #aabad6",
-                                         # "height": "auto",  # "60px",
-                                     "width": "auto"}),
-                     className="pretty_container", id="title",
-                     style={'justify-content': 'center',
-                            }),
-                 width={'size': 8}, align='center', style={
-                           'justify-content': 'space-evenly'}),
-                           # 'overflow': 'auto', 'display': 'block'}),
-             # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
-             # className="eight columns",)
-        ],
-        id="header",
+                                  style={
+                                      "margin": "auto",
+                                      "font-weight": "bold",
+                                      "-webkit-text-shadow-width": "1px",
+                                      "-webkit-text-shadow-color": "#aabad6",
+                                      "color": "#0062af",
+                                      "font-size": "40px",
+                                      "text-align": "center",
+                                      "width": "auto"}),
+                          className="pretty_container", id="title",
+                          style={'justify-content': 'center',
+                                 'align-items': 'center'}),
+                 width={'size': 8}, align='start',
+                 style={'justify-content': 'center', 'align-items': 'center',
+                        # 'display': 'flex'
+                        }
+                 )],
+        id='header',
         align='start',
-        style={'justify-content': 'center'}
-    ),
+        style={'justify-content': 'center', 'overflow': 'hidden'}),
 
      # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
      #             style={"backgroundColor": "transparent"}, type='circle',
@@ -584,9 +584,8 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                                      name=f'Cell {num+1}'))
             cells.update({num+1: {'name': f'Cell {num+1}', 'data': yval}})
 
-
         if drop2 is None:
-            y_title = drop1 +  ' / ' + local_data[drop1]['units']
+            y_title = drop1 + ' / ' + local_data[drop1]['units']
         else:
             y_title = drop1 + ' - ' + drop2 + ' / ' \
                        + local_data[drop1][drop2]['units']
@@ -600,7 +599,6 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
             yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
                    'title': y_title},
             margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
-
 
         fig.update_layout(layout)
 
