@@ -251,16 +251,16 @@ body {
   position: relative;
 }
 
-#header {
+/*#header {
   display: flex;
   flex-direction: row;
-}
+}*/
 
-#title {
+/*#title {
   text-align: center;
   display:flex;
   justify-content: center !important
-}
+}*/
 
 .display_checklist{
   display: flex;
