@@ -53,46 +53,47 @@ app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
 app.layout = dbc.Container(
-    [dbc.Row(  # HEADER
-        [dbc.Col(html.Div(html.Img(
-                        src=app.get_asset_url("logo-zbt.png"),
-                        id="zbt-image",
-                        style={  # "min-height": "60px",
-                               #"height": "auto",  # "60px",
-                               "object-fit": 'contain',
-                               'position': 'center',
-                               "width": "auto",
-                               "margin": "auto"
-                        }),
-                        id="logoContainer", className="pretty_container",
-                    style={
-                           'text-align': 'center',
-                           'height': 'auto', 'min-height': '100% !important',
-                           }),# , 'overflow': 'hidden'}),
-                    width={'size': 4}, align='center'),
-         dbc.Col(html.Div(html.H3("Fuel Cell Stack Model",
-                              style={"margin": "auto",
-                                     "min-height": "47px",
-                                     "font-weight": "bold",
-                                     "-webkit-text-shadow-width": "1px",
-                                     "-webkit-text-shadow-color": "#aabad6",
-                                     "color": "#0062af",
-                                     "font-size": "40px",
-                                         # "text-stroke": "5px 5px 5px 5px #aabad6",
-                                         # "height": "auto",  # "60px",
-                                     "width": "auto"}),
-                     className="pretty_container", id="title",
-                     style={'justify-content': 'center',
-                            }),
-                 width={'size': 8}, align='center', style={
-                           'justify-content': 'space-evenly'}),
+    [html.Div(  # HEADER
+        [html.Div(
+            html.Div(
+                html.Img(
+                    src=app.get_asset_url("logo-zbt.png"),
+                    id="zbt-image",
+                    style={"object-fit": 'contain',
+                           'position': 'center',
+                           "width": "auto",
+                           "margin": "auto"}),
+                id="logoContainer", className="pretty_container h-100",
+                style={'display': 'flex', 'justify-content': 'center',
+                       'align-items': 'center'}
+            ),# , 'overflow': 'hidden'}),
+            # width=4, align='center', style={'display': 'block'}
+            className='col-12 col-md-4 mb-2'
+        ),
+         html.Div(
+             html.Div(
+                 html.H3("Fuel Cell Stack Model",
+                         style={"margin": "auto",
+                                "min-height": "47px",
+                                "font-weight": "bold",
+                                "-webkit-text-shadow-width": "1px",
+                                "-webkit-text-shadow-color": "#aabad6",
+                                "color": "#0062af",
+                                "font-size": "40px",
+                                "width": "auto"}),
+                 className="pretty_container h-100", id="title",
+                 style={'justify-content': 'center'}),
+             # width=8, align='center',
+             style={'justify-content': 'space-evenly'},
+             className='col-12 col-md-8 mb-2'),
                            # 'overflow': 'auto', 'display': 'block'}),
              # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
              # className="eight columns",)
         ],
         id="header",
-        align='start',
-        style={'justify-content': 'center'}
+        className='row'
+        # align='start',
+        # style={'justify-content': 'center'}
     ),
 
      # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
