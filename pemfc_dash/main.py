@@ -63,12 +63,12 @@ app.layout = dbc.Container(
                            'position': 'center',
                            "width": "auto",
                            "margin": "auto"}),
-                id="logoContainer", className="pretty_container h-100",
+                id="logo-container", className="pretty_container h-100",
                 style={'display': 'flex', 'justify-content': 'center',
                        'align-items': 'center'}
             ),# , 'overflow': 'hidden'}),
             # width=4, align='center', style={'display': 'block'}
-            className='col-12 col-md-4 mb-2'
+            className='col-12 col-lg-4 mb-2'
         ),
          html.Div(
              html.Div(
@@ -80,12 +80,15 @@ app.layout = dbc.Container(
                                 "-webkit-text-shadow-color": "#aabad6",
                                 "color": "#0062af",
                                 "font-size": "40px",
-                                "width": "auto"}),
+                                "width": "auto",
+                                "text-align": "center",
+                                "vertical-align": "middle"}),
                  className="pretty_container h-100", id="title",
-                 style={'justify-content': 'center'}),
+                 style={'justify-content': 'center', 'align-items': 'center',
+                        'display': 'flex'}),
              # width=8, align='center',
              style={'justify-content': 'space-evenly'},
-             className='col-12 col-md-8 mb-2'),
+             className='col-12 col-lg-8 mb-2'),
                            # 'overflow': 'auto', 'display': 'block'}),
              # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
              # className="eight columns",)
@@ -108,8 +111,8 @@ app.layout = dbc.Container(
      # modal for any warning
      dm.modal_axes,
 
-     dbc.Row(  # MIDDLE
-         [dbc.Col(  # LEFT MIDDLE
+     html.Div(  # MIDDLE
+         [html.Div(  # LEFT MIDDLE
              [
               html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
@@ -117,7 +120,8 @@ app.layout = dbc.Container(
                           [k['title'] for k in gui_input.main_frame_dicts],
                           ids=[f'tab{num + 1}' for num in
                                range(len(gui_input.main_frame_dicts))])],
-              id='setting_container', style={'flex': '1'}),
+              id='setting_container', # style={'flex': '1'}
+              ),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
                        [html.Div(
@@ -133,7 +137,7 @@ app.layout = dbc.Container(
                             ],
                             style={
                                    'display': 'flex',
-                                    'flex-wrap': 'wrap',
+                                   'flex-wrap': 'wrap',
                                    # 'flex-direction': 'column',
                                    # 'margin': '5px',
                                    'justify-content': 'center'}
@@ -142,9 +146,9 @@ app.layout = dbc.Container(
                         dc.collapses],
                        className='neat-spacing')], style={'flex': '1'},
                   id='load_save_setting', className='pretty_container')],
-             id="left-column", width={'size': 4}, align='start'),
+             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-          dbc.Col(  # RIGHT MIDDLE
+          html.Div(  # RIGHT MIDDLE
               [
                   # html.Div(
                    html.Div(
@@ -257,12 +261,10 @@ app.layout = dbc.Container(
                  style={'display': 'flex', 'flex': '1', 'flex-direction':
                         'column', 'justify-content': 'space-evenly'}
               ),],
-              id='right-column', width={'size': 8}, align='center')],
+              id='right-column', className='col-12 col-lg-8 mb-2')],
 
-         className="flex-display",
-         style={'flex-direction': 'row',
-                # 'border': '1px solid black',
-                'justify-content': 'space-evenly'}, ),
+         className="row",
+         style={'justify-content': 'space-evenly'}, ),
      # html.Div(
      #     [],
      #     style={'position': 'relative',

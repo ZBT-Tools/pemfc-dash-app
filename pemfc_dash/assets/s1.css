@@ -564,13 +564,19 @@ there.
 
 /* Larger than tablet, for screens smaller than 768px */
 @media (max-width: 650px) {  /*550px*/
-  .flex-display {
+/*  .flex-display {
     display: block !important;
-  }
+  }*/
   .pretty_container {
     margin: 0 !important;
     margin-bottom: 25px !important;
   }
+
+  .custom-tabs-container{
+    width: fit-content(stretch);
+    flex-direction: row;
+  }
+
   #individual_graph,
   #count_graph,
   #aggregate_graph {
@@ -578,18 +584,6 @@ there.
   }
   .container-display {
     display: flex;
-  }
-  #wells,
-  #gas,
-  #oil {
-    margin-right: 10px;
-  }
-
-  #wells {
-    margin-left: 0px;
-  }
-  #water {
-    margin-right: 0px;
   }
   .mini_container {
     margin-bottom: 25px !important;
@@ -605,7 +599,7 @@ there.
 
   #zbt-image {
     margin-bottom: 0px !important;
-    height: 45px !important;
+    /*height: 45px !important;*/
     /* max-width: 100%; */
   }
   #learn-more-button {

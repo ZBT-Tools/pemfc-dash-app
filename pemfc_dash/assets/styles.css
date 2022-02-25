@@ -290,8 +290,9 @@ body {
 .custom-tabs {
   padding: 0; /*0px 24px;*/
   display: flex;
+  flex-direction: row !important;
   justify-content: space-evenly;
-  width: 100% !important;
+  /*width: 100% !important;*/
 }
 
 .custom-tab {
@@ -311,6 +312,19 @@ body {
   /*float: left;*/
   font-size:x-small;
 }
+
+.flex-container {
+  display: flex;
+  flex-direction: row !important;
+}
+
+/* Responsive layout - makes a one column layout instead of a two-column layout */
+@media (max-width: 600px) {
+  .flex-container {
+    flex-direction: column !important;
+  }
+}
+
 .custom-tab-selected {
   /*color: black;*/
   border-top-left-radius: 3px;
@@ -488,24 +502,19 @@ body {
   min-height: 170px;
 }
 
-#left-column{
+/*#left-column{
   display: flex;
   flex-direction: column;
   /*margin: auto;
   align-items: center;*/
   /*border: 1px solid green;*/
-}
+}*/
 
-/*#logoContainer {
-  /*background-color: #f9f9f9;
-  min-width: 270px;*/
-  /*border: 1px solid lightgrey;*/
-  text-align: center;
+#logo-container {
+  align-items: center !important;
   display: flex;
   justify-content: center !important;
-  /*margin: auto;*/
-  /*flex: 3;*/
-}*/
+}
 
 #tabs-content {
   min-height: 820px;

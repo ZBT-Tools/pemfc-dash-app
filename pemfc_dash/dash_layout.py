@@ -24,7 +24,8 @@ def tab_container(child, label, ids):
                  selected_className='custom-tab-selected')
          for _, (label_id, tab_id) in enumerate(zip(label, ids))],
         id='tabs', parent_className='some_container', value=ids[0],
-        className='custom-tabs')
+        className='custom-tabs flex-container'
+    )
     return tabs
 
 
