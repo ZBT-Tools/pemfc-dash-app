@@ -120,10 +120,18 @@ body {
 
 .local_data_buttons{
   margin: 1px;
+  padding: 5px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
 .settings_button{
   margin: 5px;
+  padding: 5px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
 .dropdown_input{
@@ -300,10 +308,12 @@ body {
   border-top: 0px !important;
   border-left: 0px !important;
   border-right: 0px !important;
-  border-bottom: 1px solid lightgrey;
+  border-bottom: 1px solid lightgrey !important;
   background-color: #fafbfc;
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
   /*font-family: "system-ui";*/
   align-items: center !important;
   display: flex !important;
@@ -319,7 +329,7 @@ body {
 }
 
 /* Responsive layout - makes a one column layout instead of a two-column layout */
-@media (max-width: 600px) {
+@media (max-width: 400px) {
   .flex-container {
     flex-direction: column !important;
   }
@@ -333,6 +343,7 @@ body {
   border-left: 1px solid lightgrey !important;
   border-right: 1px solid lightgrey !important;
   border-top: 3px solid #0062af !important;
+  border-bottom: 0px solid white !important;
   /*float: left;*/
 }
 .box-style {
@@ -484,12 +495,12 @@ body {
   margin-right: 0;
 }
 
-#right-column {
+/*#right-column {
   /*!*margin: auto;*/
   /*border: 1px solid green;*!*/
   display: flex;
   flex-direction: column;
-}
+}*/
 
 #activate-calc{
   display: flex;

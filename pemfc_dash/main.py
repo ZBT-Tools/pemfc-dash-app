@@ -140,7 +140,7 @@ app.layout = dbc.Container(
                                    'flex-wrap': 'wrap',
                                    # 'flex-direction': 'column',
                                    # 'margin': '5px',
-                                   'justify-content': 'center'}
+                                   'justify-content': 'space-evenly'}
                        ),
                         dcc.Download(id="savefile-json"),
                         dc.collapses],
@@ -246,23 +246,21 @@ app.layout = dbc.Container(
                                    'flex-direction': 'column',
                                    'margin-bottom': '5px'}
                            )],
-                          style={'width': '200px'}
+                           style={'width': '200px'}
                       ),
                       dcc.Store(id='cells_data'),
-                      html.Div(dcc.Graph(id='line_graph',
-                                         style={'flex': 'auto'}),
-                               style={'display': 'flex', 'flex-direction': 'row',
-                                      'width': 'calc(100% - 200px)'})
+
                     ],
                     style={'display': 'flex', 'flex-direction': 'row',
-                           'justify-content': 'space-evenly'}),
+                           'justify-content': 'left'}),
+                  dcc.Graph(id='line_graph')
+
                  ],
                  className="pretty_container",
-                 style={'display': 'flex', 'flex': '1', 'flex-direction':
+                 style={'display': 'flex', 'flex-direction':
                         'column', 'justify-content': 'space-evenly'}
               ),],
               id='right-column', className='col-12 col-lg-8 mb-2')],
-
          className="row",
          style={'justify-content': 'space-evenly'}, ),
      # html.Div(

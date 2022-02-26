@@ -532,8 +532,8 @@ there.
 */
 
 /* Larger than mobile, screen sizes larger than 400px */
-@media (min-width: 400px) {
-}
+/*@media (min-width: 400px) {
+}*/
 
 /* Larger than phablet (also point when grid becomes active), screen larger than 550px */
 @media (min-width: 550px) {
@@ -568,8 +568,8 @@ there.
     display: block !important;
   }*/
   .pretty_container {
-    margin: 0 !important;
-    margin-bottom: 25px !important;
+    /*margin: 0 !important;*/
+    /*margin-bottom: 25px !important;*/
   }
 
   .custom-tabs-container{
@@ -586,7 +586,7 @@ there.
     display: flex;
   }
   .mini_container {
-    margin-bottom: 25px !important;
+    /*margin-bottom: 25px !important;*/
     border-radius: 5px;
     background-color: #f9f9f9;
     padding: 15px;
