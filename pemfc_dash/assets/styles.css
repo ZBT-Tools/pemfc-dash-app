@@ -113,8 +113,7 @@ body {
 .val_input{
   font-size: 11px;
   margin: auto;
-  margin-left: 1px;
-  margin-right: 1px;
+  margin: 1px;
   text-align: right;
 }
 
@@ -149,6 +148,7 @@ body {
   /*padding: 1px !important;*/
   /*background-color: #FC7F66;*/
   /*border-color: #FC7F66;*/
+  color: #999 !important;
   primary-color: #0062af
 }
 
@@ -166,7 +166,7 @@ body {
 }
 
 .dropdown-toggle{
-	color: #aaa !important;
+	color: #999 !important;
 	/*height: 36px !important;*/
     height: calc(1.5em + 1.95rem) !important;
 	padding-left: 9px !important;
@@ -189,7 +189,7 @@ body {
 }
 
 .btn-primary{
-  color: #333 !important;
+  /*color: #333 !important;*/
   background-color: #fff !important;
   border-radius: 4px !important;
   border: 1px solid #ccc !important;
@@ -505,6 +505,7 @@ body {
   /*margin: auto;*/
   margin-left: 1px;
   margin-right: 1px;
+  padding-top: 10px;
 }
 /*
 .box-style{
@@ -584,8 +585,8 @@ body {
 }
 
 .row-lay{
-  margin-top: 1px;
-  margin-bottom: 1px;
+  margin-top: 0px;
+  margin-bottom: 0px;
 }
 .loading_spinner{
   width: 10rem;

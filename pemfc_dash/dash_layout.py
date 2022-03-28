@@ -379,7 +379,8 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
                 else:
                     if label == ' ':
                         inputs = \
-                            html.Div("empty", style={'visibility': 'hidden'},
+                            html.Div("empty", style={'visibility': 'hidden',
+                                                     'height': '0.75rem'},
                                      className="row-lay r_flex g-0")
                     else:
                         inputs = html.Div(

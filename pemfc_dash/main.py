@@ -285,16 +285,12 @@ app.layout = dbc.Container(
                                            style={
                                                'max-height': '400px',
                                                'overflow': 'auto'}),],
-                                # style={'background-color': '#fff',
-                                #        'border-radius': '4px',
-                                #        'border': '1px solid #ccc',
-                                #        'color': '#333'},
                                     toggle_style={
                                         'textTransform': 'none',
                                         'background': '#fff',
                                         'border': '#ccc',
                                         'letter-spacing': '0',
-                                        'font-size': '11px'
+                                        'font-size': '11px',
                                     },
                                     align_end=True,
                                     toggle_class_name='dropdown_input',
