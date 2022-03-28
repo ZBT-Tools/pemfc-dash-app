@@ -1,6 +1,7 @@
 import pathlib
 import re
-import os
+import copy
+import math
 import dash
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import dcc
@@ -165,21 +166,23 @@ app.layout = dbc.Container(
                    # className='pretty_container'),
 
                html.Div(
-                   [
+                   [html.Div('Heatmap', className='title'),
                        html.Div(
                            [html.Div(
                                dcc.Dropdown(
                                    id='results_dropdown',
-                                   placeholder='Choose Heatmap',
+                                   placeholder='Select Variable',
                                    className='dropdown_input'),
                                id='div_results_dropdown',
-                               style={'padding': '1px', 'min-width': '200px'}),
+                               # style={'padding': '1px', 'min-width': '200px'}
+                           ),
                             html.Div(
                                dcc.Dropdown(id='results_dropdown_2',
                                             className='dropdown_input',
                                             style={'visibility': 'hidden'}),
                                id='div_results_dropdown_2',
-                               style={'padding': '1px', 'min-width': '200px'})
+                               # style={'padding': '1px', 'min-width': '200px'}
+                            )
                            ],
                             # dcc.Dropdown(id='results_dropdown_2',
                             #              style={'visibility': 'hidden'},
@@ -196,42 +199,107 @@ app.layout = dbc.Container(
                    className='graph pretty_container'),
 
                html.Div(
-                 [
+                 [html.Div('Plots', className='title'),
                      html.Div(
                          [html.Div(
                              dcc.Dropdown(
                                  id='dropdown_line',
-                                 placeholder='Choose Plots',
+                                 placeholder='Select Variable',
                                  className='dropdown_input'),
                              id='div_dropdown_line',
-                             style={'padding': '1px', 'min-width': '200px'}),
+                             # style={'padding': '1px', 'min-width': '200px'}
+                         ),
                              html.Div(
                              dcc.Dropdown(id='dropdown_line2',
                                           className='dropdown_input',
                                           style={'visibility': 'hidden'}),
                              id='div_dropdown_line_2',
-                             style={'padding': '1px', 'min-width': '200px'})],
+                             # style={'padding': '1px', 'min-width': '200px'}
+                             )],
                          # dcc.Dropdown(id='results_dropdown_2',
                          #              style={'visibility': 'hidden'},
                          #              className='dropdown_input')],
                          style={'display': 'flex', 'flex-direction': 'row',
                                 'flex-wrap': 'wrap',
-                                'justify-content': 'left',
-                                'margin-bottom': '10px'},
+                                'justify-content': 'left'},
                      ),
                   html.Div(
                       [
+
+                         # dcc.Dropdown(id='data_checklist',
+                         #              className='dropdown_input',
+                         #              multi=True),
+                        # html.Div(
+                        #        dcc.Checklist(id='data_checklist',
+                        #                      style={'overflow': 'auto'},
+                        #                      inline=True)),
+                        # html.Div(
+                        #     children=dbc.DropdownMenu(id='checklist_dropdown',
+                        #         children=[
+                        #             dbc.Checklist(id='data_checklist',
+                        #                           # input_checked_class_name='checkbox',
+                        #                           style={
+                        #                               'max-height': '400px',
+                        #                               'overflow': 'auto',
+                        #                           }
+                        #                           ),
+                        #         ],
+                        #         # style={'background-color': '#fff',
+                        #         #        'border-radius': '4px',
+                        #         #        'border': '1px solid #ccc',
+                        #         #        'color': '#333'},
+                        #       toggle_style={
+                        #           'textTransform': 'none',
+                        #           'background': '#fff',
+                        #           'border': '#ccc',
+                        #           'letter-spacing': '0',
+                        #           'font-size': '11px',
+                        #           # 'padding': '1px', 'min-width': '200px'
+                        #       },
+                        #       align_end=True,
+                        #       toggle_class_name='dropdown_input',
+                        #       label="Select cells",
+                        #         # className='dropdownmenu_checklist'
+                        #     ),
+                        # ),
                       html.Div(
                           [
-                           html.Div(
-                               dcc.Checklist(id='disp_data',
-                                             style={'overflow': 'auto'}),
-                               className='display_checklist'),
+
+                           # dbc.Checklist(id='data_checklist',
+                           #               input_checked_class_name='checkbox',
+                           #                        # input_checked_style={
+                           #                        #     'backgroundColor':
+                           #                        #         'red'}
+                           #               ),
                            dcc.Store(id='disp_chosen'),
                            dcc.Store(id='disp_clicked'),
                            dcc.Store(id='append_check'),
                            html.Div(
-                               [html.Button('Clear List', id='clear_button',
+                               [html.Div(
+                                   children=dbc.DropdownMenu(
+                                    id='checklist_dropdown',
+                                    children=[
+                                       dbc.Checklist(
+                                           id='data_checklist',
+                                           # input_checked_class_name='checkbox',
+                                           style={
+                                               'max-height': '400px',
+                                               'overflow': 'auto'}),],
+                                # style={'background-color': '#fff',
+                                #        'border-radius': '4px',
+                                #        'border': '1px solid #ccc',
+                                #        'color': '#333'},
+                                    toggle_style={
+                                        'textTransform': 'none',
+                                        'background': '#fff',
+                                        'border': '#ccc',
+                                        'letter-spacing': '0',
+                                        'font-size': '11px'
+                                    },
+                                    align_end=True,
+                                    toggle_class_name='dropdown_input',
+                                    label="Select Cells"),),
+                                html.Button('Clear List', id='clear_button',
                                             className='local_data_buttons'),
                                 html.Button('Export Data to Table',
                                             id='export_b',
@@ -243,17 +311,16 @@ app.layout = dbc.Container(
                                             className='local_data_buttons')],
                                style={
                                    'display': 'flex',
-                                   'flex-direction': 'column',
+                                   'flex-direction': 'row',
                                    'margin-bottom': '5px'}
                            )],
-                           style={'width': '200px'}
+                           # style={'width': '200px'}
                       ),
                       dcc.Store(id='cells_data'),
-
-                    ],
-                    style={'display': 'flex', 'flex-direction': 'row',
+                      ],
+                    style={'display': 'flex', 'flex-direction': 'column',
                            'justify-content': 'left'}),
-                  dcc.Graph(id='line_graph')
+                    dcc.Graph(id='line_graph')
 
                  ],
                  className="pretty_container",
@@ -540,17 +607,17 @@ def dropdown_line2(dropdown_key, data):
 @app.callback(
     [Output('line_graph', 'figure'),
      Output('cells_data', 'data'),
-     Output('disp_data', 'options'),
-     Output('disp_data', 'value'),
+     Output('data_checklist', 'options'),
+     Output('data_checklist', 'value'),
      Output('disp_chosen', 'data')],
     [Input('dropdown_line', 'value'),
      Input('dropdown_line2', 'value'),
-     Input('disp_data', 'value'),
+     Input('data_checklist', 'value'),
      Input('clear_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
     [State('ret_data', 'data'),
      State('cells_data', 'data'),
-     State('disp_data', 'value'),
+     State('data_checklist', 'value'),
      State('disp_chosen', 'data')]
 )
 def update_line_graph(drop1, drop2, checklist, n_click, rdata,
@@ -582,8 +649,8 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         for num, yval in enumerate(yvalues):
             fig.add_trace(go.Scatter(x=xvalues, y=yval,
                                      mode='lines+markers',
-                                     name=f'Cell {num+1}'))
-            cells.update({num+1: {'name': f'Cell {num+1}', 'data': yval}})
+                                     name=f'Cell {num}'))
+            cells.update({num: {'name': f'Cell {num}', 'data': yval}})
 
 
         if drop2 is None:
@@ -602,10 +669,9 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                    'title': y_title},
             margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
 
-
         fig.update_layout(layout)
 
-        options = [{'label': ' ' + cells[k]['name'], 'value': cells[k]['name']}
+        options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
         val = sorted([k for k in cells])
         value = [f'Cell {num}' for num in val]
@@ -618,7 +684,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
             if state3 is None:
                 return fig, cells, options, value, check
             else:
-                if 'disp_data.value' in ctx:
+                if 'data_checklist.value' in ctx:
                     fig.for_each_trace(
                         lambda trace: trace.update(
                             visible=True) if trace.name in state3
@@ -633,12 +699,12 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
                     if len(read) == 1:
                         if isinstance(read[0], str):  # lose (legendonly)
-                            if f'Cell {read_num+1}' not in check:
-                                check.append(f'Cell {read_num+1}')
+                            if f'Cell {read_num}' not in check:
+                                check.append(f'Cell {read_num}')
                         else:  # isinstance(read, bool): #add (True)
                             try:
-                                if 'Cell {}'.format(read_num + 1) in check:
-                                    check.remove('Cell {}'.format(read_num + 1))
+                                if 'Cell {}'.format(read_num) in check:
+                                    check.remove('Cell {}'.format(read_num))
                             except ValueError:
                                 pass
                         [value.remove(val) for val in check if val in value]
@@ -649,7 +715,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
                         return fig, cells, options, value, check
                     else:
-                        check_new = [f'Cell {x[0]+1}' for x in enumerate(read)
+                        check_new = [f'Cell {x[0]}' for x in enumerate(read)
                                      if x[1] == 'legendonly']
                         [value.remove(che) for che in check_new
                          if che in value]
@@ -668,7 +734,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Output('table', 'data'),
      Output('table', 'export_format'),
      Output('append_check', 'data')],
-    [Input('disp_data', 'value'),  # from display
+    [Input('data_checklist', 'value'),  # from display
      Input('cells_data', 'data'),  # from line graph
      Input('disp_chosen', 'data'),  # from line graph (but only the val of cell)
      Input('export_b', 'n_clicks'),  # button1
@@ -750,7 +816,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
     [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value'),
      Input('ret_data', 'data')],
 )
-def update_graph(dropdown_key, dropdown_key_2, data):
+def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
     if dropdown_key is None:
         raise PreventUpdate
     else:
@@ -761,15 +827,18 @@ def update_graph(dropdown_key, dropdown_key_2, data):
         xvalues = ip.interpolate_1d(local_data[x_key]['value'])
         yvalues = local_data[y_key]['value']
 
+        n_y = len(yvalues)
+        n_x = len(xvalues)
+
         if dropdown_key is None:
-            zvalues = np.zeros((len(xvalues), len(yvalues)))
+            zvalues = np.zeros((n_x, n_y))
         else:
             if 'value' in local_data[dropdown_key]:
                 zvalues = local_data[dropdown_key]['value']
             elif dropdown_key_2 is not None:
                 zvalues = local_data[dropdown_key][dropdown_key_2]['value']
             else:
-                zvalues = np.zeros((len(xvalues), len(yvalues)))
+                zvalues = np.zeros((n_x, n_y))
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
@@ -779,15 +848,53 @@ def update_graph(dropdown_key, dropdown_key_2, data):
             z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
 
+        if n_y <= 20:
+            height = 300
+        elif 20 < n_y <= 100:
+            height = 300 + n_y * 10.0
+        else:
+            height = 1300
+
+        base_axis_dict = \
+            {'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+             'title': x_key + ' / ' + local_data[x_key]['units'],
+             'tickmode': 'array', 'showgrid': True}
+
+        x_axis_dict = copy.deepcopy(base_axis_dict)
+        x_axis_dict['title'] = x_key + ' / ' + local_data[x_key]['units']
+        x_axis_dict['tickvals'] = local_data[x_key]['value']
+
+        if n_y <= 100:
+            y_tick_labels = [str(i) for i in range(n_y)]
+        elif 100 < n_y <= 200:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 2):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+        elif 200 < n_y <= 500:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 5):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+        else:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 10):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+
+        y_axis_dict = copy.deepcopy(base_axis_dict)
+        y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
+        y_axis_dict['tickvals'] = yvalues
+        y_axis_dict['ticktext'] = y_tick_labels
+
         layout = go.Layout(
             font={'color': 'black', 'family': 'Arial'},
             # title='Local Results in Heat Map',
             titlefont={'size': 11, 'color': 'black'},
-            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': x_key + ' / ' + local_data[x_key]['units']},
-            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': y_key + ' / ' + local_data[y_key]['units']},
-            margin={'l': 75, 'r': 20, 't': 20, 'b': 20})
+            xaxis=x_axis_dict,
+            yaxis=y_axis_dict,
+            margin={'l': 75, 'r': 20, 't': 20, 'b': 20},
+            height=height)
 
         heatmap = go.Heatmap(z=zvalues, x=xvalues, y=yvalues, xgap=1, ygap=1,
                              colorbar={'tickfont': {'size': 11},
@@ -797,9 +904,6 @@ def update_graph(dropdown_key, dropdown_key_2, data):
 
         fig = go.Figure(data=heatmap, layout=layout)
 
-        fig.update_xaxes(showgrid=True, tickmode='array',
-                         tickvals=local_data[x_key]['value'])
-        fig.update_yaxes(showgrid=True, tickmode='array', tickvals=yvalues)
     return fig
 
 
