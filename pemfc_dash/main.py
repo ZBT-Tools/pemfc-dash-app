@@ -52,7 +52,7 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
-app.layout = dbc.Container(
+app.layout = html.Div(
     [dbc.Row(  # HEADER
         [dbc.Col(
             html.Div(
@@ -276,7 +276,7 @@ app.layout = dbc.Container(
     ],
     id="mainContainer",
     # className='twelve columns',
-    fluid=True,
+    # fluid=True,
     style={'padding': '0px'})
 
 

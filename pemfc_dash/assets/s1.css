@@ -48,8 +48,8 @@
 .columns {
   width: 100%;
   float: left;
-  display: flex;
   box-sizing: border-box;
+  display: flex;
 }
 
 /* For devices larger than 400px */
@@ -65,6 +65,7 @@
   .container {
     width: 80%;
   }
+
   .column,
   .columns {
     margin-left: 4%;
