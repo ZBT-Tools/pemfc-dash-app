@@ -1,6 +1,7 @@
 import pathlib
 import re
-import os
+import copy
+import math
 import dash
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import dcc
@@ -52,48 +53,52 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
-app.layout = html.Div(
-    [dbc.Row(  # HEADER
-        [dbc.Col(
+app.layout = dbc.Container(
+    [html.Div(  # HEADER
+        [html.Div(
             html.Div(
                 html.Img(
                     src=app.get_asset_url("logo-zbt.png"),
                     id="zbt-image",
-                    style={  # "min-height": "60px",
-                        #"height": "auto",  # "60px",
-                        "object-fit": 'contain',
-                        'position': 'center',
-                        "width": "auto",
-                        "margin": "auto"
-                        }),
-                id="logo_container", className="pretty_container",
-                style={'justify-content': 'center', 'align-items': 'center',
-                       # 'display': 'flex'
-                       }),
-            width={'size': 4}, align='start',
-            # style={'justify-content': 'center'}
+                    style={"object-fit": 'contain',
+                           'position': 'center',
+                           "width": "auto",
+                           "margin": "auto"}),
+                id="logo-container", className="pretty_container h-100",
+                style={'display': 'flex', 'justify-content': 'center',
+                       'align-items': 'center'}
+            ),# , 'overflow': 'hidden'}),
+            # width=4, align='center', style={'display': 'block'}
+            className='col-12 col-lg-4 mb-2'
         ),
-         dbc.Col(html.Div(html.H3("Fuel Cell Stack Model",
-                                  style={
-                                      "margin": "auto",
-                                      "font-weight": "bold",
-                                      "-webkit-text-shadow-width": "1px",
-                                      "-webkit-text-shadow-color": "#aabad6",
-                                      "color": "#0062af",
-                                      "font-size": "40px",
-                                      "text-align": "center",
-                                      "width": "auto"}),
-                          className="pretty_container", id="title",
-                          style={'justify-content': 'center',
-                                 'align-items': 'center'}),
-                 width={'size': 8}, align='start',
+         html.Div(
+             html.Div(
+                 html.H3("Fuel Cell Stack Model",
+                         style={"margin": "auto",
+                                "min-height": "47px",
+                                "font-weight": "bold",
+                                "-webkit-text-shadow-width": "1px",
+                                "-webkit-text-shadow-color": "#aabad6",
+                                "color": "#0062af",
+                                "font-size": "40px",
+                                "width": "auto",
+                                "text-align": "center",
+                                "vertical-align": "middle"}),
+                 className="pretty_container h-100", id="title",
                  style={'justify-content': 'center', 'align-items': 'center',
-                        # 'display': 'flex'
-                        }
-                 )],
-        id='header',
-        align='start',
-        style={'justify-content': 'center', 'overflow': 'hidden'}),
+                        'display': 'flex'}),
+             # width=8, align='center',
+             style={'justify-content': 'space-evenly'},
+             className='col-12 col-lg-8 mb-2'),
+                           # 'overflow': 'auto', 'display': 'block'}),
+             # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
+             # className="eight columns",)
+        ],
+        id="header",
+        className='row'
+        # align='start',
+        # style={'justify-content': 'center'}
+    ),
 
      # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
      #             style={"backgroundColor": "transparent"}, type='circle',
@@ -107,8 +112,8 @@ app.layout = html.Div(
      # modal for any warning
      dm.modal_axes,
 
-     dbc.Row(  # MIDDLE
-         [dbc.Col(  # LEFT MIDDLE
+     html.Div(  # MIDDLE
+         [html.Div(  # LEFT MIDDLE
              [
               html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
@@ -116,7 +121,8 @@ app.layout = html.Div(
                           [k['title'] for k in gui_input.main_frame_dicts],
                           ids=[f'tab{num + 1}' for num in
                                range(len(gui_input.main_frame_dicts))])],
-              id='setting_container', style={'flex': '1'}),
+              id='setting_container', # style={'flex': '1'}
+              ),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
                        [html.Div(
@@ -132,18 +138,18 @@ app.layout = html.Div(
                             ],
                             style={
                                    'display': 'flex',
-                                    'flex-wrap': 'wrap',
+                                   'flex-wrap': 'wrap',
                                    # 'flex-direction': 'column',
                                    # 'margin': '5px',
-                                   'justify-content': 'center'}
+                                   'justify-content': 'space-evenly'}
                        ),
                         dcc.Download(id="savefile-json"),
                         dc.collapses],
                        className='neat-spacing')], style={'flex': '1'},
                   id='load_save_setting', className='pretty_container')],
-             id="left-column", width={'size': 4}, align='start'),
+             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-          dbc.Col(  # RIGHT MIDDLE
+          html.Div(  # RIGHT MIDDLE
               [
                   # html.Div(
                    html.Div(
@@ -160,21 +166,23 @@ app.layout = html.Div(
                    # className='pretty_container'),
 
                html.Div(
-                   [
+                   [html.Div('Heatmap', className='title'),
                        html.Div(
                            [html.Div(
                                dcc.Dropdown(
                                    id='results_dropdown',
-                                   placeholder='Choose Heatmap',
+                                   placeholder='Select Variable',
                                    className='dropdown_input'),
                                id='div_results_dropdown',
-                               style={'padding': '1px', 'min-width': '200px'}),
+                               # style={'padding': '1px', 'min-width': '200px'}
+                           ),
                             html.Div(
                                dcc.Dropdown(id='results_dropdown_2',
                                             className='dropdown_input',
                                             style={'visibility': 'hidden'}),
                                id='div_results_dropdown_2',
-                               style={'padding': '1px', 'min-width': '200px'})
+                               # style={'padding': '1px', 'min-width': '200px'}
+                            )
                            ],
                             # dcc.Dropdown(id='results_dropdown_2',
                             #              style={'visibility': 'hidden'},
@@ -191,42 +199,103 @@ app.layout = html.Div(
                    className='graph pretty_container'),
 
                html.Div(
-                 [
+                 [html.Div('Plots', className='title'),
                      html.Div(
                          [html.Div(
                              dcc.Dropdown(
                                  id='dropdown_line',
-                                 placeholder='Choose Plots',
+                                 placeholder='Select Variable',
                                  className='dropdown_input'),
                              id='div_dropdown_line',
-                             style={'padding': '1px', 'min-width': '200px'}),
+                             # style={'padding': '1px', 'min-width': '200px'}
+                         ),
                              html.Div(
                              dcc.Dropdown(id='dropdown_line2',
                                           className='dropdown_input',
                                           style={'visibility': 'hidden'}),
                              id='div_dropdown_line_2',
-                             style={'padding': '1px', 'min-width': '200px'})],
+                             # style={'padding': '1px', 'min-width': '200px'}
+                             )],
                          # dcc.Dropdown(id='results_dropdown_2',
                          #              style={'visibility': 'hidden'},
                          #              className='dropdown_input')],
                          style={'display': 'flex', 'flex-direction': 'row',
                                 'flex-wrap': 'wrap',
-                                'justify-content': 'left',
-                                'margin-bottom': '10px'},
+                                'justify-content': 'left'},
                      ),
                   html.Div(
                       [
+
+                         # dcc.Dropdown(id='data_checklist',
+                         #              className='dropdown_input',
+                         #              multi=True),
+                        # html.Div(
+                        #        dcc.Checklist(id='data_checklist',
+                        #                      style={'overflow': 'auto'},
+                        #                      inline=True)),
+                        # html.Div(
+                        #     children=dbc.DropdownMenu(id='checklist_dropdown',
+                        #         children=[
+                        #             dbc.Checklist(id='data_checklist',
+                        #                           # input_checked_class_name='checkbox',
+                        #                           style={
+                        #                               'max-height': '400px',
+                        #                               'overflow': 'auto',
+                        #                           }
+                        #                           ),
+                        #         ],
+                        #         # style={'background-color': '#fff',
+                        #         #        'border-radius': '4px',
+                        #         #        'border': '1px solid #ccc',
+                        #         #        'color': '#333'},
+                        #       toggle_style={
+                        #           'textTransform': 'none',
+                        #           'background': '#fff',
+                        #           'border': '#ccc',
+                        #           'letter-spacing': '0',
+                        #           'font-size': '11px',
+                        #           # 'padding': '1px', 'min-width': '200px'
+                        #       },
+                        #       align_end=True,
+                        #       toggle_class_name='dropdown_input',
+                        #       label="Select cells",
+                        #         # className='dropdownmenu_checklist'
+                        #     ),
+                        # ),
                       html.Div(
                           [
-                           html.Div(
-                               dcc.Checklist(id='disp_data',
-                                             style={'overflow': 'auto'}),
-                               className='display_checklist'),
+
+                           # dbc.Checklist(id='data_checklist',
+                           #               input_checked_class_name='checkbox',
+                           #                        # input_checked_style={
+                           #                        #     'backgroundColor':
+                           #                        #         'red'}
+                           #               ),
                            dcc.Store(id='disp_chosen'),
                            dcc.Store(id='disp_clicked'),
                            dcc.Store(id='append_check'),
                            html.Div(
-                               [html.Button('Clear List', id='clear_button',
+                               [html.Div(
+                                   children=dbc.DropdownMenu(
+                                    id='checklist_dropdown',
+                                    children=[
+                                       dbc.Checklist(
+                                           id='data_checklist',
+                                           # input_checked_class_name='checkbox',
+                                           style={
+                                               'max-height': '400px',
+                                               'overflow': 'auto'}),],
+                                    toggle_style={
+                                        'textTransform': 'none',
+                                        'background': '#fff',
+                                        'border': '#ccc',
+                                        'letter-spacing': '0',
+                                        'font-size': '11px',
+                                    },
+                                    align_end=True,
+                                    toggle_class_name='dropdown_input',
+                                    label="Select Cells"),),
+                                html.Button('Clear List', id='clear_button',
                                             className='local_data_buttons'),
                                 html.Button('Export Data to Table',
                                             id='export_b',
@@ -238,30 +307,25 @@ app.layout = html.Div(
                                             className='local_data_buttons')],
                                style={
                                    'display': 'flex',
-                                   'flex-direction': 'column',
+                                   'flex-direction': 'row',
                                    'margin-bottom': '5px'}
                            )],
-                          style={'width': '200px'}
+                           # style={'width': '200px'}
                       ),
                       dcc.Store(id='cells_data'),
-                      html.Div(dcc.Graph(id='line_graph',
-                                         style={'flex': 'auto'}),
-                               style={'display': 'flex', 'flex-direction': 'row',
-                                      'width': 'calc(100% - 200px)'})
-                    ],
-                    style={'display': 'flex', 'flex-direction': 'row',
-                           'justify-content': 'space-evenly'}),
+                      ],
+                    style={'display': 'flex', 'flex-direction': 'column',
+                           'justify-content': 'left'}),
+                    dcc.Graph(id='line_graph')
+
                  ],
                  className="pretty_container",
-                 style={'display': 'flex', 'flex': '1', 'flex-direction':
+                 style={'display': 'flex', 'flex-direction':
                         'column', 'justify-content': 'space-evenly'}
               ),],
-              id='right-column', width={'size': 8}, align='center')],
-
-         className="flex-display",
-         style={'flex-direction': 'row',
-                # 'border': '1px solid black',
-                'justify-content': 'space-evenly'}, ),
+              id='right-column', className='col-12 col-lg-8 mb-2')],
+         className="row",
+         style={'justify-content': 'space-evenly'}, ),
      # html.Div(
      #     [],
      #     style={'position': 'relative',
@@ -276,7 +340,7 @@ app.layout = html.Div(
     ],
     id="mainContainer",
     # className='twelve columns',
-    # fluid=True,
+    fluid=True,
     style={'padding': '0px'})
 
 
@@ -539,17 +603,17 @@ def dropdown_line2(dropdown_key, data):
 @app.callback(
     [Output('line_graph', 'figure'),
      Output('cells_data', 'data'),
-     Output('disp_data', 'options'),
-     Output('disp_data', 'value'),
+     Output('data_checklist', 'options'),
+     Output('data_checklist', 'value'),
      Output('disp_chosen', 'data')],
     [Input('dropdown_line', 'value'),
      Input('dropdown_line2', 'value'),
-     Input('disp_data', 'value'),
+     Input('data_checklist', 'value'),
      Input('clear_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
     [State('ret_data', 'data'),
      State('cells_data', 'data'),
-     State('disp_data', 'value'),
+     State('data_checklist', 'value'),
      State('disp_chosen', 'data')]
 )
 def update_line_graph(drop1, drop2, checklist, n_click, rdata,
@@ -581,11 +645,12 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         for num, yval in enumerate(yvalues):
             fig.add_trace(go.Scatter(x=xvalues, y=yval,
                                      mode='lines+markers',
-                                     name=f'Cell {num+1}'))
-            cells.update({num+1: {'name': f'Cell {num+1}', 'data': yval}})
+                                     name=f'Cell {num}'))
+            cells.update({num: {'name': f'Cell {num}', 'data': yval}})
+
 
         if drop2 is None:
-            y_title = drop1 + ' / ' + local_data[drop1]['units']
+            y_title = drop1 +  ' / ' + local_data[drop1]['units']
         else:
             y_title = drop1 + ' - ' + drop2 + ' / ' \
                        + local_data[drop1][drop2]['units']
@@ -602,7 +667,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
         fig.update_layout(layout)
 
-        options = [{'label': ' ' + cells[k]['name'], 'value': cells[k]['name']}
+        options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
         val = sorted([k for k in cells])
         value = [f'Cell {num}' for num in val]
@@ -615,7 +680,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
             if state3 is None:
                 return fig, cells, options, value, check
             else:
-                if 'disp_data.value' in ctx:
+                if 'data_checklist.value' in ctx:
                     fig.for_each_trace(
                         lambda trace: trace.update(
                             visible=True) if trace.name in state3
@@ -630,12 +695,12 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
                     if len(read) == 1:
                         if isinstance(read[0], str):  # lose (legendonly)
-                            if f'Cell {read_num+1}' not in check:
-                                check.append(f'Cell {read_num+1}')
+                            if f'Cell {read_num}' not in check:
+                                check.append(f'Cell {read_num}')
                         else:  # isinstance(read, bool): #add (True)
                             try:
-                                if 'Cell {}'.format(read_num + 1) in check:
-                                    check.remove('Cell {}'.format(read_num + 1))
+                                if 'Cell {}'.format(read_num) in check:
+                                    check.remove('Cell {}'.format(read_num))
                             except ValueError:
                                 pass
                         [value.remove(val) for val in check if val in value]
@@ -646,7 +711,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
                         return fig, cells, options, value, check
                     else:
-                        check_new = [f'Cell {x[0]+1}' for x in enumerate(read)
+                        check_new = [f'Cell {x[0]}' for x in enumerate(read)
                                      if x[1] == 'legendonly']
                         [value.remove(che) for che in check_new
                          if che in value]
@@ -665,7 +730,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Output('table', 'data'),
      Output('table', 'export_format'),
      Output('append_check', 'data')],
-    [Input('disp_data', 'value'),  # from display
+    [Input('data_checklist', 'value'),  # from display
      Input('cells_data', 'data'),  # from line graph
      Input('disp_chosen', 'data'),  # from line graph (but only the val of cell)
      Input('export_b', 'n_clicks'),  # button1
@@ -747,7 +812,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
     [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value'),
      Input('ret_data', 'data')],
 )
-def update_graph(dropdown_key, dropdown_key_2, data):
+def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
     if dropdown_key is None:
         raise PreventUpdate
     else:
@@ -758,15 +823,18 @@ def update_graph(dropdown_key, dropdown_key_2, data):
         xvalues = ip.interpolate_1d(local_data[x_key]['value'])
         yvalues = local_data[y_key]['value']
 
+        n_y = len(yvalues)
+        n_x = len(xvalues)
+
         if dropdown_key is None:
-            zvalues = np.zeros((len(xvalues), len(yvalues)))
+            zvalues = np.zeros((n_x, n_y))
         else:
             if 'value' in local_data[dropdown_key]:
                 zvalues = local_data[dropdown_key]['value']
             elif dropdown_key_2 is not None:
                 zvalues = local_data[dropdown_key][dropdown_key_2]['value']
             else:
-                zvalues = np.zeros((len(xvalues), len(yvalues)))
+                zvalues = np.zeros((n_x, n_y))
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
@@ -776,15 +844,53 @@ def update_graph(dropdown_key, dropdown_key_2, data):
             z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
 
+        if n_y <= 20:
+            height = 300
+        elif 20 < n_y <= 100:
+            height = 300 + n_y * 10.0
+        else:
+            height = 1300
+
+        base_axis_dict = \
+            {'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+             'title': x_key + ' / ' + local_data[x_key]['units'],
+             'tickmode': 'array', 'showgrid': True}
+
+        x_axis_dict = copy.deepcopy(base_axis_dict)
+        x_axis_dict['title'] = x_key + ' / ' + local_data[x_key]['units']
+        x_axis_dict['tickvals'] = local_data[x_key]['value']
+
+        if n_y <= 100:
+            y_tick_labels = [str(i) for i in range(n_y)]
+        elif 100 < n_y <= 200:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 2):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+        elif 200 < n_y <= 500:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 5):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+        else:
+            y_tick_labels = [' ' for i in range(n_y)]
+            for i in range(0, n_y, 10):
+                y_tick_labels[i] = str(i)
+            y_tick_labels[-1] = str(n_y-1)
+
+        y_axis_dict = copy.deepcopy(base_axis_dict)
+        y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
+        y_axis_dict['tickvals'] = yvalues
+        y_axis_dict['ticktext'] = y_tick_labels
+
         layout = go.Layout(
             font={'color': 'black', 'family': 'Arial'},
             # title='Local Results in Heat Map',
             titlefont={'size': 11, 'color': 'black'},
-            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': x_key + ' / ' + local_data[x_key]['units']},
-            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': y_key + ' / ' + local_data[y_key]['units']},
-            margin={'l': 75, 'r': 20, 't': 20, 'b': 20})
+            xaxis=x_axis_dict,
+            yaxis=y_axis_dict,
+            margin={'l': 75, 'r': 20, 't': 20, 'b': 20},
+            height=height)
 
         heatmap = go.Heatmap(z=zvalues, x=xvalues, y=yvalues, xgap=1, ygap=1,
                              colorbar={'tickfont': {'size': 11},
@@ -794,9 +900,6 @@ def update_graph(dropdown_key, dropdown_key_2, data):
 
         fig = go.Figure(data=heatmap, layout=layout)
 
-        fig.update_xaxes(showgrid=True, tickmode='array',
-                         tickvals=local_data[x_key]['value'])
-        fig.update_yaxes(showgrid=True, tickmode='array', tickvals=yvalues)
     return fig
 
 
