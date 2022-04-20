@@ -44,8 +44,8 @@ server = app.server
 # Setup caching
 CACHE_CONFIG = {
     "DEBUG": True,          # some Flask specific configs
-    "CACHE_TYPE": "simple",  # Flask-Caching related configs
-    "CACHE_DEFAULT_TIMEOUT": 300
+    "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
+    "CACHE_DEFAULT_TIMEOUT": 1000
 }
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
@@ -114,8 +114,7 @@ app.layout = dbc.Container(
 
      html.Div(  # MIDDLE
          [html.Div(  # LEFT MIDDLE
-             [
-              html.Div(  # LEFT MIDDLE MIDDLE
+             [html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
                           tabs_list, label=
                           [k['title'] for k in gui_input.main_frame_dicts],
@@ -150,9 +149,7 @@ app.layout = dbc.Container(
              id="left-column", className='col-12 col-lg-4 mb-2'),
 
           html.Div(  # RIGHT MIDDLE
-              [
-                  # html.Div(
-                   html.Div(
+              [html.Div(
                         [html.Div('Global Results', className='title'),
                             dt.DataTable(id='global_data_table',
                                      editable=True,
@@ -192,8 +189,10 @@ app.layout = dbc.Container(
                                   'flex-wrap': 'wrap',
                                   'justify-content': 'left'},
                        ),
-                  # RIGHT MIDDLE BOTTOM
-                       dcc.Graph(id="heatmap_graph")
+                    # RIGHT MIDDLE BOTTOM
+                    dbc.Spinner(dcc.Graph(id="heatmap_graph"),
+                                spinner_class_name='loading_spinner',
+                                fullscreen_class_name='loading_spinner_bg'),
                    ],
                    id='heatmap_container',
                    className='graph pretty_container'),
@@ -284,7 +283,7 @@ app.layout = dbc.Container(
                                            # input_checked_class_name='checkbox',
                                            style={
                                                'max-height': '400px',
-                                               'overflow': 'auto'}),],
+                                               'overflow': 'auto'})],
                                     toggle_style={
                                         'textTransform': 'none',
                                         'background': '#fff',
@@ -312,20 +311,19 @@ app.layout = dbc.Container(
                            )],
                            # style={'width': '200px'}
                       ),
-                      dcc.Store(id='cells_data'),
-                      ],
-                    style={'display': 'flex', 'flex-direction': 'column',
-                           'justify-content': 'left'}),
-                    dcc.Graph(id='line_graph')
-
-                 ],
+                      dcc.Store(id='cells_data')],
+                  style={'display': 'flex', 'flex-direction': 'column',
+                         'justify-content': 'left'}),
+                  dbc.Spinner(dcc.Graph(id='line_graph'),
+                              spinner_class_name='loading_spinner',
+                              fullscreen_class_name='loading_spinner_bg')],
                  className="pretty_container",
                  style={'display': 'flex', 'flex-direction':
                         'column', 'justify-content': 'space-evenly'}
-              ),],
+              )],
               id='right-column', className='col-12 col-lg-8 mb-2')],
          className="row",
-         style={'justify-content': 'space-evenly'}, ),
+         style={'justify-content': 'space-evenly'}),
      # html.Div(
      #     [],
      #     style={'position': 'relative',
@@ -648,9 +646,8 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                                      name=f'Cell {num}'))
             cells.update({num: {'name': f'Cell {num}', 'data': yval}})
 
-
         if drop2 is None:
-            y_title = drop1 +  ' / ' + local_data[drop1]['units']
+            y_title = drop1 + ' / ' + local_data[drop1]['units']
         else:
             y_title = drop1 + ' - ' + drop2 + ' / ' \
                        + local_data[drop1][drop2]['units']

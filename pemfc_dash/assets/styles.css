@@ -1,6 +1,6 @@
 .js-plotly-plot .plotly .modebar {
-  padding-top: 5%;
-  margin-right: 3.5%;
+  padding-top: 0%;
+  margin-right: 10%;
 }
 
 body {
@@ -148,7 +148,7 @@ body {
   /*padding: 1px !important;*/
   /*background-color: #FC7F66;*/
   /*border-color: #FC7F66;*/
-  color: #999 !important;
+  /*color: #999 !important;*/
   primary-color: #0062af
 }
 
@@ -595,7 +595,7 @@ body {
 }
 .loading_spinner_bg{
   opacity: 0.5;
-  color: lightgrey;
+  /*color: lightgrey;*/
 }
 
 .c_flex{
