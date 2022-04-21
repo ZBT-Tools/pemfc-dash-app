@@ -31,7 +31,6 @@ import pemfc_gui.input as gui_input
 import json
 
 import collections
-
 tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
              tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
@@ -44,9 +43,9 @@ server = app.server
 
 # Setup caching
 CACHE_CONFIG = {
-    "DEBUG": True,  # some Flask specific configs
-    "CACHE_TYPE": "simple",  # Flask-Caching related configs
-    "CACHE_DEFAULT_TIMEOUT": 300
+    "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
+    'CACHE_DIR': 'cache_dir',
+    "CACHE_DEFAULT_TIMEOUT": 3600
 }
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
@@ -68,32 +67,32 @@ app.layout = dbc.Container(
                 id="logo-container", className="pretty_container h-100",
                 style={'display': 'flex', 'justify-content': 'center',
                        'align-items': 'center'}
-            ),  # , 'overflow': 'hidden'}),
+            ),# , 'overflow': 'hidden'}),
             # width=4, align='center', style={'display': 'block'}
             className='col-12 col-lg-4 mb-2'
         ),
-            html.Div(
-                html.Div(
-                    html.H3("Fuel Cell Stack Model",
-                            style={"margin": "auto",
-                                   "min-height": "47px",
-                                   "font-weight": "bold",
-                                   "-webkit-text-shadow-width": "1px",
-                                   "-webkit-text-shadow-color": "#aabad6",
-                                   "color": "#0062af",
-                                   "font-size": "40px",
-                                   "width": "auto",
-                                   "text-align": "center",
-                                   "vertical-align": "middle"}),
-                    className="pretty_container h-100", id="title",
-                    style={'justify-content': 'center', 'align-items': 'center',
-                           'display': 'flex'}),
-                # width=8, align='center',
-                style={'justify-content': 'space-evenly'},
-                className='col-12 col-lg-8 mb-2'),
-            # 'overflow': 'auto', 'display': 'block'}),
-            # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
-            # className="eight columns",)
+         html.Div(
+             html.Div(
+                 html.H3("Fuel Cell Stack Model",
+                         style={"margin": "auto",
+                                "min-height": "47px",
+                                "font-weight": "bold",
+                                "-webkit-text-shadow-width": "1px",
+                                "-webkit-text-shadow-color": "#aabad6",
+                                "color": "#0062af",
+                                "font-size": "40px",
+                                "width": "auto",
+                                "text-align": "center",
+                                "vertical-align": "middle"}),
+                 className="pretty_container h-100", id="title",
+                 style={'justify-content': 'center', 'align-items': 'center',
+                        'display': 'flex'}),
+             # width=8, align='center',
+             style={'justify-content': 'space-evenly'},
+             className='col-12 col-lg-8 mb-2'),
+                           # 'overflow': 'auto', 'display': 'block'}),
+             # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
+             # className="eight columns",)
         ],
         id="header",
         className='row'
@@ -101,251 +100,241 @@ app.layout = dbc.Container(
         # style={'justify-content': 'center'}
     ),
 
-        # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
-        #             style={"backgroundColor": "transparent"}, type='circle',
-        #             color="#0a60c2"),
-        dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
-                    spinner_class_name='loading_spinner',
-                    fullscreen_class_name='loading_spinner_bg'),
+     # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
+     #             style={"backgroundColor": "transparent"}, type='circle',
+     #             color="#0a60c2"),
+     dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
+                 spinner_class_name='loading_spinner',
+                 fullscreen_class_name='loading_spinner_bg'),
         # color="#0a60c2"),
-        # empty Div to trigger javascript file for graph resizing
-        html.Div(id="output-clientside"),
-        # modal for any warning
-        dm.modal_axes,
+     # empty Div to trigger javascript file for graph resizing
+     html.Div(id="output-clientside"),
+     # modal for any warning
+     dm.modal_axes,
 
-        html.Div(  # MIDDLE
-            [html.Div(  # LEFT MIDDLE
-                [
-                    html.Div(  # LEFT MIDDLE MIDDLE
-                        [dl.tab_container(
-                            tabs_list, label=
-                            [k['title'] for k in gui_input.main_frame_dicts],
-                            ids=[f'tab{num + 1}' for num in
-                                 range(len(gui_input.main_frame_dicts))])],
-                        id='setting_container',  # style={'flex': '1'}
-                    ),
-                    html.Div(  # LEFT MIDDLE BOTTOM
-                        [html.Div(
-                            [html.Div(
-                                [html.Button('Load Settings', id='load-button',
-                                             className='settings_button',
-                                             style={'display': 'flex'}),
-                                 html.Button('Save Settings', id='save-button',
-                                             className='settings_button',
-                                             style={'display': 'flex'}),
-                                 html.Button('Run Simulation', id='run_button',
-                                             className='settings_button',
-                                             style={'display': 'flex'})
-                                 ],
-                                style={
-                                    'display': 'flex',
-                                    'flex-wrap': 'wrap',
-                                    # 'flex-direction': 'column',
-                                    # 'margin': '5px',
-                                    'justify-content': 'space-evenly'}
-                            ),
-                                dcc.Download(id="savefile-json"),
-                                dc.collapses],
-                            className='neat-spacing')], style={'flex': '1'},
-                        id='load_save_setting', className='pretty_container')],
-                id="left-column", className='col-12 col-lg-4 mb-2'),
+     html.Div(  # MIDDLE
+         [html.Div(  # LEFT MIDDLE
+             [html.Div(  # LEFT MIDDLE MIDDLE
+                  [dl.tab_container(
+                          tabs_list, label=
+                          [k['title'] for k in gui_input.main_frame_dicts],
+                          ids=[f'tab{num + 1}' for num in
+                               range(len(gui_input.main_frame_dicts))])],
+              id='setting_container', # style={'flex': '1'}
+              ),
+              html.Div(   # LEFT MIDDLE BOTTOM
+                  [html.Div(
+                       [html.Div(
+                           [html.Button('Load Settings', id='load-button',
+                                        className='settings_button',
+                                        style={'display': 'flex'}),
+                            html.Button('Save Settings', id='save-button',
+                                        className='settings_button',
+                                        style={'display': 'flex'}),
+                            html.Button('Run Simulation', id='run_button',
+                                        className='settings_button',
+                                        style={'display': 'flex'})
+                            ],
+                            style={
+                                   'display': 'flex',
+                                   'flex-wrap': 'wrap',
+                                   # 'flex-direction': 'column',
+                                   # 'margin': '5px',
+                                   'justify-content': 'space-evenly'}
+                       ),
+                        dcc.Download(id="savefile-json"),
+                        dc.collapses],
+                       className='neat-spacing')], style={'flex': '1'},
+                  id='load_save_setting', className='pretty_container')],
+             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-                html.Div(  # RIGHT MIDDLE
-                    [
+          html.Div(  # RIGHT MIDDLE
+              [html.Div(
+                        [html.Div('Global Results', className='title'),
+                            dt.DataTable(id='global_data_table',
+                                     editable=True,
+                                     column_selectable='multi')],
+                   #               id='sub_div_global_table',
+                   #               className='pretty_container'),
+                   #      columns=[{'filter_options': 'sensitive'}]
+                        id='div_global_table',
+                        className='pretty_container', style={'overflow': 'auto'}),
+                   # id='div_global_table',  # style={'overflow': 'auto'},
+                   # className='pretty_container'),
+
+               html.Div(
+                   [html.Div('Heatmap', className='title'),
+                       html.Div(
+                           [html.Div(
+                               dcc.Dropdown(
+                                   id='results_dropdown',
+                                   placeholder='Select Variable',
+                                   className='dropdown_input'),
+                               id='div_results_dropdown',
+                               # style={'padding': '1px', 'min-width': '200px'}
+                           ),
+                            html.Div(
+                               dcc.Dropdown(id='results_dropdown_2',
+                                            className='dropdown_input',
+                                            style={'visibility': 'hidden'}),
+                               id='div_results_dropdown_2',
+                               # style={'padding': '1px', 'min-width': '200px'}
+                            )
+                           ],
+                            # dcc.Dropdown(id='results_dropdown_2',
+                            #              style={'visibility': 'hidden'},
+                            #              className='dropdown_input')],
+                           style={'display': 'flex',
+                                  'flex-direction': 'row',
+                                  'flex-wrap': 'wrap',
+                                  'justify-content': 'left'},
+                       ),
+                    # RIGHT MIDDLE BOTTOM
+                    dbc.Spinner(dcc.Graph(id="heatmap_graph"),
+                                spinner_class_name='loading_spinner',
+                                fullscreen_class_name='loading_spinner_bg'),
+                   ],
+                   id='heatmap_container',
+                   className='graph pretty_container'),
+
+               html.Div(
+                 [html.Div('Plots', className='title'),
+                     html.Div(
+                         [html.Div(
+                             dcc.Dropdown(
+                                 id='dropdown_line',
+                                 placeholder='Select Variable',
+                                 className='dropdown_input'),
+                             id='div_dropdown_line',
+                             # style={'padding': '1px', 'min-width': '200px'}
+                         ),
+                             html.Div(
+                             dcc.Dropdown(id='dropdown_line2',
+                                          className='dropdown_input',
+                                          style={'visibility': 'hidden'}),
+                             id='div_dropdown_line_2',
+                             # style={'padding': '1px', 'min-width': '200px'}
+                             )],
+                         # dcc.Dropdown(id='results_dropdown_2',
+                         #              style={'visibility': 'hidden'},
+                         #              className='dropdown_input')],
+                         style={'display': 'flex', 'flex-direction': 'row',
+                                'flex-wrap': 'wrap',
+                                'justify-content': 'left'},
+                     ),
+                  html.Div(
+                      [
+
+                         # dcc.Dropdown(id='data_checklist',
+                         #              className='dropdown_input',
+                         #              multi=True),
                         # html.Div(
-                        html.Div(
-                            [html.Div('Global Results', className='title'),
-                             dt.DataTable(id='global_data_table',
-                                          editable=True,
-                                          column_selectable='multi')],
-                            #               id='sub_div_global_table',
-                            #               className='pretty_container'),
-                            #      columns=[{'filter_options': 'sensitive'}]
-                            id='div_global_table',
-                            className='pretty_container',
-                            style={'overflow': 'auto'}),
-                        # id='div_global_table',  # style={'overflow': 'auto'},
-                        # className='pretty_container'),
-                        html.Div(
-                            [html.Div('Heatmap', className='title'),
-                             html.Div(
-                                 [html.Div(
-                                     dcc.Dropdown(
-                                         id='results_dropdown',
-                                         placeholder='Select Variable',
-                                         className='dropdown_input'),
-                                     id='div_results_dropdown',
-                                     # style={'padding': '1px', 'min-width': '200px'}
-                                 ),
-                                     html.Div(
-                                         dcc.Dropdown(id='results_dropdown_2',
-                                                      className='dropdown_input',
-                                                      style={
-                                                          'visibility': 'hidden'}),
-                                         id='div_results_dropdown_2',
-                                         # style={'padding': '1px', 'min-width': '200px'}
-                                     )
-                                 ],
-                                 # dcc.Dropdown(id='results_dropdown_2',
-                                 #              style={'visibility': 'hidden'},
-                                 #              className='dropdown_input')],
-                                 style={'display': 'flex',
-                                        'flex-direction': 'row',
-                                        'flex-wrap': 'wrap',
-                                        'justify-content': 'left'},
-                             ),
-                             # RIGHT MIDDLE BOTTOM
-                             dcc.Graph(id="heatmap_graph")
-                             ],
-                            id='heatmap_container',
-                            className='graph pretty_container'),
+                        #        dcc.Checklist(id='data_checklist',
+                        #                      style={'overflow': 'auto'},
+                        #                      inline=True)),
+                        # html.Div(
+                        #     children=dbc.DropdownMenu(id='checklist_dropdown',
+                        #         children=[
+                        #             dbc.Checklist(id='data_checklist',
+                        #                           # input_checked_class_name='checkbox',
+                        #                           style={
+                        #                               'max-height': '400px',
+                        #                               'overflow': 'auto',
+                        #                           }
+                        #                           ),
+                        #         ],
+                        #         # style={'background-color': '#fff',
+                        #         #        'border-radius': '4px',
+                        #         #        'border': '1px solid #ccc',
+                        #         #        'color': '#333'},
+                        #       toggle_style={
+                        #           'textTransform': 'none',
+                        #           'background': '#fff',
+                        #           'border': '#ccc',
+                        #           'letter-spacing': '0',
+                        #           'font-size': '11px',
+                        #           # 'padding': '1px', 'min-width': '200px'
+                        #       },
+                        #       align_end=True,
+                        #       toggle_class_name='dropdown_input',
+                        #       label="Select cells",
+                        #         # className='dropdownmenu_checklist'
+                        #     ),
+                        # ),
+                      html.Div(
+                          [
 
-                        html.Div(
-                            [html.Div('Plots', className='title'),
-                             html.Div(
-                                 [html.Div(
-                                     dcc.Dropdown(
-                                         id='dropdown_line',
-                                         placeholder='Select Variable',
-                                         className='dropdown_input'),
-                                     id='div_dropdown_line',
-                                     # style={'padding': '1px', 'min-width': '200px'}
-                                 ),
-                                     html.Div(
-                                         dcc.Dropdown(id='dropdown_line2',
-                                                      className='dropdown_input',
-                                                      style={
-                                                          'visibility': 'hidden'}),
-                                         id='div_dropdown_line_2',
-                                         # style={'padding': '1px', 'min-width': '200px'}
-                                     )],
-                                 # dcc.Dropdown(id='results_dropdown_2',
-                                 #              style={'visibility': 'hidden'},
-                                 #              className='dropdown_input')],
-                                 style={'display': 'flex',
-                                        'flex-direction': 'row',
-                                        'flex-wrap': 'wrap',
-                                        'justify-content': 'left'},
-                             ),
-                             html.Div(
-                                 [
-
-                                     # dcc.Dropdown(id='data_checklist',
-                                     #              className='dropdown_input',
-                                     #              multi=True),
-                                     # html.Div(
-                                     #        dcc.Checklist(id='data_checklist',
-                                     #                      style={'overflow': 'auto'},
-                                     #                      inline=True)),
-                                     # html.Div(
-                                     #     children=dbc.DropdownMenu(id='checklist_dropdown',
-                                     #         children=[
-                                     #             dbc.Checklist(id='data_checklist',
-                                     #                           # input_checked_class_name='checkbox',
-                                     #                           style={
-                                     #                               'max-height': '400px',
-                                     #                               'overflow': 'auto',
-                                     #                           }
-                                     #                           ),
-                                     #         ],
-                                     #         # style={'background-color': '#fff',
-                                     #         #        'border-radius': '4px',
-                                     #         #        'border': '1px solid #ccc',
-                                     #         #        'color': '#333'},
-                                     #       toggle_style={
-                                     #           'textTransform': 'none',
-                                     #           'background': '#fff',
-                                     #           'border': '#ccc',
-                                     #           'letter-spacing': '0',
-                                     #           'font-size': '11px',
-                                     #           # 'padding': '1px', 'min-width': '200px'
-                                     #       },
-                                     #       align_end=True,
-                                     #       toggle_class_name='dropdown_input',
-                                     #       label="Select cells",
-                                     #         # className='dropdownmenu_checklist'
-                                     #     ),
-                                     # ),
-                                     html.Div(
-                                         [
-
-                                             # dbc.Checklist(id='data_checklist',
-                                             #               input_checked_class_name='checkbox',
-                                             #                        # input_checked_style={
-                                             #                        #     'backgroundColor':
-                                             #                        #         'red'}
-                                             #               ),
-                                             dcc.Store(id='disp_chosen'),
-                                             dcc.Store(id='disp_clicked'),
-                                             dcc.Store(id='append_check'),
-                                             html.Div(
-                                                 [html.Div(
-                                                     children=dbc.DropdownMenu(
-                                                         id='checklist_dropdown',
-                                                         children=[
-                                                             dbc.Checklist(
-                                                                 id='data_checklist',
-                                                                 # input_checked_class_name='checkbox',
-                                                                 style={
-                                                                     'max-height': '400px',
-                                                                     'overflow': 'auto'}), ],
-                                                         toggle_style={
-                                                             'textTransform': 'none',
-                                                             'background': '#fff',
-                                                             'border': '#ccc',
-                                                             'letter-spacing': '0',
-                                                             'font-size': '11px',
-                                                         },
-                                                         align_end=True,
-                                                         toggle_class_name='dropdown_input',
-                                                         label="Select Cells"), ),
-                                                     html.Button('Clear List',
-                                                                 id='clear_button',
-                                                                 className='local_data_buttons'),
-                                                     html.Button(
-                                                         'Export Data to Table',
-                                                         id='export_b',
-                                                         className='local_data_buttons'),
-                                                     html.Button(
-                                                         'Append New Data to Table',
-                                                         id='append_b',
-                                                         className='local_data_buttons'),
-                                                     html.Button('Clear Table',
-                                                                 id='clear_table_b',
-                                                                 className='local_data_buttons')],
-                                                 style={
-                                                     'display': 'flex',
-                                                     'flex-direction': 'row',
-                                                     'margin-bottom': '5px'}
-                                             )],
-                                         # style={'width': '200px'}
-                                     ),
-                                     dcc.Store(id='cells_data'),
-                                 ],
-                                 style={'display': 'flex',
-                                        'flex-direction': 'column',
-                                        'justify-content': 'left'}),
-                             dcc.Graph(id='line_graph')
-
-                             ],
-                            className="pretty_container",
-                            style={'display': 'flex', 'flex-direction':
-                                'column', 'justify-content': 'space-evenly'}
-                        ), ],
-                    id='right-column', className='col-12 col-lg-8 mb-2')],
-            className="row",
-            style={'justify-content': 'space-evenly'}, ),
-        # html.Div(
-        #     [],
-        #     style={'position': 'relative',
-        #            'margin': '0 0.05% 0 0.7%'})
-        html.Div(dt.DataTable(id='table', editable=True,
-                              column_selectable='multi'),
-                 # columns=[{'filter_options': 'sensitive'}]),
-                 id='div_table', style={'overflow': 'auto',
-                                        'position': 'relative',
-                                        'margin': '0 0.05% 0 0.7%'},
-                 className='pretty_container')
+                           # dbc.Checklist(id='data_checklist',
+                           #               input_checked_class_name='checkbox',
+                           #                        # input_checked_style={
+                           #                        #     'backgroundColor':
+                           #                        #         'red'}
+                           #               ),
+                           dcc.Store(id='disp_chosen'),
+                           dcc.Store(id='disp_clicked'),
+                           dcc.Store(id='append_check'),
+                           html.Div(
+                               [html.Div(
+                                   children=dbc.DropdownMenu(
+                                    id='checklist_dropdown',
+                                    children=[
+                                       dbc.Checklist(
+                                           id='data_checklist',
+                                           # input_checked_class_name='checkbox',
+                                           style={
+                                               'max-height': '400px',
+                                               'overflow': 'auto'})],
+                                    toggle_style={
+                                        'textTransform': 'none',
+                                        'background': '#fff',
+                                        'border': '#ccc',
+                                        'letter-spacing': '0',
+                                        'font-size': '11px',
+                                    },
+                                    align_end=True,
+                                    toggle_class_name='dropdown_input',
+                                    label="Select Cells"),),
+                                html.Button('Clear List', id='clear_button',
+                                            className='local_data_buttons'),
+                                html.Button('Export Data to Table',
+                                            id='export_b',
+                                            className='local_data_buttons'),
+                                html.Button('Append New Data to Table',
+                                            id='append_b',
+                                            className='local_data_buttons'),
+                                html.Button('Clear Table', id='clear_table_b',
+                                            className='local_data_buttons')],
+                               style={
+                                   'display': 'flex',
+                                   'flex-direction': 'row',
+                                   'margin-bottom': '5px'}
+                           )],
+                           # style={'width': '200px'}
+                      ),
+                      dcc.Store(id='cells_data')],
+                  style={'display': 'flex', 'flex-direction': 'column',
+                         'justify-content': 'left'}),
+                  dbc.Spinner(dcc.Graph(id='line_graph'),
+                              spinner_class_name='loading_spinner',
+                              fullscreen_class_name='loading_spinner_bg')],
+                 className="pretty_container",
+                 style={'display': 'flex', 'flex-direction':
+                        'column', 'justify-content': 'space-evenly'}
+              )],
+              id='right-column', className='col-12 col-lg-8 mb-2')],
+         className="row",
+         style={'justify-content': 'space-evenly'}),
+     # html.Div(
+     #     [],
+     #     style={'position': 'relative',
+     #            'margin': '0 0.05% 0 0.7%'})
+     html.Div(dt.DataTable(id='table', editable=True,
+                           column_selectable='multi'),
+             # columns=[{'filter_options': 'sensitive'}]),
+              id='div_table', style={'overflow': 'auto',
+                                     'position': 'relative',
+                                     'margin': '0 0.05% 0 0.7%'},
+              className='pretty_container')
     ],
     id="mainContainer",
     # className='twelve columns',
@@ -435,7 +424,7 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
                     if k in id_match:
                         if isinstance(v, list):
                             for num, val in enumerate(v):
-                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
+                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
                         else:
                             dict_ids[k] = df.check_ifbool(v)
                     else:
@@ -445,24 +434,24 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = dm.modal_process('loaded')
                     return list(dict_ids.values()), list(dict_ids2.values()), \
-                           None, modal_title, modal_body, not modal_state
+                        None, modal_title, modal_body, not modal_state
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
                         dm.modal_process('id-not-loaded', err_l)
                     return list(dict_ids.values()), list(dict_ids2.values()), \
-                           None, modal_title, modal_body, not modal_state
+                        None, modal_title, modal_body, not modal_state
             except Exception as e:
                 # Error / JSON file cannot be processed; return old value
                 modal_title, modal_body = dm.modal_process('error')
                 return value, multival, None, modal_title, modal_body, \
-                       not modal_state
+                    not modal_state
         else:
             # Not JSON file; return old value
             modal_title, modal_body = dm.modal_process('wrong-file')
             return value, multival, None, modal_title, modal_body, \
-                   not modal_state
+                not modal_state
 
 
 @app.callback(
@@ -473,7 +462,7 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+    State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id'),
     prevent_initial_call=True,
 )
 def save_settings(n_clicks, name, val1, val2, ids, ids2):
@@ -661,7 +650,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
             y_title = drop1 + ' / ' + local_data[drop1]['units']
         else:
             y_title = drop1 + ' - ' + drop2 + ' / ' \
-                      + local_data[drop1][drop2]['units']
+                       + local_data[drop1][drop2]['units']
 
         layout = go.Layout(
             font={'color': 'black', 'family': 'Arial'},
@@ -778,7 +767,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
             appended = state4
 
         if 'export_b.n_clicks' in ctx:
-            return index + columns, datas, 'csv', appended
+            return index+columns, datas, 'csv', appended
         elif 'clear_table_b.n_clicks' in ctx:
             return [], [], 'none', appended
         elif 'append_b.n_clicks' in ctx:
@@ -790,13 +779,12 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
                 app_columns = \
                     [{'deletable': True, 'renamable': True,
                       'selectable': True, 'name': 'Cell {}'.format(d),
-                      'id': 'Cell {}'.format(d) + '-' + str(appended)}
+                      'id': 'Cell {}'.format(d) + '-'+str(appended)}
                      for d in digit_list]
                 new_columns = state2 + app_columns
                 app_datas = \
                     [{**{'Channel Location': cell},
-                      **{data[k]['name'] + '-' + str(appended): data[k]['data'][
-                          num]
+                      **{data[k]['name']+'-'+str(appended): data[k]['data'][num]
                          for k in data}}
                      for num, cell in enumerate(xvalues)]
                 new_data_list = []
@@ -848,10 +836,10 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
         if dropdown_key_2 is None:
-            z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
+            z_title = dropdown_key +  ' / ' + local_data[dropdown_key]['units']
         else:
             z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
-                      + local_data[dropdown_key][dropdown_key_2]['units']
+                       + local_data[dropdown_key][dropdown_key_2]['units']
 
         if n_y <= 20:
             height = 300
@@ -875,17 +863,17 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
             y_tick_labels = [' ' for i in range(n_y)]
             for i in range(0, n_y, 2):
                 y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y - 1)
+            y_tick_labels[-1] = str(n_y-1)
         elif 200 < n_y <= 500:
             y_tick_labels = [' ' for i in range(n_y)]
             for i in range(0, n_y, 5):
                 y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y - 1)
+            y_tick_labels[-1] = str(n_y-1)
         else:
             y_tick_labels = [' ' for i in range(n_y)]
             for i in range(0, n_y, 10):
                 y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y - 1)
+            y_tick_labels[-1] = str(n_y-1)
 
         y_axis_dict = copy.deepcopy(base_axis_dict)
         y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
@@ -910,6 +898,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
         fig = go.Figure(data=heatmap, layout=layout)
 
     return fig
+
 
 # if __name__ == "__main__":
 #     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
