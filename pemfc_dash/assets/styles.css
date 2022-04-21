@@ -148,14 +148,14 @@ body {
   /*padding: 1px !important;*/
   /*background-color: #FC7F66;*/
   /*border-color: #FC7F66;*/
-  color: #999 !important;
+  /*color: #999 !important;*/
   primary-color: #0062af
 }
 
 .dropdown-toggle::after {
   margin-right: 3px !important;
   vertical-align: middle;
-  border-color: #999 transparent transparent;
+  border-color: #999 transparent;
   border-top-color: rgb(153, 153, 153);
   border-style: solid;
   border-width: 5px 5px 2.5px;
