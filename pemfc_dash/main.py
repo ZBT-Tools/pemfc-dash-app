@@ -549,7 +549,8 @@ def global_outputs_table(data):
 @app.callback(
     [Output('results_dropdown', 'options'),
      Output('results_dropdown', 'value'),
-     Output('dropdown_line', 'options')],
+     Output('dropdown_line', 'options'),
+     Output('dropdown_line', 'value')],
     Input('ret_data', 'data')
 )
 def get_dropdown_options(data):
@@ -558,7 +559,7 @@ def get_dropdown_options(data):
     values = [{'label': key, 'value': key} for key in local_data if key not in
               ["Channel Location", "Cells", "Cathode",
                "Coolant Channels", "Normalized Flow Distribution"]]
-    return values, 'Current Density', values
+    return values, 'Current Density', values, 'Current Density'
 
 
 @app.callback(
