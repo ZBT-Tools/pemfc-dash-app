@@ -3,6 +3,7 @@ import re
 import copy
 import math
 import dash
+import dash.long_callback
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import dcc
 from dash import html
@@ -92,11 +93,13 @@ app.layout = dbc.Container(
         ],
         id="header",
         className='row'
-    ),
-     dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
+        ),
+     dcc.Store(id="input_data"),
+     dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
                  spinner_class_name='loading_spinner',
                  fullscreen_class_name='loading_spinner_bg'),
-        # color="#0a60c2"),
+     dcc.Store(id='signal'),
+
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
      # modal for any warning
@@ -125,12 +128,11 @@ app.layout = dbc.Container(
                                         className='settings_button',
                                         style={'display': 'flex'})
                             ],
-                            style={
-                                   'display': 'flex',
-                                   'flex-wrap': 'wrap',
-                                   # 'flex-direction': 'column',
-                                   # 'margin': '5px',
-                                   'justify-content': 'space-evenly'}
+                           style={'display': 'flex',
+                                  'flex-wrap': 'wrap',
+                                  # 'flex-direction': 'column',
+                                  # 'margin': '5px',
+                                  'justify-content': 'space-evenly'}
                        ),
                         dcc.Download(id="savefile-json"),
                         dc.collapses],
@@ -276,72 +278,71 @@ app.layout = dbc.Container(
 
 
 @app.long_callback(
-    output=Output("paragraph_id", "children"),
-    inputs=(Input("run_button", "n_clicks"),
-            State('ret_data', 'data')),
-    running=[
-        (Output("run_button", "disabled"), True, False),
-    ],
+    output=(Output("result_data_store", "data"),
+            Output('modal-title', 'children'),
+            Output('modal-body', 'children'),
+            Output('modal', 'is_open')),
+    inputs=(Input("signal", "data")),
+    state=(State('input_data', 'data'),
+           State('modal', 'is_open')),
+    running=[(Output("run_button", "disabled"), True, False)],
+    prevent_initial_call=True
 )
-def simulation_store(**kwargs):
-    data_transfer.gui_to_sim_transfer(kwargs, input_dicts.sim_dict)
-    global_data, local_data, sim = main_app.main()
-    return [global_data[0], local_data[0]]
+def run_simulation(signal, input_data, modal_state):
 
-
-def try_simulation_store(**kwargs):
     try:
-        results = simulation_store(**kwargs)
+        data_transfer.gui_to_sim_transfer(input_data, input_dicts.sim_dict)
+        global_data, local_data, sim = main_app.main()
     except Exception as E:
-        raise PreventUpdate
-    return results
+        modal_title, modal_body = \
+            dm.modal_process('input-error', error=repr(E))
+        return None, modal_title, modal_body, not modal_state
+    return [global_data[0], local_data[0]], None, None, modal_state
+
+# def try_simulation_store(**kwargs):
+#     try:
+#         results = simulation_store(**kwargs)
+#     except Exception as E:
+#         raise PreventUpdate
+#     return results
 
 
 @app.callback(
-    Output('ret_data', 'data'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    [Output('input_data', 'data'),
+     Output('signal', 'data')],
     Input("run_button", "n_clicks"),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-    State('modal', 'is_open'),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
 )
-def compute_simulation(n_click, inputs, inputs2, ids, ids2, modal_state):
+def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'run_button' in changed_id and n_click is not None:
         dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
 
-        datas = {}
+        input_data = {}
         for k, v in dict_data.items():
-            datas[k] = {'sim_name': k.split('-'), 'value': v}
-        try:
-            simulation_store(**datas)
-        except Exception as E:
-            modal_title, modal_body = \
-                dm.modal_process('input-error', error=repr(E))
-            return datas, modal_title, modal_body, not modal_state
+            input_data[k] = {'sim_name': k.split('-'), 'value': v}
+        return input_data, n_click
     else:
         raise PreventUpdate
-    return datas, None, None, modal_state
 
 
 @app.callback(
-    Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-    Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    Output('upload-file', 'contents'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output('upload-file', 'contents'),
+     Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
     Input('upload-file', 'contents'),
-    State('upload-file', 'filename'),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-    State('modal', 'is_open'),
+    [State('upload-file', 'filename'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State('modal', 'is_open')]
 )
 def upload_settings(contents, filename, value, multival, ids, ids2,
                     modal_state):
@@ -395,14 +396,14 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
 
 
 @app.callback(
-    Output("savefile-json", "data"),
-    Output('save-as-button', "n_clicks"),
+    [Output("savefile-json", "data"),
+     Output('save-as-button', "n_clicks")],
     Input('save-as-button', "n_clicks"),
-    State('save_as_input', 'value'),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-    State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id'),
+    [State('save_as_input', 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id')],
     prevent_initial_call=True,
 )
 def save_settings(n_clicks, name, val1, val2, ids, ids2):
@@ -437,10 +438,9 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
      Output({'type': 'global_unit', 'id': ALL}, 'children'),
      # Output({'type': 'global_container', 'id': ALL}, 'style'),
      Output('global-data', 'style')],
-    Input('ret_data', 'data')
+    Input('result_data_store', 'data')
 )
-def global_outputs(data):
-    results = try_simulation_store(**data)
+def global_outputs(results):
     g = results[0]
     glob = list(results[0])
     glob_len = len(glob)
@@ -459,24 +459,27 @@ def global_outputs(data):
     [Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
      Output('global_data_table', 'export_format')],
-    Input('ret_data', 'data')
+    Input('result_data_store', 'data'),
+    prevent_initial_call=True
 )
-def global_outputs_table(data):
-    results = try_simulation_store(**data)
-    global_result_dict = results[0]
-    names = list(global_result_dict.keys())
-    values = [v['value'] for k, v in global_result_dict.items()]
-    units = [v['units'] for k, v in global_result_dict.items()]
+def global_outputs_table(results):
+    if results is None:
+        raise PreventUpdate
+    else:
+        global_result_dict = results[0]
+        names = list(global_result_dict.keys())
+        values = [v['value'] for k, v in global_result_dict.items()]
+        units = [v['units'] for k, v in global_result_dict.items()]
 
-    column_names = ['Quantity', 'Value', 'Units']
-    columns = [{'deletable': True, 'renamable': True,
-                'selectable': True, 'name': col, 'id': col}
-               for col in column_names]
-    datas = [{column_names[0]: names[i],
-              column_names[1]: values[i],
-              column_names[2]: units[i]} for i in range(len(values))]
+        column_names = ['Quantity', 'Value', 'Units']
+        columns = [{'deletable': True, 'renamable': True,
+                    'selectable': True, 'name': col, 'id': col}
+                   for col in column_names]
+        datas = [{column_names[0]: names[i],
+                  column_names[1]: values[i],
+                  column_names[2]: units[i]} for i in range(len(values))]
 
-    return columns, datas, 'csv',
+        return columns, datas, 'csv',
 
 
 @app.callback(
@@ -484,15 +487,19 @@ def global_outputs_table(data):
      Output('results_dropdown', 'value'),
      Output('dropdown_line', 'options'),
      Output('dropdown_line', 'value')],
-    Input('ret_data', 'data')
+    Input('result_data_store', 'data'),
+
 )
-def get_dropdown_options(data):
-    results = try_simulation_store(**data)
-    local_data = results[1]
-    values = [{'label': key, 'value': key} for key in local_data if key not in
-              ["Channel Location", "Cells", "Cathode",
-               "Coolant Channels", "Normalized Flow Distribution"]]
-    return values, 'Current Density', values, 'Current Density'
+def get_dropdown_options(results):
+    if results is None:
+        raise PreventUpdate
+    else:
+        local_data = results[1]
+        values = [{'label': key, 'value': key} for key in local_data
+                  if key not in
+                  ["Channel Location", "Cells", "Cathode",
+                   "Coolant Channels", "Normalized Flow Distribution"]]
+        return values, 'Current Density', values, 'Current Density'
 
 
 @app.callback(
@@ -500,13 +507,12 @@ def get_dropdown_options(data):
      Output('results_dropdown_2', 'value'),
      Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
-     Input('ret_data', 'data')]
+     Input('result_data_store', 'data')]
 )
-def get_dropdown_options_2(dropdown_key, data):
-    if dropdown_key is None:
+def get_dropdown_options_2(dropdown_key, results):
+    if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        results = try_simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -521,14 +527,13 @@ def get_dropdown_options_2(dropdown_key, data):
     [Output('dropdown_line2', 'options'),
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
-    [Input('dropdown_line', 'value'),
-     Input('ret_data', 'data')]
+    Input('dropdown_line', 'value'),
+    State('result_data_store', 'data')
 )
-def dropdown_line2(dropdown_key, data):
-    if dropdown_key is None:
+def dropdown_line2(dropdown_key, results):
+    if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        results = try_simulation_store(**data)
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -550,23 +555,23 @@ def dropdown_line2(dropdown_key, data):
      Input('data_checklist', 'value'),
      Input('clear_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    [State('ret_data', 'data'),
+    [State('result_data_store', 'data'),
      State('cells_data', 'data'),
      State('data_checklist', 'value'),
      State('disp_chosen', 'data')]
 )
 def update_line_graph(drop1, drop2, checklist, n_click, rdata,
-                      data, state2, state3, state4):
+                      results, state2, state3, state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if drop1 is None:
+    if drop1 is None or results is None:
         raise PreventUpdate
     else:
 
-        results = try_simulation_store(**data)
         local_data = results[1]
 
         x_key = 'Channel Location'
-        xvalues = ip.interpolate_1d(local_data[x_key]['value'])
+
+        xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
 
         if drop1 is None:
             yvalues = np.zeros(len(xvalues))
@@ -675,31 +680,32 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Input('export_b', 'n_clicks'),  # button1
      Input('append_b', 'n_clicks'),  # button2
      Input('clear_table_b', 'n_clicks')],
-    [State('ret_data', 'data'),
+    [State('result_data_store', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
      State('append_check', 'data')]
 )
-def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
+def list_to_table(val, data, data2, n1, n2, n3, results, state2, state3,
+                  state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if val is None:
+    if val is None or results is None:
         raise PreventUpdate
     else:
-        results = try_simulation_store(**data)
         local_data = results[1]
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
 
-        index = [{'id': 'Channel Location', 'name': 'Channel Location',
+        x_key = 'Channel Location'
+
+        index = [{'id': x_key, 'name': x_key,
                   'deletable': True}]
         columns = [{'deletable': True, 'renamable': True,
                     'selectable': True, 'name': 'Cell {}'.format(d),
                     'id': 'Cell {}'.format(d)} for d in digit_list]
         # list with nested dict
 
-        x_key = 'Channel Location'
-        xvalues = ip.interpolate_1d(local_data[x_key]['value'])
-        datas = [{**{'Channel Location': cell},
+        xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
+        datas = [{**{x_key: cell},
                   **{data[k]['name']: data[k]['data'][num] for k in data}}
                  for num, cell in enumerate(xvalues)]  # list with nested dict
 
@@ -725,7 +731,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
                      for d in digit_list]
                 new_columns = state2 + app_columns
                 app_datas = \
-                    [{**{'Channel Location': cell},
+                    [{**{x_key: cell},
                       **{data[k]['name']+'-'+str(appended): data[k]['data'][num]
                          for k in data}}
                      for num, cell in enumerate(xvalues)]
@@ -748,18 +754,17 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
 
 @app.callback(
     Output("heatmap_graph", "figure"),
-    [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value'),
-     Input('ret_data', 'data')],
+    [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value')],
+    State('result_data_store', 'data'),
 )
-def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
-    if dropdown_key is None:
+def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
+    if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        results = try_simulation_store(**data)
         local_data = results[1]
         x_key = 'Channel Location'
         y_key = 'Cells'
-        xvalues = ip.interpolate_1d(local_data[x_key]['value'])
+        xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
         yvalues = local_data[y_key]['value']
 
         n_y = len(yvalues)
@@ -778,7 +783,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
         if dropdown_key_2 is None:
-            z_title = dropdown_key +  ' / ' + local_data[dropdown_key]['units']
+            z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
         else:
             z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
