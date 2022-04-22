@@ -1,13 +1,18 @@
-import dash
-import dash_bootstrap_components as dbc
-from dash.long_callback import CeleryLongCallbackManager
+# import dash
+# import dash_bootstrap_components as dbc
+from dash.long_callback import CeleryLongCallbackManager, \
+    DiskcacheLongCallbackManager
 from dash_extensions.enrich import DashProxy, MultiplexerTransform
 from celery import Celery
+import diskcache
 
-celery_app = Celery(
-    __name__, broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/1")
-long_callback_manager = CeleryLongCallbackManager(celery_app)
+cache = diskcache.Cache("./cache")
+long_callback_manager = DiskcacheLongCallbackManager(cache)
+
+# celery_app = Celery(
+#     __name__, broker="redis://localhost:6379/0",
+#     backend="redis://localhost:6379/1")
+# long_callback_manager = CeleryLongCallbackManager(celery_app)
 
 # app = dash.Dash(__name__, long_callback_manager=long_callback_manager)
 

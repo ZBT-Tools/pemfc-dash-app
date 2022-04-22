@@ -41,14 +41,14 @@ DATA_PATH = PATH.joinpath("data").resolve()
 
 server = app.server
 
-# Setup caching
-CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
-    'CACHE_DIR': 'cache_dir',
-    "CACHE_DEFAULT_TIMEOUT": 3600
-}
-cache = Cache()
-cache.init_app(app.server, config=CACHE_CONFIG)
+# # Setup caching
+# CACHE_CONFIG = {
+#     "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
+#     'CACHE_DIR': 'cache_dir',
+#     "CACHE_DEFAULT_TIMEOUT": 3600
+# }
+# cache = Cache()
+# cache.init_app(app.server, config=CACHE_CONFIG)
 
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
@@ -67,8 +67,7 @@ app.layout = dbc.Container(
                 id="logo-container", className="pretty_container h-100",
                 style={'display': 'flex', 'justify-content': 'center',
                        'align-items': 'center'}
-            ),# , 'overflow': 'hidden'}),
-            # width=4, align='center', style={'display': 'block'}
+            ),
             className='col-12 col-lg-4 mb-2'
         ),
          html.Div(
@@ -90,19 +89,10 @@ app.layout = dbc.Container(
              # width=8, align='center',
              style={'justify-content': 'space-evenly'},
              className='col-12 col-lg-8 mb-2'),
-                           # 'overflow': 'auto', 'display': 'block'}),
-             # style={'border': '1px solid grey', 'overflow': 'auto', 'display': 'block'}},
-             # className="eight columns",)
         ],
         id="header",
         className='row'
-        # align='start',
-        # style={'justify-content': 'center'}
     ),
-
-     # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
-     #             style={"backgroundColor": "transparent"}, type='circle',
-     #             color="#0a60c2"),
      dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
                  spinner_class_name='loading_spinner',
                  fullscreen_class_name='loading_spinner_bg'),
@@ -118,9 +108,9 @@ app.layout = dbc.Container(
                   [dl.tab_container(
                           tabs_list, label=
                           [k['title'] for k in gui_input.main_frame_dicts],
-                          ids=[f'tab{num + 1}' for num in
+                          ids=['tab{}'.format(num + 1) for num in
                                range(len(gui_input.main_frame_dicts))])],
-              id='setting_container', # style={'flex': '1'}
+              id='setting_container',  # style={'flex': '1'}
               ),
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
@@ -152,16 +142,11 @@ app.layout = dbc.Container(
               [html.Div(
                         [html.Div('Global Results', className='title'),
                             dt.DataTable(id='global_data_table',
-                                     editable=True,
-                                     column_selectable='multi')],
-                   #               id='sub_div_global_table',
-                   #               className='pretty_container'),
-                   #      columns=[{'filter_options': 'sensitive'}]
+                                         editable=True,
+                                         column_selectable='multi')],
                         id='div_global_table',
-                        className='pretty_container', style={'overflow': 'auto'}),
-                   # id='div_global_table',  # style={'overflow': 'auto'},
-                   # className='pretty_container'),
-
+                        className='pretty_container',
+                        style={'overflow': 'auto'}),
                html.Div(
                    [html.Div('Heatmap', className='title'),
                        html.Div(
@@ -178,12 +163,8 @@ app.layout = dbc.Container(
                                             className='dropdown_input',
                                             style={'visibility': 'hidden'}),
                                id='div_results_dropdown_2',
-                               # style={'padding': '1px', 'min-width': '200px'}
                             )
                            ],
-                            # dcc.Dropdown(id='results_dropdown_2',
-                            #              style={'visibility': 'hidden'},
-                            #              className='dropdown_input')],
                            style={'display': 'flex',
                                   'flex-direction': 'row',
                                   'flex-wrap': 'wrap',
@@ -215,61 +196,13 @@ app.layout = dbc.Container(
                              id='div_dropdown_line_2',
                              # style={'padding': '1px', 'min-width': '200px'}
                              )],
-                         # dcc.Dropdown(id='results_dropdown_2',
-                         #              style={'visibility': 'hidden'},
-                         #              className='dropdown_input')],
                          style={'display': 'flex', 'flex-direction': 'row',
                                 'flex-wrap': 'wrap',
                                 'justify-content': 'left'},
                      ),
                   html.Div(
-                      [
-
-                         # dcc.Dropdown(id='data_checklist',
-                         #              className='dropdown_input',
-                         #              multi=True),
-                        # html.Div(
-                        #        dcc.Checklist(id='data_checklist',
-                        #                      style={'overflow': 'auto'},
-                        #                      inline=True)),
-                        # html.Div(
-                        #     children=dbc.DropdownMenu(id='checklist_dropdown',
-                        #         children=[
-                        #             dbc.Checklist(id='data_checklist',
-                        #                           # input_checked_class_name='checkbox',
-                        #                           style={
-                        #                               'max-height': '400px',
-                        #                               'overflow': 'auto',
-                        #                           }
-                        #                           ),
-                        #         ],
-                        #         # style={'background-color': '#fff',
-                        #         #        'border-radius': '4px',
-                        #         #        'border': '1px solid #ccc',
-                        #         #        'color': '#333'},
-                        #       toggle_style={
-                        #           'textTransform': 'none',
-                        #           'background': '#fff',
-                        #           'border': '#ccc',
-                        #           'letter-spacing': '0',
-                        #           'font-size': '11px',
-                        #           # 'padding': '1px', 'min-width': '200px'
-                        #       },
-                        #       align_end=True,
-                        #       toggle_class_name='dropdown_input',
-                        #       label="Select cells",
-                        #         # className='dropdownmenu_checklist'
-                        #     ),
-                        # ),
-                      html.Div(
+                      [html.Div(
                           [
-
-                           # dbc.Checklist(id='data_checklist',
-                           #               input_checked_class_name='checkbox',
-                           #                        # input_checked_style={
-                           #                        #     'backgroundColor':
-                           #                        #         'red'}
-                           #               ),
                            dcc.Store(id='disp_chosen'),
                            dcc.Store(id='disp_clicked'),
                            dcc.Store(id='append_check'),
@@ -310,10 +243,10 @@ app.layout = dbc.Container(
                                    'margin-bottom': '5px'}
                            )],
                            # style={'width': '200px'}
-                      ),
-                      dcc.Store(id='cells_data')],
-                  style={'display': 'flex', 'flex-direction': 'column',
-                         'justify-content': 'left'}),
+                       ),
+                       dcc.Store(id='cells_data')],
+                      style={'display': 'flex', 'flex-direction': 'column',
+                             'justify-content': 'left'}),
                   dbc.Spinner(dcc.Graph(id='line_graph'),
                               spinner_class_name='loading_spinner',
                               fullscreen_class_name='loading_spinner_bg')],
@@ -341,15 +274,15 @@ app.layout = dbc.Container(
     fluid=True,
     style={'padding': '0px'})
 
-# @app.long_callback(
-#     output=Output("paragraph_id", "children"),
-#     inputs=Input("button_id", "n_clicks"),
-#     running=[
-#         (Output("button_id", "disabled"), True, False),
-#     ],
-# )
 
-@cache.memoize()
+@app.long_callback(
+    output=Output("paragraph_id", "children"),
+    inputs=(Input("run_button", "n_clicks"),
+            State('ret_data', 'data')),
+    running=[
+        (Output("run_button", "disabled"), True, False),
+    ],
+)
 def simulation_store(**kwargs):
     data_transfer.gui_to_sim_transfer(kwargs, input_dicts.sim_dict)
     global_data, local_data, sim = main_app.main()
@@ -651,8 +584,8 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         for num, yval in enumerate(yvalues):
             fig.add_trace(go.Scatter(x=xvalues, y=yval,
                                      mode='lines+markers',
-                                     name=f'Cell {num}'))
-            cells.update({num: {'name': f'Cell {num}', 'data': yval}})
+                                     name='Cell {}'.format(num)))
+            cells.update({num: {'name': 'Cell {}'.format(num), 'data': yval}})
 
         if drop2 is None:
             y_title = drop1 + ' / ' + local_data[drop1]['units']
@@ -675,7 +608,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
         options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
         val = sorted([k for k in cells])
-        value = [f'Cell {num}' for num in val]
+        value = ['Cell {}'.format(num) for num in val]
         check = [] if state4 is None else state4
 
         if 'clear_button.n_clicks' in ctx:
@@ -697,15 +630,15 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                 elif 'line_graph.restyleData' in ctx:
                     read = rdata[0]['visible']
                     read_num = rdata[1][0]
-
+                    cell_name = 'Cell {}'.format(read_num)
                     if len(read) == 1:
                         if isinstance(read[0], str):  # lose (legendonly)
-                            if f'Cell {read_num}' not in check:
-                                check.append(f'Cell {read_num}')
+                            if cell_name not in check:
+                                check.append(cell_name)
                         else:  # isinstance(read, bool): #add (True)
                             try:
-                                if 'Cell {}'.format(read_num) in check:
-                                    check.remove('Cell {}'.format(read_num))
+                                if cell_name in check:
+                                    check.remove(cell_name)
                             except ValueError:
                                 pass
                         [value.remove(val) for val in check if val in value]
@@ -716,7 +649,8 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
                         return fig, cells, options, value, check
                     else:
-                        check_new = [f'Cell {x[0]}' for x in enumerate(read)
+                        check_new = ['Cell {}'.format(x[0]) for x
+                                     in enumerate(read)
                                      if x[1] == 'legendonly']
                         [value.remove(che) for che in check_new
                          if che in value]

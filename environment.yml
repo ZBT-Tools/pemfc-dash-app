@@ -12,6 +12,9 @@ dependencies:
     - flask-caching
     - plotly
     - glom
+    - diskcache
+    - celery
+    - redis
     - pip
     - pip:
         - gunicorn
