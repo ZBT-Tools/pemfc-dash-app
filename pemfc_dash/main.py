@@ -43,7 +43,7 @@ server = app.server
 
 # Setup caching
 CACHE_CONFIG = {
-    "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
+    "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
     'CACHE_DIR': 'cache_dir',
     "CACHE_DEFAULT_TIMEOUT": 3600
 }
@@ -341,6 +341,13 @@ app.layout = dbc.Container(
     fluid=True,
     style={'padding': '0px'})
 
+# @app.long_callback(
+#     output=Output("paragraph_id", "children"),
+#     inputs=Input("button_id", "n_clicks"),
+#     running=[
+#         (Output("button_id", "disabled"), True, False),
+#     ],
+# )
 
 @cache.memoize()
 def simulation_store(**kwargs):
@@ -522,7 +529,7 @@ def global_outputs(data):
     Input('ret_data', 'data')
 )
 def global_outputs_table(data):
-    results = simulation_store(**data)
+    results = try_simulation_store(**data)
     global_result_dict = results[0]
     names = list(global_result_dict.keys())
     values = [v['value'] for k, v in global_result_dict.items()]
