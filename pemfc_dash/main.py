@@ -100,10 +100,10 @@ app.layout = dbc.Container(
         # style={'justify-content': 'center'}
     ),
 
-     # dcc.Loading(dcc.Store(id="ret_data"), fullscreen=True,
+     # dcc.Loading(dcc.Store(id="input_data"), fullscreen=True,
      #             style={"backgroundColor": "transparent"}, type='circle',
      #             color="#0a60c2"),
-     dbc.Spinner(dcc.Store(id="ret_data"), fullscreen=True,
+     dbc.Spinner(dcc.Store(id="input_data"), fullscreen=True,
                  spinner_class_name='loading_spinner',
                  fullscreen_class_name='loading_spinner_bg'),
         # color="#0a60c2"),
@@ -358,7 +358,7 @@ def try_simulation_store(**kwargs):
 
 
 @app.callback(
-    Output('ret_data', 'data'),
+    Output('input_data', 'data'),
     Output('modal-title', 'children'),
     Output('modal-body', 'children'),
     Output('modal', 'is_open'),
@@ -374,18 +374,18 @@ def compute_simulation(n_click, inputs, inputs2, ids, ids2, modal_state):
     if 'run_button' in changed_id and n_click is not None:
         dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
 
-        datas = {}
+        input_data = {}
         for k, v in dict_data.items():
-            datas[k] = {'sim_name': k.split('-'), 'value': v}
+            input_data[k] = {'sim_name': k.split('-'), 'value': v}
         try:
-            simulation_store(**datas)
+            simulation_store(**input_data)
         except Exception as E:
             modal_title, modal_body = \
                 dm.modal_process('input-error', error=repr(E))
-            return datas, modal_title, modal_body, not modal_state
+            return input_data, modal_title, modal_body, not modal_state
     else:
         raise PreventUpdate
-    return datas, None, None, modal_state
+    return input_data, None, None, modal_state
 
 
 @app.callback(
@@ -497,7 +497,7 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
      Output({'type': 'global_unit', 'id': ALL}, 'children'),
      # Output({'type': 'global_container', 'id': ALL}, 'style'),
      Output('global-data', 'style')],
-    Input('ret_data', 'data')
+    Input('input_data', 'data')
 )
 def global_outputs(data):
     results = try_simulation_store(**data)
@@ -519,7 +519,7 @@ def global_outputs(data):
     [Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
      Output('global_data_table', 'export_format')],
-    Input('ret_data', 'data')
+    Input('input_data', 'data')
 )
 def global_outputs_table(data):
     results = simulation_store(**data)
@@ -532,11 +532,11 @@ def global_outputs_table(data):
     columns = [{'deletable': True, 'renamable': True,
                 'selectable': True, 'name': col, 'id': col}
                for col in column_names]
-    datas = [{column_names[0]: names[i],
+    data = [{column_names[0]: names[i],
               column_names[1]: values[i],
               column_names[2]: units[i]} for i in range(len(values))]
 
-    return columns, datas, 'csv',
+    return columns, data, 'csv',
 
 
 @app.callback(
@@ -544,7 +544,7 @@ def global_outputs_table(data):
      Output('results_dropdown', 'value'),
      Output('dropdown_line', 'options'),
      Output('dropdown_line', 'value')],
-    Input('ret_data', 'data')
+    Input('input_data', 'data')
 )
 def get_dropdown_options(data):
     results = try_simulation_store(**data)
@@ -560,7 +560,7 @@ def get_dropdown_options(data):
      Output('results_dropdown_2', 'value'),
      Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
-     Input('ret_data', 'data')]
+     Input('input_data', 'data')]
 )
 def get_dropdown_options_2(dropdown_key, data):
     if dropdown_key is None:
@@ -582,7 +582,7 @@ def get_dropdown_options_2(dropdown_key, data):
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
     [Input('dropdown_line', 'value'),
-     Input('ret_data', 'data')]
+     Input('input_data', 'data')]
 )
 def dropdown_line2(dropdown_key, data):
     if dropdown_key is None:
@@ -610,7 +610,7 @@ def dropdown_line2(dropdown_key, data):
      Input('data_checklist', 'value'),
      Input('clear_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    [State('ret_data', 'data'),
+    [State('input_data', 'data'),
      State('cells_data', 'data'),
      State('data_checklist', 'value'),
      State('disp_chosen', 'data')]
@@ -734,7 +734,7 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Input('export_b', 'n_clicks'),  # button1
      Input('append_b', 'n_clicks'),  # button2
      Input('clear_table_b', 'n_clicks')],
-    [State('ret_data', 'data'),
+    [State('input_data', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
      State('append_check', 'data')]
@@ -749,16 +749,17 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
 
-        index = [{'id': 'Channel Location', 'name': 'Channel Location',
+        x_key = 'Channel Location'
+
+        index = [{'id': x_key, 'name': x_key,
                   'deletable': True}]
         columns = [{'deletable': True, 'renamable': True,
                     'selectable': True, 'name': 'Cell {}'.format(d),
                     'id': 'Cell {}'.format(d)} for d in digit_list]
         # list with nested dict
 
-        x_key = 'Channel Location'
         xvalues = ip.interpolate_1d(local_data[x_key]['value'])
-        datas = [{**{'Channel Location': cell},
+        data = [{**{x_key: cell},
                   **{data[k]['name']: data[k]['data'][num] for k in data}}
                  for num, cell in enumerate(xvalues)]  # list with nested dict
 
@@ -768,7 +769,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
             appended = state4
 
         if 'export_b.n_clicks' in ctx:
-            return index+columns, datas, 'csv', appended
+            return index+columns, data, 'csv', appended
         elif 'clear_table_b.n_clicks' in ctx:
             return [], [], 'none', appended
         elif 'append_b.n_clicks' in ctx:
@@ -783,21 +784,21 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
                       'id': 'Cell {}'.format(d) + '-'+str(appended)}
                      for d in digit_list]
                 new_columns = state2 + app_columns
-                app_datas = \
-                    [{**{'Channel Location': cell},
+                app_data = \
+                    [{**{x_key: cell},
                       **{data[k]['name']+'-'+str(appended): data[k]['data'][num]
                          for k in data}}
                      for num, cell in enumerate(xvalues)]
                 new_data_list = []
-                new_datas = \
-                    [{**state3[i], **app_datas[i]}
-                     if state3[i][x_key] == app_datas[i][x_key]
-                     else new_data_list.extend([state3[i], app_datas[i]])
-                     for i in range(len(app_datas))]
-                new_datas = list(filter(None.__ne__, new_datas))
-                new_datas.extend(new_data_list)
+                new_data = \
+                    [{**state3[i], **app_data[i]}
+                     if state3[i][x_key] == app_data[i][x_key]
+                     else new_data_list.extend([state3[i], app_data[i]])
+                     for i in range(len(app_data))]
+                new_data = list(filter(None.__ne__, new_data))
+                new_data.extend(new_data_list)
 
-                return new_columns, new_datas, 'csv', appended
+                return new_columns, new_data, 'csv', appended
         else:
             if n1 is None or state2 == []:
                 return state2, state3, 'none', appended
@@ -808,7 +809,7 @@ def list_to_table(val, data, data2, n1, n2, n3, state, state2, state3, state4):
 @app.callback(
     Output("heatmap_graph", "figure"),
     [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value'),
-     Input('ret_data', 'data')],
+     Input('input_data', 'data')],
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
     if dropdown_key is None:
@@ -837,7 +838,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, data):
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
         if dropdown_key_2 is None:
-            z_title = dropdown_key +  ' / ' + local_data[dropdown_key]['units']
+            z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
         else:
             z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
