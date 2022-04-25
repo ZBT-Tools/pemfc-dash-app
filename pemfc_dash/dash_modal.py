@@ -6,13 +6,14 @@ import dash_bootstrap_components as dbc
 
 # from dash_app import app
 
-modal_axes = \
-    html.Div(dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title',
+
+def create_modal(name_extension):
+    return html.Div(dbc.Modal(
+        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-'+str(name_extension),
                                         style={'font-weight': 'bold',
                                                'font-size': '20px'})),
-         dbc.ModalBody(id='modal-body')],
-        id="modal", is_open=False, size="lg"))
+         dbc.ModalBody(id='modal-body-'+str(name_extension))],
+        id="modal-"+str(name_extension), is_open=False, size="lg"))
 
 
 def modal_process(error_type, error=''):

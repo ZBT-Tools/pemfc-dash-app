@@ -23,7 +23,7 @@ from pemfc import main_app
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm, dash_collapse as dc
 
-from .dash_app import app
+from pemfc_dash.dash_app import app  #, celery_app
 from .dash_tabs import tab3
 from .dash_tabs import tab1, tab2, tab4, tab6, tab5
 
@@ -41,7 +41,6 @@ DATA_PATH = PATH.joinpath("data").resolve()
 # app = dash.Dash(__name__)
 
 server = app.server
-
 # # Setup caching
 # CACHE_CONFIG = {
 #     "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
@@ -53,6 +52,8 @@ server = app.server
 
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
+
+modal_name_extensions = ['1', '2', '3']
 
 app.layout = dbc.Container(
     [html.Div(  # HEADER
@@ -103,8 +104,8 @@ app.layout = dbc.Container(
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
      # modal for any warning
-     dm.modal_axes,
-
+     dm.create_modal(modal_name_extensions[0]),
+     dm.create_modal(modal_name_extensions[1]),
      html.Div(  # MIDDLE
          [html.Div(  # LEFT MIDDLE
              [html.Div(  # LEFT MIDDLE MIDDLE
@@ -278,26 +279,28 @@ app.layout = dbc.Container(
 
 
 @app.long_callback(
-    output=(Output("result_data_store", "data"),
-            Output('modal-title', 'children'),
-            Output('modal-body', 'children'),
-            Output('modal', 'is_open')),
-    inputs=(Input("signal", "data")),
-    state=(State('input_data', 'data'),
-           State('modal', 'is_open')),
-    running=[(Output("run_button", "disabled"), True, False)],
+    output=Output("result_data_store", "data"),
+            # Output('modal-title-1', 'children'),
+            # Output('modal-body-1', 'children'),
+            # Output('modal-1', 'is_open')),
+    inputs=Input("signal", "data"),
+    state=State('input_data', 'data'),
+    # interval=1e10,
+           # State('modal-1', 'is_open')),
+    # running=[(Output("run_button", "disabled"), True, False)],
     prevent_initial_call=True
 )
-def run_simulation(signal, input_data, modal_state):
-
+def run_simulation(signal, input_data):
+    if signal is None:
+        raise PreventUpdate
     try:
         data_transfer.gui_to_sim_transfer(input_data, input_dicts.sim_dict)
         global_data, local_data, sim = main_app.main()
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
-        return None, modal_title, modal_body, not modal_state
-    return [global_data[0], local_data[0]], None, None, modal_state
+        return None, modal_title  #, modal_body, not modal_state
+    return [global_data[0], local_data[0]]  #, None, None, modal_state
 
 # def try_simulation_store(**kwargs):
 #     try:
@@ -333,16 +336,16 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      Output('upload-file', 'contents'),
-     Output('modal-title', 'children'),
-     Output('modal-body', 'children'),
-     Output('modal', 'is_open')],
+     Output('modal-title-2', 'children'),
+     Output('modal-body-2', 'children'),
+     Output('modal-2', 'is_open')],
     Input('upload-file', 'contents'),
     [State('upload-file', 'filename'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal', 'is_open')]
+     State('modal-2', 'is_open')]
 )
 def upload_settings(contents, filename, value, multival, ids, ids2,
                     modal_state):
@@ -383,9 +386,10 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
                         dm.modal_process('id-not-loaded', err_l)
                     return list(dict_ids.values()), list(dict_ids2.values()), \
                         None, modal_title, modal_body, not modal_state
-            except Exception as e:
+            except Exception as E:
                 # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = dm.modal_process('error')
+                modal_title, modal_body = \
+                    dm.modal_process('error', error=repr(E))
                 return value, multival, None, modal_title, modal_body, \
                     not modal_state
         else:
@@ -432,27 +436,27 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
                     filename=setting_name), None
 
 
-@app.callback(
-    [Output({'type': 'global_children', 'id': ALL}, 'children'),
-     Output({'type': 'global_value', 'id': ALL}, 'children'),
-     Output({'type': 'global_unit', 'id': ALL}, 'children'),
-     # Output({'type': 'global_container', 'id': ALL}, 'style'),
-     Output('global-data', 'style')],
-    Input('result_data_store', 'data')
-)
-def global_outputs(results):
-    g = results[0]
-    glob = list(results[0])
-    glob_len = len(glob)
-
-    desc = [gl for gl in glob]
-    unit = [g[gl]['units'] for gl in glob]
-    val = \
-        ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
-         for gl in glob]
-    disp = {'display': 'flex'}
-    # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
-    return desc, val, unit, disp
+# @app.callback(
+#     [Output({'type': 'global_children', 'id': ALL}, 'children'),
+#      Output({'type': 'global_value', 'id': ALL}, 'children'),
+#      Output({'type': 'global_unit', 'id': ALL}, 'children'),
+#      # Output({'type': 'global_container', 'id': ALL}, 'style'),
+#      Output('global-data', 'style')],
+#     Input('result_data_store', 'data')
+# )
+# def global_outputs(results):
+#     g = results[0]
+#     glob = list(results[0])
+#     glob_len = len(glob)
+#
+#     desc = [gl for gl in glob]
+#     unit = [g[gl]['units'] for gl in glob]
+#     val = \
+#         ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
+#          for gl in glob]
+#     disp = {'display': 'flex'}
+#     # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
+#     return desc, val, unit, disp
 
 
 @app.callback(
@@ -488,7 +492,6 @@ def global_outputs_table(results):
      Output('dropdown_line', 'options'),
      Output('dropdown_line', 'value')],
     Input('result_data_store', 'data'),
-
 )
 def get_dropdown_options(results):
     if results is None:
