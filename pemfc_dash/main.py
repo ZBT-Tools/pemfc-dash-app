@@ -1,12 +1,13 @@
 import pathlib
 import re
 import copy
-import math
+import os
+# import math
 import dash
 # import dash.long_callback
 # from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash_extensions.enrich import Output, Input, State, ALL, \
-    ServersideOutput, html, dcc, RedisStore
+    ServersideOutput, html, dcc
 # from dash import dcc
 # from dash import html
 from dash import dash_table as dt
@@ -16,7 +17,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import numpy as np
 from pemfc.src import interpolation as ip
-from flask_caching import Cache
+# from flask_caching import Cache
 
 from pemfc_gui import data_transfer
 from pemfc.data import input_dicts
@@ -61,12 +62,13 @@ server = app.server
 # # Setup caching
 # CACHE_CONFIG = {
 #     "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
-#     'CACHE_DIR': 'cache_dir',
+#     'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379/'),
 #     "CACHE_DEFAULT_TIMEOUT": 3600
 # }
 # cache = Cache()
 # cache.init_app(app.server, config=CACHE_CONFIG)
-caching_backend = RedisStore()
+# caching_backend = RedisStore() # host='127.0.0.1', port=6379, password=None,
+# db=0)
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
@@ -297,17 +299,17 @@ app.layout = dbc.Container(
 
 @app.callback(
     ServersideOutput("result_data_store", "data"),
-            # Output('modal-title-1', 'children'),
-            # Output('modal-body-1', 'children'),
-            # Output('modal-1', 'is_open')),
+    Output('modal-title-1', 'children'),
+    Output('modal-body-1', 'children'),
+    Output('modal-1', 'is_open'),
     Input("signal", "data"),
     State('input_data', 'data'),
     # interval=1e10,
-           # State('modal-1', 'is_open')),
+    State('modal-1', 'is_open'),
     # running=[(Output("run_button", "disabled"), True, False)],
     prevent_initial_call=True
 )
-def run_simulation(signal, input_data):
+def run_simulation(signal, input_data, modal_state):
     if signal is None:
         raise PreventUpdate
     try:
@@ -316,8 +318,8 @@ def run_simulation(signal, input_data):
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
-        return None, modal_title  #, modal_body, not modal_state
-    return [global_data[0], local_data[0]]  #, None, None, modal_state
+        return None, modal_title, modal_body, not modal_state
+    return [global_data[0], local_data[0]], None, None, modal_state
 
 # def try_simulation_store(**kwargs):
 #     try:

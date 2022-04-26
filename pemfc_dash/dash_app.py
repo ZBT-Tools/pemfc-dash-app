@@ -3,7 +3,7 @@ import dash
 from dash.long_callback import CeleryLongCallbackManager, \
     DiskcacheLongCallbackManager
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
-    ServersideOutputTransform
+    ServersideOutputTransform, RedisStore
 # from celery import Celery
 # import diskcache
 
@@ -22,12 +22,13 @@ bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
               '/bootstrap.min.css')
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
 
+caching_backend = RedisStore() # host='127.0.0.1', port=6379, password=None,
 
 external_stylesheets = [bs_5_css]
 app = DashProxy(__name__, external_stylesheets=external_stylesheets,
                 suppress_callback_exceptions=True,
                 transforms=[MultiplexerTransform(),
-                            ServersideOutputTransform()])
+                            ServersideOutputTransform(backend=caching_backend)])
 
 # app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
 #                 long_callback_manager=long_callback_manager,
