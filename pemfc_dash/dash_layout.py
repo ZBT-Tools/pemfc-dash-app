@@ -403,4 +403,6 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
     return inputs
 
 
-
+graph_font_props = {'small': {'size': 12, 'color': 'black', 'family': 'Arial'},
+                    'medium': {'size': 16, 'color': 'black', 'family': 'Arial'},
+                    'large': {'size': 20, 'color': 'black', 'family': 'Arial'}}

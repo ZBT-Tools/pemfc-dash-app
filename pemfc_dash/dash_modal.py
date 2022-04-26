@@ -7,13 +7,13 @@ import dash_bootstrap_components as dbc
 # from dash_app import app
 
 
-def create_modal(name_extension):
+def create_modal(main_id='modal', title_id='modal-title', body_id='modal-body'):
     return html.Div(dbc.Modal(
-        [dbc.ModalHeader(dbc.ModalTitle(id='modal-title-'+str(name_extension),
+        [dbc.ModalHeader(dbc.ModalTitle(id=title_id,
                                         style={'font-weight': 'bold',
                                                'font-size': '20px'})),
-         dbc.ModalBody(id='modal-body-'+str(name_extension))],
-        id="modal-"+str(name_extension), is_open=False, size="lg"))
+         dbc.ModalBody(id=body_id)],
+        id=main_id, is_open=False, size="lg"))
 
 
 def modal_process(error_type, error=''):

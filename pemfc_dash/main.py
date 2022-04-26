@@ -123,8 +123,7 @@ app.layout = dbc.Container(
      # empty Div to trigger javascript file for graph resizing
      html.Div(id="output-clientside"),
      # modal for any warning
-     dm.create_modal(modal_name_extensions[0]),
-     dm.create_modal(modal_name_extensions[1]),
+     dm.create_modal(),
      html.Div(  # MIDDLE
          [html.Div(  # LEFT MIDDLE
              [html.Div(  # LEFT MIDDLE MIDDLE
@@ -299,13 +298,13 @@ app.layout = dbc.Container(
 
 @app.callback(
     ServersideOutput("result_data_store", "data"),
-    Output('modal-title-1', 'children'),
-    Output('modal-body-1', 'children'),
-    Output('modal-1', 'is_open'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("signal", "data"),
     State('input_data', 'data'),
     # interval=1e10,
-    State('modal-1', 'is_open'),
+    State('modal', 'is_open'),
     # running=[(Output("run_button", "disabled"), True, False)],
     prevent_initial_call=True
 )
@@ -355,16 +354,16 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      Output('upload-file', 'contents'),
-     Output('modal-title-2', 'children'),
-     Output('modal-body-2', 'children'),
-     Output('modal-2', 'is_open')],
+     Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
     Input('upload-file', 'contents'),
     [State('upload-file', 'filename'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal-2', 'is_open')]
+     State('modal', 'is_open')]
 )
 def upload_settings(contents, filename, value, multival, ids, ids2,
                     modal_state):
@@ -804,67 +803,115 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
+        # if dropdown_key_2 is None:
+        #     z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
+        # else:
+        #     z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
+        #                + local_data[dropdown_key][dropdown_key_2]['units']
+
         if dropdown_key_2 is None:
             z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
         else:
-            z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
+            z_title = dropdown_key + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
 
-        if n_y <= 20:
-            height = 300
-        elif 20 < n_y <= 100:
-            height = 300 + n_y * 10.0
-        else:
-            height = 1300
+        # if n_y <= 20:
+        #     height = 300
+        # elif 20 < n_y <= 100:
+        #     height = 300 + n_y * 10.0
+        # else:
+        #     height = 1300
+
+        height = 800
+        # width = 500
+
+        font_props = dl.graph_font_props
 
         base_axis_dict = \
-            {'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+            {'tickfont': font_props['medium'],
+             'titlefont': font_props['large'],
              'title': x_key + ' / ' + local_data[x_key]['units'],
              'tickmode': 'array', 'showgrid': True}
+
+        tick_division_dict = \
+            {'fine': {'upper_limit': 10, 'value': 1},
+             'medium': {'upper_limit': 20, 'value': 2},
+             'medium_coarse': {'upper_limit': 50, 'value': 5},
+             'coarse': {'value': 10}}
+
+        def filter_tick_text(data, spacing=1):
+            return [str(data[i]) if i % spacing == 0 else ' '
+                    for i in range(len(data))]
+
+        def granular_tick_division(data, division=None):
+            n = len(data)
+            if division is None:
+                division = tick_division_dict
+            if n <= division['fine']['upper_limit']:
+                result = filter_tick_text(data, division['fine']['value'])
+            elif division['fine']['upper_limit'] < n \
+                    <= division['medium']['upper_limit']:
+                result = \
+                    filter_tick_text(data, division['medium']['value'])
+            elif division['medium']['upper_limit'] < n \
+                    <= division['medium_coarse']['upper_limit']:
+                result = filter_tick_text(
+                    data, division['medium_coarse']['value'])
+            else:
+                result = \
+                    filter_tick_text(data, division['coarse']['value'])
+            return result
+        # y_tick_labels[-1] = str(n_y - 1)
 
         x_axis_dict = copy.deepcopy(base_axis_dict)
         x_axis_dict['title'] = x_key + ' / ' + local_data[x_key]['units']
         x_axis_dict['tickvals'] = local_data[x_key]['value']
-
-        if n_y <= 100:
-            y_tick_labels = [str(i) for i in range(n_y)]
-        elif 100 < n_y <= 200:
-            y_tick_labels = [' ' for i in range(n_y)]
-            for i in range(0, n_y, 2):
-                y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y-1)
-        elif 200 < n_y <= 500:
-            y_tick_labels = [' ' for i in range(n_y)]
-            for i in range(0, n_y, 5):
-                y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y-1)
-        else:
-            y_tick_labels = [' ' for i in range(n_y)]
-            for i in range(0, n_y, 10):
-                y_tick_labels[i] = str(i)
-            y_tick_labels[-1] = str(n_y-1)
+        x_axis_dict['ticktext'] = \
+            granular_tick_division(local_data[x_key]['value'])
 
         y_axis_dict = copy.deepcopy(base_axis_dict)
         y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
         y_axis_dict['tickvals'] = yvalues
-        y_axis_dict['ticktext'] = y_tick_labels
+        y_axis_dict['ticktext'] = granular_tick_division(range(n_y))
+
+        z_axis_dict = copy.deepcopy(base_axis_dict)
+        z_axis_dict['title'] = z_title
+        # z_axis_dict['tickvals'] = zvalues
 
         layout = go.Layout(
-            font={'color': 'black', 'family': 'Arial'},
+            font=font_props['large'],
             # title='Local Results in Heat Map',
-            titlefont={'size': 11, 'color': 'black'},
+            titlefont=font_props['large'],
             xaxis=x_axis_dict,
             yaxis=y_axis_dict,
             margin={'l': 75, 'r': 20, 't': 20, 'b': 20},
-            height=height)
+            height=height
+        )
+        scene = dict(
+            # font={'color': 'black', 'family': 'Arial'},
+            # title='Local Results in Heat Map',
+            # titlefont={'size': 11, 'color': 'black'},
+            xaxis=x_axis_dict,
+            yaxis=y_axis_dict,
+            zaxis=z_axis_dict
+            # margin={'l': 75, 'r': 20, 't': 20, 'b': 20})
+            )
 
-        heatmap = go.Heatmap(z=zvalues, x=xvalues, y=yvalues, xgap=1, ygap=1,
-                             colorbar={'tickfont': {'size': 11},
-                                       'title': {'text': z_title,
-                                                 'font': {'size': 14},
-                                                 'side': 'right'}})
+        heatmap = \
+            go.Surface(z=zvalues, x=xvalues, y=yvalues, # xgap=1, ygap=1,
+                       colorbar={
+                           'tickfont': font_props['large'],
+                           'title': {
+                               'text': z_title,
+                               'font': {'size': font_props['large']['size']},
+                               'side': 'right'},
+                           # 'height': height - 300
+                           'lenmode': 'fraction',
+                           'len': 0.75
+                       })
 
         fig = go.Figure(data=heatmap, layout=layout)
+        fig.update_layout(scene=scene)
 
     return fig
 

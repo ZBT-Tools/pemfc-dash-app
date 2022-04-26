@@ -1,9 +1,10 @@
 import dash
 # import dash_bootstrap_components as dbc
-from dash.long_callback import CeleryLongCallbackManager, \
-    DiskcacheLongCallbackManager
+# from dash.long_callback import CeleryLongCallbackManager, \
+#     DiskcacheLongCallbackManager
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
-    ServersideOutputTransform, RedisStore
+    ServersideOutputTransform, RedisStore, FileSystemStore
+import redis
 # from celery import Celery
 # import diskcache
 
@@ -22,7 +23,13 @@ bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
               '/bootstrap.min.css')
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
 
-caching_backend = RedisStore() # host='127.0.0.1', port=6379, password=None,
+caching_backend = RedisStore()
+try:
+    caching_backend.delete('test')
+except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
+    caching_backend = FileSystemStore()
+except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
+    pass
 
 external_stylesheets = [bs_5_css]
 app = DashProxy(__name__, external_stylesheets=external_stylesheets,
