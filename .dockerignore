@@ -13,3 +13,4 @@ Procfile
 *.pyd
 __pycache__
 .pytest_cache
+test_long_callback.py

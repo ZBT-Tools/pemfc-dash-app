@@ -43,17 +43,17 @@ DATA_PATH = PATH.joinpath("data").resolve()
 server = app.server
 
 # Setup caching
-# CACHE_CONFIG = {
-#     "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
-#     'CACHE_DIR': 'cache_dir',
-#     "CACHE_DEFAULT_TIMEOUT": 3600
-# }
-
 CACHE_CONFIG = {
-    'CACHE_TYPE': 'RedisCache',
-    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379/'),
-    'CACHE_DEFAULT_TIMEOUT': 3600
+    "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
+    'CACHE_DIR': 'cache_dir',
+    "CACHE_DEFAULT_TIMEOUT": 3600
 }
+
+# CACHE_CONFIG = {
+#     'CACHE_TYPE': 'RedisCache',
+#     'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379/'),
+#     'CACHE_DEFAULT_TIMEOUT': 3600
+# }
 
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
