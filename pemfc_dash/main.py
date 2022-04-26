@@ -3,10 +3,12 @@ import re
 import copy
 import math
 import dash
-import dash.long_callback
-from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
-from dash import dcc
-from dash import html
+# import dash.long_callback
+# from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
+from dash_extensions.enrich import Output, Input, State, ALL, \
+    ServersideOutput, html, dcc, RedisStore
+# from dash import dcc
+# from dash import html
 from dash import dash_table as dt
 
 import dash_bootstrap_components as dbc
@@ -23,13 +25,28 @@ from pemfc import main_app
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm, dash_collapse as dc
 
-from pemfc_dash.dash_app import app  #, celery_app
 from .dash_tabs import tab3
 from .dash_tabs import tab1, tab2, tab4, tab6, tab5
 
 import pemfc_gui.input as gui_input
 
 import json
+
+from pemfc_dash.dash_app import app  #, celery_app
+
+# from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
+#     ServersideOutputTransform
+# dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css")
+# bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
+#               '/bootstrap.min.css')
+# bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
+#
+#
+# external_stylesheets = [bs_5_css]
+# app = DashProxy(__name__, external_stylesheets=external_stylesheets,
+#                 # suppress_callback_exceptions=True,
+#                 transforms=[MultiplexerTransform(),
+#                             ServersideOutputTransform()])
 
 import collections
 tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
@@ -49,7 +66,7 @@ server = app.server
 # }
 # cache = Cache()
 # cache.init_app(app.server, config=CACHE_CONFIG)
-
+caching_backend = RedisStore()
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
@@ -278,13 +295,13 @@ app.layout = dbc.Container(
     style={'padding': '0px'})
 
 
-@app.long_callback(
-    output=Output("result_data_store", "data"),
+@app.callback(
+    ServersideOutput("result_data_store", "data"),
             # Output('modal-title-1', 'children'),
             # Output('modal-body-1', 'children'),
             # Output('modal-1', 'is_open')),
-    inputs=Input("signal", "data"),
-    state=State('input_data', 'data'),
+    Input("signal", "data"),
+    State('input_data', 'data'),
     # interval=1e10,
            # State('modal-1', 'is_open')),
     # running=[(Output("run_button", "disabled"), True, False)],

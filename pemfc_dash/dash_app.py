@@ -2,12 +2,13 @@ import dash
 # import dash_bootstrap_components as dbc
 from dash.long_callback import CeleryLongCallbackManager, \
     DiskcacheLongCallbackManager
-# from dash_extensions.enrich import DashProxy, MultiplexerTransform
+from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
+    ServersideOutputTransform
 # from celery import Celery
-import diskcache
+# import diskcache
 
-cache = diskcache.Cache("./cache")
-long_callback_manager = DiskcacheLongCallbackManager(cache)
+# cache = diskcache.Cache("./cache")
+# long_callback_manager = DiskcacheLongCallbackManager(cache)
 
 # celery_app = Celery(
 #     __name__, broker="redis://localhost:6379/0",
@@ -23,13 +24,13 @@ bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min
 
 
 external_stylesheets = [bs_5_css]
-# app = DashProxy(__name__, external_stylesheets=external_stylesheets,
-#                 long_callback_manager=long_callback_manager,
-#                 suppress_callback_exceptions=True,
-#                 transforms=[MultiplexerTransform()])
+app = DashProxy(__name__, external_stylesheets=external_stylesheets,
+                suppress_callback_exceptions=True,
+                transforms=[MultiplexerTransform(),
+                            ServersideOutputTransform()])
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
-                long_callback_manager=long_callback_manager,
-                suppress_callback_exceptions=True)
+# app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
+#                 long_callback_manager=long_callback_manager,
+#                 suppress_callback_exceptions=True)
 # app = dash.Dash(__name__, suppress_callback_exceptions=True)
 # server = app.server
