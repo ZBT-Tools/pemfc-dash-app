@@ -1,7 +1,8 @@
 import pathlib
 import re
 import copy
-import math
+import os
+# import math
 import dash
 from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash import dcc
@@ -42,11 +43,18 @@ DATA_PATH = PATH.joinpath("data").resolve()
 server = app.server
 
 # Setup caching
+# CACHE_CONFIG = {
+#     "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
+#     'CACHE_DIR': 'cache_dir',
+#     "CACHE_DEFAULT_TIMEOUT": 3600
+# }
+
 CACHE_CONFIG = {
-    "CACHE_TYPE": "FileSystemCache",  # Flask-Caching related configs
-    'CACHE_DIR': 'cache_dir',
-    "CACHE_DEFAULT_TIMEOUT": 3600
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379/'),
+    'CACHE_DEFAULT_TIMEOUT': 3600
 }
+
 cache = Cache()
 cache.init_app(app.server, config=CACHE_CONFIG)
 
@@ -442,9 +450,10 @@ def upload_settings(contents, filename, value, multival, ids, ids2,
                         dm.modal_process('id-not-loaded', err_l)
                     return list(dict_ids.values()), list(dict_ids2.values()), \
                         None, modal_title, modal_body, not modal_state
-            except Exception as e:
+            except Exception as E:
                 # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = dm.modal_process('error')
+                modal_title, modal_body = \
+                    dm.modal_process('error', error=repr(E))
                 return value, multival, None, modal_title, modal_body, \
                     not modal_state
         else:
@@ -491,28 +500,28 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
                     filename=setting_name), None
 
 
-@app.callback(
-    [Output({'type': 'global_children', 'id': ALL}, 'children'),
-     Output({'type': 'global_value', 'id': ALL}, 'children'),
-     Output({'type': 'global_unit', 'id': ALL}, 'children'),
-     # Output({'type': 'global_container', 'id': ALL}, 'style'),
-     Output('global-data', 'style')],
-    Input('input_data', 'data')
-)
-def global_outputs(data):
-    results = try_simulation_store(**data)
-    g = results[0]
-    glob = list(results[0])
-    glob_len = len(glob)
-
-    desc = [gl for gl in glob]
-    unit = [g[gl]['units'] for gl in glob]
-    val = \
-        ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
-         for gl in glob]
-    disp = {'display': 'flex'}
-    # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
-    return desc, val, unit, disp
+# @app.callback(
+#     [Output({'type': 'global_children', 'id': ALL}, 'children'),
+#      Output({'type': 'global_value', 'id': ALL}, 'children'),
+#      Output({'type': 'global_unit', 'id': ALL}, 'children'),
+#      # Output({'type': 'global_container', 'id': ALL}, 'style'),
+#      Output('global-data', 'style')],
+#     Input('input_data', 'data')
+# )
+# def global_outputs(data):
+#     results = try_simulation_store(**data)
+#     g = results[0]
+#     glob = list(results[0])
+#     glob_len = len(glob)
+#
+#     desc = [gl for gl in glob]
+#     unit = [g[gl]['units'] for gl in glob]
+#     val = \
+#         ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
+#          for gl in glob]
+#     disp = {'display': 'flex'}
+#     # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
+#     return desc, val, unit, disp
 
 
 @app.callback(
@@ -522,7 +531,7 @@ def global_outputs(data):
     Input('input_data', 'data')
 )
 def global_outputs_table(data):
-    results = simulation_store(**data)
+    results = try_simulation_store(**data)
     global_result_dict = results[0]
     names = list(global_result_dict.keys())
     values = [v['value'] for k, v in global_result_dict.items()]
