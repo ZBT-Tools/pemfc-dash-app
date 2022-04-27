@@ -28,7 +28,7 @@ collapses = \
             [html.Div('Save setting as  : ', className='label-param-s'),
              dbc.Input(id='save_as_input', placeholder="settings.json",
                        className='label-param-l'),
-             html.Button('Go', id='save-as-button',
+             html.Button('Save', id='save-as-button',
                          className='ufontm centered')], className='r_flex g-0'),
             id='collapse_save', is_open=False)])
 

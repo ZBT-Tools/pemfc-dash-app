@@ -17,6 +17,8 @@ README.md
 Procfile
 ubuntu_specific
 environment.yml
+docker-compose.yml
+test_long_callback.py
 
 # Python pycache:
 __pycache__/
