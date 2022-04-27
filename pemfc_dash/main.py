@@ -6,8 +6,7 @@ import os
 import dash
 # import dash.long_callback
 # from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
-from dash_extensions.enrich import Output, Input, State, ALL, \
-    ServersideOutput, html, dcc
+from dash_extensions.enrich import Output, Input, State, ALL, html, dcc
 # from dash import dcc
 # from dash import html
 from dash import dash_table as dt
@@ -115,7 +114,7 @@ app.layout = dbc.Container(
         className='row'
         ),
      dcc.Store(id="input_data"),
-     dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
+     dbc.Spinner(dcc.Store(id='result_signal'), fullscreen=True,
                  spinner_class_name='loading_spinner',
                  fullscreen_class_name='loading_spinner_bg'),
      dcc.Store(id='signal'),
@@ -296,8 +295,11 @@ app.layout = dbc.Container(
     style={'padding': '0px'})
 
 
+global_result_store = None
+
+
 @app.callback(
-    ServersideOutput("result_data_store", "data"),
+    Output("result_signal", "data"),
     Output('modal-title', 'children'),
     Output('modal-body', 'children'),
     Output('modal', 'is_open'),
@@ -318,7 +320,9 @@ def run_simulation(signal, input_data, modal_state):
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
         return None, modal_title, modal_body, not modal_state
-    return [global_data[0], local_data[0]], None, None, modal_state
+    global global_result_store
+    global_result_store = [global_data[0], local_data[0]]
+    return True, None, None, modal_state
 
 # def try_simulation_store(**kwargs):
 #     try:
@@ -460,7 +464,7 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
 #      Output({'type': 'global_unit', 'id': ALL}, 'children'),
 #      # Output({'type': 'global_container', 'id': ALL}, 'style'),
 #      Output('global-data', 'style')],
-#     Input('result_data_store', 'data')
+#     Input('result_signal', 'data')
 # )
 # def global_outputs(results):
 #     g = results[0]
@@ -481,13 +485,14 @@ def save_settings(n_clicks, name, val1, val2, ids, ids2):
     [Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
      Output('global_data_table', 'export_format')],
-    Input('result_data_store', 'data'),
+    Input('result_signal', 'data'),
     prevent_initial_call=True
 )
-def global_outputs_table(results):
-    if results is None:
+def global_outputs_table(result_signal):
+    if global_result_store is None or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         global_result_dict = results[0]
         names = list(global_result_dict.keys())
         values = [v['value'] for k, v in global_result_dict.items()]
@@ -509,12 +514,13 @@ def global_outputs_table(results):
      Output('results_dropdown', 'value'),
      Output('dropdown_line', 'options'),
      Output('dropdown_line', 'value')],
-    Input('result_data_store', 'data'),
+    Input('result_signal', 'data'),
 )
-def get_dropdown_options(results):
-    if results is None:
+def get_dropdown_options(result_signal):
+    if global_result_store is None or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         local_data = results[1]
         values = [{'label': key, 'value': key} for key in local_data
                   if key not in
@@ -528,12 +534,14 @@ def get_dropdown_options(results):
      Output('results_dropdown_2', 'value'),
      Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
-     Input('result_data_store', 'data')]
+     Input('result_signal', 'data')]
 )
-def get_dropdown_options_2(dropdown_key, results):
-    if dropdown_key is None or results is None:
+def get_dropdown_options_2(dropdown_key, result_signal):
+    if dropdown_key is None or global_result_store is None \
+            or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -549,12 +557,14 @@ def get_dropdown_options_2(dropdown_key, results):
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
     Input('dropdown_line', 'value'),
-    State('result_data_store', 'data')
+    State('result_signal', 'data')
 )
-def dropdown_line2(dropdown_key, results):
-    if dropdown_key is None or results is None:
+def dropdown_line2(dropdown_key, result_signal):
+    if dropdown_key is None or global_result_store is None \
+            or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -576,18 +586,19 @@ def dropdown_line2(dropdown_key, results):
      Input('data_checklist', 'value'),
      Input('clear_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    [State('result_data_store', 'data'),
+    [State('result_signal', 'data'),
      State('cells_data', 'data'),
      State('data_checklist', 'value'),
      State('disp_chosen', 'data')]
 )
 def update_line_graph(drop1, drop2, checklist, n_click, rdata,
-                      results, state2, state3, state4):
+                      result_signal, state2, state3, state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if drop1 is None or results is None:
+    if drop1 is None or global_result_store is None \
+            or not result_signal:
         raise PreventUpdate
     else:
-
+        results = global_result_store
         local_data = results[1]
 
         x_key = 'Channel Location'
@@ -701,17 +712,19 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Input('export_b', 'n_clicks'),  # button1
      Input('append_b', 'n_clicks'),  # button2
      Input('clear_table_b', 'n_clicks')],
-    [State('result_data_store', 'data'),
+    [State('result_signal', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
      State('append_check', 'data')]
 )
-def list_to_table(val, data, data2, n1, n2, n3, results, state2, state3,
+def list_to_table(val, data, data2, n1, n2, n3, result_signal, state2, state3,
                   state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if val is None or results is None:
+    if val is None or global_result_store is None \
+            or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         local_data = results[1]
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
@@ -776,12 +789,14 @@ def list_to_table(val, data, data2, n1, n2, n3, results, state2, state3,
 @app.callback(
     Output("heatmap_graph", "figure"),
     [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value')],
-    State('result_data_store', 'data'),
+    State('result_signal', 'data'),
 )
-def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
-    if dropdown_key is None or results is None:
+def update_heatmap_graph(dropdown_key, dropdown_key_2, result_signal):
+    if dropdown_key is None or global_result_store is None \
+            or not result_signal:
         raise PreventUpdate
     else:
+        results = global_result_store
         local_data = results[1]
         x_key = 'Channel Location'
         y_key = 'Cells'
@@ -803,17 +818,17 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
             # else:
             #     zvalues = local_data[dropdown_key][dropdown_key_2]['value']
 
-        # if dropdown_key_2 is None:
-        #     z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
-        # else:
-        #     z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
-        #                + local_data[dropdown_key][dropdown_key_2]['units']
-
         if dropdown_key_2 is None:
             z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
         else:
-            z_title = dropdown_key + ' / ' \
+            z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
                        + local_data[dropdown_key][dropdown_key_2]['units']
+
+        # if dropdown_key_2 is None:
+        #     z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
+        # else:
+        #     z_title = dropdown_key + ' / ' \
+        #                + local_data[dropdown_key][dropdown_key_2]['units']
 
         # if n_y <= 20:
         #     height = 300
@@ -828,8 +843,8 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         font_props = dl.graph_font_props
 
         base_axis_dict = \
-            {'tickfont': font_props['medium'],
-             'titlefont': font_props['large'],
+            {'tickfont': font_props['small'],
+             'titlefont': font_props['medium'],
              'title': x_key + ' / ' + local_data[x_key]['units'],
              'tickmode': 'array', 'showgrid': True}
 
@@ -879,9 +894,9 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         # z_axis_dict['tickvals'] = zvalues
 
         layout = go.Layout(
-            font=font_props['large'],
+            font=font_props['medium'],
             # title='Local Results in Heat Map',
-            titlefont=font_props['large'],
+            titlefont=font_props['medium'],
             xaxis=x_axis_dict,
             yaxis=y_axis_dict,
             margin={'l': 75, 'r': 20, 't': 20, 'b': 20},
@@ -900,10 +915,11 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         heatmap = \
             go.Surface(z=zvalues, x=xvalues, y=yvalues, # xgap=1, ygap=1,
                        colorbar={
-                           'tickfont': font_props['large'],
+                           'tickfont': font_props['small'],
+                           'titlefont': font_props['medium'],
                            'title': {
                                'text': z_title,
-                               'font': {'size': font_props['large']['size']},
+                               # 'font': {'size': font_props['medium']['size']},
                                'side': 'right'},
                            # 'height': height - 300
                            'lenmode': 'fraction',
