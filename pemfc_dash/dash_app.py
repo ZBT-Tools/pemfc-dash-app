@@ -23,7 +23,7 @@ bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
               '/bootstrap.min.css')
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
 
-caching_backend = RedisStore()
+caching_backend = RedisStore(host='redis', port=6379)
 try:
     caching_backend.delete('test')
 except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
