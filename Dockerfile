@@ -34,6 +34,7 @@ ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY . ./
 
+ENV PYTHONUNBUFFERED True
 # install runtime libraries (different from development libraries!)
 # RUN apt-get -qy update && apt-get -qy install libldap-2.4-2 && \
 #     rm -rf /var/cache/apt/* /var/lib/apt/lists/*

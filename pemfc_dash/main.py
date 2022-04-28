@@ -4,6 +4,7 @@ import copy
 import os
 # import math
 import dash
+from flask import request
 # import dash.long_callback
 # from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc
@@ -287,7 +288,9 @@ app.layout = dbc.Container(
               id='div_table', style={'overflow': 'auto',
                                      'position': 'relative',
                                      'margin': '0 0.05% 0 0.7%'},
-              className='pretty_container')
+              className='pretty_container'),
+     # html.Div(id='debug-container', className='pretty_container',
+     #          style={'whiteSpace': 'pre-wrap'})
     ],
     id="mainContainer",
     # className='twelve columns',
@@ -295,7 +298,11 @@ app.layout = dbc.Container(
     style={'padding': '0px'})
 
 
-global_result_store = None
+global_result_store = {}
+
+
+def store_in_global(data, ip_address):
+    global_result_store[ip_address] = data
 
 
 @app.callback(
@@ -320,8 +327,10 @@ def run_simulation(signal, input_data, modal_state):
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
         return None, modal_title, modal_body, not modal_state
-    global global_result_store
-    global_result_store = [global_data[0], local_data[0]]
+    # global global_result_store
+    store_in_global([global_data[0], local_data[0]], request.remote_addr)
+    print('global_result_store')
+    print(global_result_store)
     return True, None, None, modal_state
 
 # def try_simulation_store(**kwargs):
@@ -355,144 +364,22 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
 
 
 @app.callback(
-    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output('upload-file', 'contents'),
-     Output('modal-title', 'children'),
-     Output('modal-body', 'children'),
-     Output('modal', 'is_open')],
-    Input('upload-file', 'contents'),
-    [State('upload-file', 'filename'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal', 'is_open')]
-)
-def upload_settings(contents, filename, value, multival, ids, ids2,
-                    modal_state):
-    if contents is None:
-        raise PreventUpdate
-    else:
-        if 'json' in filename:
-            try:
-                j_file, err_l = df.parse_contents(contents)
-
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
-
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
-                    # All JSON settings match Dash IDs
-                    modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-                else:
-                    # Some JSON settings do not match Dash IDs; return values
-                    # that matched with Dash IDs
-                    modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-            except Exception as E:
-                # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = \
-                    dm.modal_process('error', error=repr(E))
-                return value, multival, None, modal_title, modal_body, \
-                    not modal_state
-        else:
-            # Not JSON file; return old value
-            modal_title, modal_body = dm.modal_process('wrong-file')
-            return value, multival, None, modal_title, modal_body, \
-                not modal_state
-
-
-@app.callback(
-    [Output("savefile-json", "data"),
-     Output('save-as-button', "n_clicks")],
-    Input('save-as-button', "n_clicks"),
-    [State('save_as_input', 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id')],
-    prevent_initial_call=True,
-)
-def save_settings(n_clicks, name, val1, val2, ids, ids2):
-    if n_clicks is not None:
-        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
-        sep_id_list = [joined_id.split('-') for joined_id in
-                       dict_data.keys()]
-
-        val_list = dict_data.values()
-        new_dict = {}
-        for sep_id, vals in zip(sep_id_list, val_list):
-            current_level = new_dict
-            for id_l in sep_id:
-                if id_l not in current_level:
-                    if id_l != sep_id[-1]:
-                        current_level[id_l] = {}
-                    else:
-                        current_level[id_l] = vals
-                current_level = current_level[id_l]
-        if name:
-            setting_name = name if '.json' in name else name + '.json'
-        else:
-            setting_name = 'settings.json'
-
-        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                    filename=setting_name), None
-
-
-# @app.callback(
-#     [Output({'type': 'global_children', 'id': ALL}, 'children'),
-#      Output({'type': 'global_value', 'id': ALL}, 'children'),
-#      Output({'type': 'global_unit', 'id': ALL}, 'children'),
-#      # Output({'type': 'global_container', 'id': ALL}, 'style'),
-#      Output('global-data', 'style')],
-#     Input('result_signal', 'data')
-# )
-# def global_outputs(results):
-#     g = results[0]
-#     glob = list(results[0])
-#     glob_len = len(glob)
-#
-#     desc = [gl for gl in glob]
-#     unit = [g[gl]['units'] for gl in glob]
-#     val = \
-#         ['{:g}'.format(float('{:.5g}'.format(g[gl]['value'])))
-#          for gl in glob]
-#     disp = {'display': 'flex'}
-#     # disps = [{k: v} for k, v in disp.items() for _ in range(glob_len)]
-#     return desc, val, unit, disp
-
-
-@app.callback(
-    [Output('global_data_table', 'columns'),
+    [
+     Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
-     Output('global_data_table', 'export_format')],
+     Output('global_data_table', 'export_format'),
+     ],
     Input('result_signal', 'data'),
     prevent_initial_call=True
 )
 def global_outputs_table(result_signal):
-    if global_result_store is None or not result_signal:
+    if not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            raise PreventUpdate
         global_result_dict = results[0]
         names = list(global_result_dict.keys())
         values = [v['value'] for k, v in global_result_dict.items()]
@@ -510,23 +397,35 @@ def global_outputs_table(result_signal):
 
 
 @app.callback(
-    [Output('results_dropdown', 'options'),
+    [
+     Output('results_dropdown', 'options'),
      Output('results_dropdown', 'value'),
      Output('dropdown_line', 'options'),
-     Output('dropdown_line', 'value')],
+     Output('dropdown_line', 'value'),
+     ],
     Input('result_signal', 'data'),
+    prevent_initial_call=True
 )
 def get_dropdown_options(result_signal):
-    if global_result_store is None or not result_signal:
+    debug_output = 'result_signal: ' + str(result_signal) + '\n' \
+        + 'global_result_store: ' + str(bool(global_result_store))
+    print('callback: get_dropdown_options')
+    print(debug_output)
+    print('remote address: ', request.remote_addr)
+    if not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            print('KeyError')
+            raise PreventUpdate
         local_data = results[1]
-        values = [{'label': key, 'value': key} for key in local_data
+        options = [{'label': key, 'value': key} for key in local_data
                   if key not in
                   ["Channel Location", "Cells", "Cathode",
                    "Coolant Channels", "Normalized Flow Distribution"]]
-        return values, 'Current Density', values, 'Current Density'
+        return options, 'Current Density', options, 'Current Density'
 
 
 @app.callback(
@@ -534,14 +433,24 @@ def get_dropdown_options(result_signal):
      Output('results_dropdown_2', 'value'),
      Output('results_dropdown_2', 'style')],
     [Input('results_dropdown', 'value'),
-     Input('result_signal', 'data')]
+     Input('result_signal', 'data')],
+    prevent_initial_call=True
 )
 def get_dropdown_options_2(dropdown_key, result_signal):
-    if dropdown_key is None or global_result_store is None \
-            or not result_signal:
+    debug_output = 'dropdown_key: ' + str(dropdown_key) + '\n' \
+        + 'result_signal: ' + str(result_signal) + '\n' \
+        + 'global_result_store: ' + str(bool(global_result_store))
+    print('callback: get_dropdown_options_2')
+    print(debug_output)
+    print('remote address: ', request.remote_addr)
+    if dropdown_key is None or not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            print('KeyError')
+            raise PreventUpdate
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -557,14 +466,18 @@ def get_dropdown_options_2(dropdown_key, result_signal):
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
     Input('dropdown_line', 'value'),
-    State('result_signal', 'data')
+    State('result_signal', 'data'),
+    prevent_initial_call=True
 )
 def dropdown_line2(dropdown_key, result_signal):
-    if dropdown_key is None or global_result_store is None \
-            or not result_signal:
+    if dropdown_key is None or not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            print('KeyError')
+            raise PreventUpdate
         local_data = results[1]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
@@ -589,16 +502,25 @@ def dropdown_line2(dropdown_key, result_signal):
     [State('result_signal', 'data'),
      State('cells_data', 'data'),
      State('data_checklist', 'value'),
-     State('disp_chosen', 'data')]
+     State('disp_chosen', 'data')],
+    prevent_initial_call=True
 )
 def update_line_graph(drop1, drop2, checklist, n_click, rdata,
                       result_signal, state2, state3, state4):
+    print('callback: update_line_graph')
+    debug_output = 'result_signal: ' + str(result_signal) + '\n' \
+        + 'global_result_store: ' + str(bool(global_result_store))
+    print(debug_output)
+    print('remote address: ', request.remote_addr)
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if drop1 is None or global_result_store is None \
-            or not result_signal:
+    if drop1 is None or not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            print('KeyError')
+            raise PreventUpdate
         local_data = results[1]
 
         x_key = 'Channel Location'
@@ -715,16 +637,19 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
     [State('result_signal', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
-     State('append_check', 'data')]
+     State('append_check', 'data')],
+    prevent_initial_call=True
 )
 def list_to_table(val, data, data2, n1, n2, n3, result_signal, state2, state3,
                   state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if val is None or global_result_store is None \
-            or not result_signal:
+    if val is None or not result_signal:
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            raise PreventUpdate
         local_data = results[1]
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
@@ -787,16 +712,27 @@ def list_to_table(val, data, data2, n1, n2, n3, result_signal, state2, state3,
 
 
 @app.callback(
-    Output("heatmap_graph", "figure"),
+    [Output("heatmap_graph", "figure")],
     [Input('results_dropdown', 'value'), Input('results_dropdown_2', 'value')],
     State('result_signal', 'data'),
+    prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, result_signal):
-    if dropdown_key is None or global_result_store is None \
-            or not result_signal:
+    debug_output = 'dropdown_key: ' + str(dropdown_key) + '\n' \
+        + 'result_signal: ' + str(result_signal) + '\n' \
+        + 'global_result_store: ' + str(bool(global_result_store))
+    print('callback: update_heatmap_graph')
+    print(debug_output)
+    print('remote address: ', request.remote_addr)
+    if dropdown_key is None or not result_signal:
+        print('first PreventUpdate')
         raise PreventUpdate
     else:
-        results = global_result_store
+        try:
+            results = global_result_store[request.remote_addr]
+        except KeyError:
+            print('KeyError')
+            raise PreventUpdate
         local_data = results[1]
         x_key = 'Channel Location'
         y_key = 'Cells'
@@ -931,6 +867,108 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, result_signal):
 
     return fig
 
+@app.callback(
+    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output('upload-file', 'contents'),
+     Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
+    Input('upload-file', 'contents'),
+    [State('upload-file', 'filename'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State('modal', 'is_open')]
+)
+def upload_settings(contents, filename, value, multival, ids, ids2,
+                    modal_state):
+    if contents is None:
+        raise PreventUpdate
+    else:
+        if 'json' in filename:
+            try:
+                j_file, err_l = df.parse_contents(contents)
+
+                dict_ids = {id_l: val for id_l, val in
+                            zip([id_l['id'] for id_l in ids], value)}
+                dict_ids2 = {id_l: val for id_l, val in
+                             zip([id_l['id'] for id_l in ids2], multival)}
+
+                id_match = set.union(set(dict_ids),
+                                     set([item[:-2] for item in dict_ids2]))
+
+                for k, v in j_file.items():
+                    if k in id_match:
+                        if isinstance(v, list):
+                            for num, val in enumerate(v):
+                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
+                        else:
+                            dict_ids[k] = df.check_ifbool(v)
+                    else:
+                        continue
+
+                if not err_l:
+                    # All JSON settings match Dash IDs
+                    modal_title, modal_body = dm.modal_process('loaded')
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+                else:
+                    # Some JSON settings do not match Dash IDs; return values
+                    # that matched with Dash IDs
+                    modal_title, modal_body = \
+                        dm.modal_process('id-not-loaded', err_l)
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+            except Exception as E:
+                # Error / JSON file cannot be processed; return old value
+                modal_title, modal_body = \
+                    dm.modal_process('error', error=repr(E))
+                return value, multival, None, modal_title, modal_body, \
+                    not modal_state
+        else:
+            # Not JSON file; return old value
+            modal_title, modal_body = dm.modal_process('wrong-file')
+            return value, multival, None, modal_title, modal_body, \
+                not modal_state
+
+
+@app.callback(
+    [Output("savefile-json", "data"),
+     Output('save-as-button', "n_clicks")],
+    Input('save-as-button', "n_clicks"),
+    [State('save_as_input', 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id')],
+    prevent_initial_call=True,
+)
+def save_settings(n_clicks, name, val1, val2, ids, ids2):
+    if n_clicks is not None:
+        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+        sep_id_list = [joined_id.split('-') for joined_id in
+                       dict_data.keys()]
+
+        val_list = dict_data.values()
+        new_dict = {}
+        for sep_id, vals in zip(sep_id_list, val_list):
+            current_level = new_dict
+            for id_l in sep_id:
+                if id_l not in current_level:
+                    if id_l != sep_id[-1]:
+                        current_level[id_l] = {}
+                    else:
+                        current_level[id_l] = vals
+                current_level = current_level[id_l]
+        if name:
+            setting_name = name if '.json' in name else name + '.json'
+        else:
+            setting_name = 'settings.json'
+
+        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                    filename=setting_name), None
 
 # if __name__ == "__main__":
 #     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
