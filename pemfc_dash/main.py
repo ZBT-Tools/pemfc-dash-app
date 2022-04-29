@@ -298,7 +298,8 @@ app.layout = dbc.Container(
     style={'padding': '0px'})
 
 
-global_result_store = {}
+# global_result_store = {'initial': 0}
+global_result_store = None
 
 
 def store_in_global(data, ip_address):
@@ -317,8 +318,8 @@ def store_in_global(data, ip_address):
     # running=[(Output("run_button", "disabled"), True, False)],
     prevent_initial_call=True
 )
-def run_simulation(signal, input_data, modal_state):
-    if signal is None:
+def run_simulation(n_click, input_data, modal_state):
+    if n_click is None:
         raise PreventUpdate
     try:
         data_transfer.gui_to_sim_transfer(input_data, input_dicts.sim_dict)
@@ -328,9 +329,11 @@ def run_simulation(signal, input_data, modal_state):
             dm.modal_process('input-error', error=repr(E))
         return None, modal_title, modal_body, not modal_state
     # global global_result_store
-    store_in_global([global_data[0], local_data[0]], request.remote_addr)
-    print('global_result_store')
-    print(global_result_store)
+    # store_in_global([global_data[0], local_data[0]], request.remote_addr)
+    # print('global_result_store')
+    # print(global_result_store)
+    global global_result_store
+    global_result_store = [global_data[0], local_data[0]]
     return True, None, None, modal_state
 
 # def try_simulation_store(**kwargs):
@@ -373,12 +376,18 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     prevent_initial_call=True
 )
 def global_outputs_table(result_signal):
-    if not result_signal:
+    debug_output = 'result_signal: ' + str(result_signal) + '\n' \
+        + 'global_result_store: ' + str(bool(global_result_store))
+    print('callback: global_outputs_table')
+    print(debug_output)
+    print('remote address: ', request.remote_addr)
+    if not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
+            print('KeyError')
             raise PreventUpdate
         global_result_dict = results[0]
         names = list(global_result_dict.keys())
@@ -412,11 +421,11 @@ def get_dropdown_options(result_signal):
     print('callback: get_dropdown_options')
     print(debug_output)
     print('remote address: ', request.remote_addr)
-    if not result_signal:
+    if not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             print('KeyError')
             raise PreventUpdate
@@ -443,11 +452,11 @@ def get_dropdown_options_2(dropdown_key, result_signal):
     print('callback: get_dropdown_options_2')
     print(debug_output)
     print('remote address: ', request.remote_addr)
-    if dropdown_key is None or not result_signal:
+    if dropdown_key is None or not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             print('KeyError')
             raise PreventUpdate
@@ -470,11 +479,11 @@ def get_dropdown_options_2(dropdown_key, result_signal):
     prevent_initial_call=True
 )
 def dropdown_line2(dropdown_key, result_signal):
-    if dropdown_key is None or not result_signal:
+    if dropdown_key is None or not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             print('KeyError')
             raise PreventUpdate
@@ -513,11 +522,11 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
     print(debug_output)
     print('remote address: ', request.remote_addr)
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if drop1 is None or not result_signal:
+    if drop1 is None or not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             print('KeyError')
             raise PreventUpdate
@@ -643,11 +652,11 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 def list_to_table(val, data, data2, n1, n2, n3, result_signal, state2, state3,
                   state4):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if val is None or not result_signal:
+    if val is None or not result_signal or global_result_store is None:
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             raise PreventUpdate
         local_data = results[1]
@@ -724,12 +733,12 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, result_signal):
     print('callback: update_heatmap_graph')
     print(debug_output)
     print('remote address: ', request.remote_addr)
-    if dropdown_key is None or not result_signal:
+    if dropdown_key is None or not result_signal or global_result_store is None:
         print('first PreventUpdate')
         raise PreventUpdate
     else:
         try:
-            results = global_result_store[request.remote_addr]
+            results = global_result_store # [request.remote_addr]
         except KeyError:
             print('KeyError')
             raise PreventUpdate
