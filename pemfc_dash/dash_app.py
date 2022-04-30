@@ -27,7 +27,7 @@ caching_backend = RedisStore(
     host='eu2-arriving-honeybee-30031.upstash.io',
     password='8390b37d96074c5ba8b27653e8ec1957',
     port=30031,
-    default_timeout=300)
+    default_timeout=900)
 try:
     caching_backend.delete('test')
 except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
