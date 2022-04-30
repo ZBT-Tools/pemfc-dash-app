@@ -39,7 +39,7 @@ COPY . ./
 #     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # remember to run python from the virtualenv
-# CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:server
+CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:server
 
 # specifically for docker-compose
-CMD exec gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 0 app:server
+# CMD exec gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 0 app:server
