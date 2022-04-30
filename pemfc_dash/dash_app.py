@@ -27,12 +27,12 @@ caching_backend = RedisStore(
     host='eu2-arriving-honeybee-30031.upstash.io',
     password='8390b37d96074c5ba8b27653e8ec1957',
     port=30031)
-# try:
-#     caching_backend.delete('test')
-# except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
-#     caching_backend = FileSystemStore()
-# except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
-#     pass
+try:
+    caching_backend.delete('test')
+except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
+    caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
+except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
+    pass
 
 external_stylesheets = [bs_5_css]
 app = DashProxy(__name__, external_stylesheets=external_stylesheets,
