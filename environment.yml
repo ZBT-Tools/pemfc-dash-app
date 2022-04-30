@@ -18,7 +18,7 @@ dependencies:
     - pip
     - pip:
         - gunicorn
-        - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
+        - git+https://github.com/ZBT-Tools/pemfc-core.git@result_extension#egg=pemfc
         - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
 
 
