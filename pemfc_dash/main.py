@@ -1,78 +1,36 @@
 import pathlib
 import re
 import copy
-import os
-# import math
+import numpy as np
+import json
+
 import dash
-# import dash.long_callback
-# from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
 from dash_extensions.enrich import Output, Input, State, ALL,  html, dcc, \
     ServersideOutput
-# from dash import dcc
-# from dash import html
 from dash import dash_table as dt
-
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-import numpy as np
-from pemfc.src import interpolation as ip
-# from flask_caching import Cache
 
-from pemfc_gui import data_transfer
+from pemfc.src import interpolation as ip
 from pemfc.data import input_dicts
 from pemfc import main_app
+from pemfc_gui import data_transfer
+import pemfc_gui.input as gui_input
 
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm, dash_collapse as dc
-
 from .dash_tabs import tab3
 from .dash_tabs import tab1, tab2, tab4, tab6, tab5
+from pemfc_dash.dash_app import app
 
-import pemfc_gui.input as gui_input
-
-import json
-
-from pemfc_dash.dash_app import app  #, celery_app
-
-# from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
-#     ServersideOutputTransform
-# dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css")
-# bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
-#               '/bootstrap.min.css')
-# bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
-#
-#
-# external_stylesheets = [bs_5_css]
-# app = DashProxy(__name__, external_stylesheets=external_stylesheets,
-#                 # suppress_callback_exceptions=True,
-#                 transforms=[MultiplexerTransform(),
-#                             ServersideOutputTransform()])
-
-import collections
-tabs_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
-             tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
-
-# get relative data folder
-PATH = pathlib.Path(__file__).parent
-DATA_PATH = PATH.joinpath("data").resolve()
-# app = dash.Dash(__name__)
+tab_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
+            tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
 
 server = app.server
-# # Setup caching
-# CACHE_CONFIG = {
-#     "CACHE_TYPE": "RedisCache",  # Flask-Caching related configs
-#     'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379/'),
-#     "CACHE_DEFAULT_TIMEOUT": 3600
-# }
-# cache = Cache()
-# cache.init_app(app.server, config=CACHE_CONFIG)
-# caching_backend = RedisStore() # host='127.0.0.1', port=6379, password=None,
-# db=0)
+
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
-
-modal_name_extensions = ['1', '2', '3']
 
 app.layout = dbc.Container(
     [html.Div(  # HEADER
@@ -128,7 +86,7 @@ app.layout = dbc.Container(
          [html.Div(  # LEFT MIDDLE
              [html.Div(  # LEFT MIDDLE MIDDLE
                   [dl.tab_container(
-                          tabs_list, label=
+                          tab_list, label=
                           [k['title'] for k in gui_input.main_frame_dicts],
                           ids=['tab{}'.format(num + 1) for num in
                                range(len(gui_input.main_frame_dicts))])],
@@ -224,8 +182,6 @@ app.layout = dbc.Container(
                   html.Div(
                       [html.Div(
                           [
-                           dcc.Store(id='disp_chosen'),
-                           dcc.Store(id='disp_clicked'),
                            dcc.Store(id='append_check'),
                            html.Div(
                                [html.Div(
@@ -248,8 +204,11 @@ app.layout = dbc.Container(
                                     align_end=True,
                                     toggle_class_name='dropdown_input',
                                     label="Select Cells"),),
-                                html.Button('Clear List', id='clear_button',
+                                html.Button('Clear All', id='clear_all_button',
                                             className='local_data_buttons'),
+                                html.Button('Select All',
+                                            id='select_all_button',
+                                               className='local_data_buttons'),
                                 html.Button('Export to Table',
                                             id='export_b',
                                             className='local_data_buttons'),
@@ -592,13 +551,6 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         if x_length == z_length + 1:
             xvalues = ip.interpolate_1d(xvalues)
 
-
-        # if dropdown_key_2 is None:
-        #     z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
-        # else:
-        #     z_title = dropdown_key + ' - ' + dropdown_key_2 + ' / ' \
-        #                + local_data[dropdown_key][dropdown_key_2]['units']
-
         if dropdown_key_2 is None:
             z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
         else:
@@ -674,21 +626,16 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
             titlefont=font_props['large'],
             xaxis=x_axis_dict,
             yaxis=y_axis_dict,
-            margin={'l': 75, 'r': 20, 't': 20, 'b': 20},
+            margin={'l': 75, 'r': 20, 't': 10, 'b': 20},
             height=height
         )
         scene = dict(
-            # font={'color': 'black', 'family': 'Arial'},
-            # title='Local Results in Heat Map',
-            # titlefont={'size': 11, 'color': 'black'},
             xaxis=x_axis_dict,
             yaxis=y_axis_dict,
-            zaxis=z_axis_dict
-            # margin={'l': 75, 'r': 20, 't': 20, 'b': 20})
-            )
+            zaxis=z_axis_dict)
 
         heatmap = \
-            go.Surface(z=zvalues, x=xvalues, y=yvalues, # xgap=1, ygap=1,
+            go.Surface(z=zvalues, x=xvalues, y=yvalues,  # xgap=1, ygap=1,
                        colorbar={
                            'tickfont': font_props['large'],
                            'title': {
@@ -710,74 +657,34 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
     [Output('line_graph', 'figure'),
      Output('cells_data', 'data'),
      Output('data_checklist', 'options'),
-     Output('data_checklist', 'value'),
-     Output('disp_chosen', 'data')],
+     Output('data_checklist', 'value')],
     [Input('dropdown_line', 'value'),
      Input('dropdown_line2', 'value'),
      Input('data_checklist', 'value'),
-     Input('clear_button', 'n_clicks'),
+     Input('select_all_button', 'n_clicks'),
+     Input('clear_all_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    [State('result_data_store', 'data'),
-     State('cells_data', 'data'),
-     State('data_checklist', 'value'),
-     State('disp_chosen', 'data')],
+    [State('result_data_store', 'data')],
     prevent_initial_call=True
 )
-def update_line_graph(drop1, drop2, checklist, n_click, rdata,
-                      results, state2, state3, state4):
+def update_line_graph(drop1, drop2, checklist, select_all_clicks,
+                      clear_all_clicks, restyle_data, results):
     ctx = dash.callback_context.triggered[0]['prop_id']
     if drop1 is None or results is None:
         raise PreventUpdate
     else:
 
+        fig = go.Figure()
         local_data = results[1]
 
-        # x_key = 'Channel Location'
-
-        # xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
         default_x_key = 'Number'
         x_key = local_data[drop1].get('xkey', default_x_key)
-
-        if drop1 is None:
-            raise PreventUpdate
-            # yvalues = np.zeros(len(xvalues))
-        else:
-            if 'value' in local_data[drop1]:
-                yvalues = np.asarray(local_data[drop1]['value'])
-            elif drop2 is not None:
-                yvalues = np.asarray(local_data[drop1][drop2]['value'])
-            else:
-                raise PreventUpdate
-                # yvalues = np.zeros((len(local_data['Cell Voltage']['value']),
-                #                     len(xvalues)))
-
-        y_length = np.asarray(yvalues).shape[-1]
-        if x_key in local_data:
-            xvalues = np.asarray(local_data[x_key]['value'])
-            if len(xvalues) == y_length + 1:
-                xvalues = ip.interpolate_1d(xvalues)
-        else:
-            xvalues = np.asarray(list(range(y_length)))
-
-        if xvalues.ndim > 1:
-            xvalues = xvalues[0]
-
-        if yvalues.ndim == 1:
-            yvalues = [yvalues]
-
-        fig = go.Figure()
-        cells = {}
-        for num, yval in enumerate(yvalues):
-            fig.add_trace(go.Scatter(x=xvalues, y=yval,
-                                     mode='lines+markers',
-                                     name='Cell {}'.format(num)))
-            cells.update({num: {'name': 'Cell {}'.format(num), 'data': yval}})
 
         if drop2 is None:
             y_title = drop1 + ' / ' + local_data[drop1]['units']
         else:
             y_title = drop1 + ' - ' + drop2 + ' / ' \
-                       + local_data[drop1][drop2]['units']
+                      + local_data[drop1][drop2]['units']
 
         if x_key == default_x_key:
             x_title = x_key + ' / -'
@@ -802,63 +709,77 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
 
         fig.update_layout(layout)
 
+        if 'value' in local_data[drop1]:
+            yvalues = np.asarray(local_data[drop1]['value'])
+        elif drop2 is not None:
+            yvalues = np.asarray(local_data[drop1][drop2]['value'])
+        else:
+            raise PreventUpdate
+
+        y_length = np.asarray(yvalues).shape[-1]
+        if x_key in local_data:
+            xvalues = np.asarray(local_data[x_key]['value'])
+            if len(xvalues) == y_length + 1:
+                xvalues = ip.interpolate_1d(xvalues)
+        else:
+            xvalues = np.asarray(list(range(y_length)))
+
+        if xvalues.ndim > 1:
+            xvalues = xvalues[0]
+
+        if yvalues.ndim == 1:
+            yvalues = [yvalues]
+        cells = {}
+        for num, yval in enumerate(yvalues):
+            fig.add_trace(go.Scatter(x=xvalues, y=yval,
+                                     mode='lines+markers',
+                                     name='Cell {}'.format(num)))
+            cells[num] = {'name': 'Cell {}'.format(num), 'data': yval}
+
         options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
-        val = sorted([k for k in cells])
-        value = ['Cell {}'.format(num) for num in val]
-        check = [] if state4 is None else state4
+        value = ['Cell {}'.format(str(i)) for i in range(y_length)]
 
-        if 'clear_button.n_clicks' in ctx:
-            fig.data = []
-            return fig, {}, [], [], []
+        if checklist is None:
+            return fig, cells, options, value #, check
         else:
-            if state3 is None:
-                return fig, cells, options, value, check
-            else:
-                if 'data_checklist.value' in ctx:
-                    fig.for_each_trace(
-                        lambda trace: trace.update(
-                            visible=True) if trace.name in state3
-                        else trace.update(visible='legendonly'))
-                    new_check = list(k['value'] for k in options)
-                    [new_check.remove(cell) for cell in state3 if cell in
-                     new_check]
-                    return fig, cells, options, state3, new_check
-                elif 'line_graph.restyleData' in ctx:
-                    read = rdata[0]['visible']
-                    read_num = rdata[1][0]
-                    cell_name = 'Cell {}'.format(read_num)
-                    if len(read) == 1:
-                        if isinstance(read[0], str):  # lose (legendonly)
-                            if cell_name not in check:
-                                check.append(cell_name)
-                        else:  # isinstance(read, bool): #add (True)
-                            try:
-                                if cell_name in check:
-                                    check.remove(cell_name)
-                            except ValueError:
-                                pass
-                        [value.remove(val) for val in check if val in value]
-                        fig.for_each_trace(
-                            lambda trace: trace.update(
-                                visible=True) if trace.name in value
-                            else trace.update(visible='legendonly'))
-
-                        return fig, cells, options, value, check
-                    else:
-                        check_new = ['Cell {}'.format(x[0]) for x
-                                     in enumerate(read)
-                                     if x[1] == 'legendonly']
-                        [value.remove(che) for che in check_new
-                         if che in value]
-                        fig.for_each_trace(
-                            lambda trace: trace.update(
-                                visible=True) if trace.name in value
-                            else trace.update(visible='legendonly'))
-
-                        return fig, cells, options, value, check_new
+            if 'clear_all_button.n_clicks' in ctx:
+                fig.for_each_trace(
+                    lambda trace: trace.update(visible='legendonly'))
+                new_check = list(k['value'] for k in options)
+                # [new_check.remove(cell) for cell in checklist if cell in
+                #  new_check]
+                return fig, cells, options, [] # , new_check
+            elif 'data_checklist.value' in ctx:
+                fig.for_each_trace(
+                    lambda trace: trace.update(
+                        visible=True) if trace.name in checklist
+                    else trace.update(visible='legendonly'))
+                new_check = list(k['value'] for k in options)
+                [new_check.remove(cell) for cell in checklist if cell in
+                 new_check]
+                return fig, cells, options, checklist #, new_check
+            elif 'line_graph.restyleData' in ctx:
+                read = restyle_data[0]['visible']
+                if len(read) == 1:
+                    cell_name = cells[restyle_data[1][0]]['name']
+                    if read[0] is True:  # lose (legendonly)
+                        checklist.append(cell_name)
+                    else:  # isinstance(read, bool): #add (True)
+                        if cell_name in checklist:
+                            checklist.remove(cell_name)
+                    value = [val for val in value if val in checklist]
                 else:
-                    return fig, cells, options, value, check
+                    value = [value[i] for i in range(y_length)
+                             if read[i] is True]
+                fig.for_each_trace(
+                    lambda trace: trace.update(
+                        visible=True) if trace.name in value
+                    else trace.update(visible='legendonly'))
+                # fig.plotly_restyle(restyle_data[0])
+                return fig, cells, options, value
+            else:
+                return fig, cells, options, value
 
 
 @app.callback(
@@ -871,22 +792,22 @@ def update_line_graph(drop1, drop2, checklist, n_click, rdata,
      Input('clear_table_b', 'n_clicks')],
     [State('data_checklist', 'value'),  # from display
      State('cells_data', 'data'),  # from line graph
-     State('disp_chosen', 'data'),  # from line graph (but only the val of cell)
      State('result_data_store', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
      State('append_check', 'data')],
     prevent_initial_call=True
 )
-def list_to_table(n1, n2, n3, val, data, data2, results, state2, state3,
-                  state4):
+def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
+                  table_columns, table_data, append_check):
     ctx = dash.callback_context.triggered[0]['prop_id']
-    if val is None or results is None:
+    if data_checklist is None or results is None:
         raise PreventUpdate
     else:
         local_data = results[1]
         digit_list = \
-            sorted([int(re.sub('[^0-9\.]', '', inside)) for inside in val])
+            sorted([int(re.sub('[^0-9\.]', '', inside))
+                    for inside in data_checklist])
 
         x_key = 'Channel Location'
 
@@ -898,21 +819,22 @@ def list_to_table(n1, n2, n3, val, data, data2, results, state2, state3,
         # list with nested dict
 
         xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
-        datas = [{**{x_key: cell},
-                  **{data[k]['name']: data[k]['data'][num] for k in data}}
-                 for num, cell in enumerate(xvalues)]  # list with nested dict
+        data = [{**{x_key: cell},
+                 **{cells_data[k]['name']: cells_data[k]['data'][num]
+                     for k in cells_data}}
+                for num, cell in enumerate(xvalues)]  # list with nested dict
 
-        if state4 is None:
+        if append_check is None:
             appended = 0
         else:
-            appended = state4
+            appended = append_check
 
         if 'export_b.n_clicks' in ctx:
-            return index+columns, datas, 'csv', appended
+            return index+columns, data, 'csv', appended
         elif 'clear_table_b.n_clicks' in ctx:
             return [], [], 'none', appended
         elif 'append_b.n_clicks' in ctx:
-            if n1 is None or state3 == [] or state2 == [] or \
+            if n1 is None or table_data == [] or table_columns == [] or \
                     ctx == 'clear_table_b.n_clicks':
                 raise PreventUpdate
             else:
@@ -922,30 +844,30 @@ def list_to_table(n1, n2, n3, val, data, data2, results, state2, state3,
                       'selectable': True, 'name': 'Cell {}'.format(d),
                       'id': 'Cell {}'.format(d) + '-'+str(appended)}
                      for d in digit_list]
-                new_columns = state2 + app_columns
+                new_columns = table_columns + app_columns
                 app_datas = \
                     [{**{x_key: cell},
-                      **{data[k]['name']+'-'+str(appended): data[k]['data'][num]
-                         for k in data}}
+                      **{cells_data[k]['name']+'-'+str(appended):
+                         cells_data[k]['data'][num]
+                         for k in cells_data}}
                      for num, cell in enumerate(xvalues)]
                 new_data_list = []
-                new_datas = \
-                    [{**state3[i], **app_datas[i]}
-                     if state3[i][x_key] == app_datas[i][x_key]
-                     else new_data_list.extend([state3[i], app_datas[i]])
+                new_data = \
+                    [{**table_data[i], **app_datas[i]}
+                     if table_data[i][x_key] == app_datas[i][x_key]
+                     else new_data_list.extend([table_data[i], app_datas[i]])
                      for i in range(len(app_datas))]
-                new_datas = list(filter(None.__ne__, new_datas))
-                new_datas.extend(new_data_list)
+                new_data = list(filter(None.__ne__, new_data))
+                new_data.extend(new_data_list)
 
-                return new_columns, new_datas, 'csv', appended
+                return new_columns, new_data, 'csv', appended
         else:
-            if n1 is None or state2 == []:
-                return state2, state3, 'none', appended
+            if n1 is None or table_columns == []:
+                return table_columns, table_data, 'none', appended
             else:
-                return state2, state3, 'csv', appended
+                return table_columns, table_data, 'csv', appended
 
-# if __name__ == "__main__":
-#     # [print(num, x) for num, x in enumerate(dl.ID_LIST) ]
-#     app.run_server(debug=True, use_reloader=False)
-#     # app.run_server(debug=True, use_reloader=False,
-#     #                host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+if __name__ == "__main__":
+    app.run_server(debug=True, use_reloader=False)
+
