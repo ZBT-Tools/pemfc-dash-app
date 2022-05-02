@@ -5,7 +5,7 @@ import dash
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
 import redis
-import redis_credentials as rc
+import pemfc_dash.redis_credentials as rc
 # from celery import Celery
 # import diskcache
 

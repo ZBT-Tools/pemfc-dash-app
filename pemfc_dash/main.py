@@ -664,7 +664,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
      Input('select_all_button', 'n_clicks'),
      Input('clear_all_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    [State('result_data_store', 'data')],
+    State('result_data_store', 'data'),
     prevent_initial_call=True
 )
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
@@ -716,7 +716,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         else:
             raise PreventUpdate
 
-        y_length = np.asarray(yvalues).shape[-1]
+        y_length = np.asarray(yvalues).shape[0]
         if x_key in local_data:
             xvalues = np.asarray(local_data[x_key]['value'])
             if len(xvalues) == y_length + 1:
@@ -741,31 +741,25 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         value = ['Cell {}'.format(str(i)) for i in range(y_length)]
 
         if checklist is None:
-            return fig, cells, options, value #, check
+            return fig, cells, options, value
         else:
             if 'clear_all_button.n_clicks' in ctx:
                 fig.for_each_trace(
                     lambda trace: trace.update(visible='legendonly'))
-                new_check = list(k['value'] for k in options)
-                # [new_check.remove(cell) for cell in checklist if cell in
-                #  new_check]
-                return fig, cells, options, [] # , new_check
+                return fig, cells, options, []
             elif 'data_checklist.value' in ctx:
                 fig.for_each_trace(
                     lambda trace: trace.update(
                         visible=True) if trace.name in checklist
                     else trace.update(visible='legendonly'))
-                new_check = list(k['value'] for k in options)
-                [new_check.remove(cell) for cell in checklist if cell in
-                 new_check]
-                return fig, cells, options, checklist #, new_check
+                return fig, cells, options, checklist
             elif 'line_graph.restyleData' in ctx:
                 read = restyle_data[0]['visible']
                 if len(read) == 1:
                     cell_name = cells[restyle_data[1][0]]['name']
                     if read[0] is True:  # lose (legendonly)
                         checklist.append(cell_name)
-                    else:  # isinstance(read, bool): #add (True)
+                    else:
                         if cell_name in checklist:
                             checklist.remove(cell_name)
                     value = [val for val in value if val in checklist]
