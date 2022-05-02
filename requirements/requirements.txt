@@ -5,7 +5,7 @@ flask-caching>=1.10.1
 glom>=20.11.0
 matplotlib>=3.5.1
 numpy>=1.22.1
-pemfc @ git+https://github.com/ZBT-Tools/pemfc-core.git@result_extension
+pemfc @ git+https://github.com/ZBT-Tools/pemfc-core.git@master
 pemfc-gui @ git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master
 plotly>=5.5.0
 redis

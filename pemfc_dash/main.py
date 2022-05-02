@@ -535,7 +535,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         else:
             raise PreventUpdate
 
-        x_key = 'Channel Location'
+        x_key = local_data[dropdown_key]['xkey']
         y_key = 'Cells'
         xvalues = np.asarray(local_data[x_key]['value'])
         if xvalues.ndim > 1:
