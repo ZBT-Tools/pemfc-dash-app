@@ -10,3 +10,4 @@ pemfc/build
 *.pyc
 # *.png
 *.jpg
+*credentials.py

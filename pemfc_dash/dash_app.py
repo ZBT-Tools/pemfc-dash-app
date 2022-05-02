@@ -5,6 +5,7 @@ import dash
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
 import redis
+import redis_credentials as rc
 # from celery import Celery
 # import diskcache
 
@@ -24,9 +25,9 @@ bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
 
 caching_backend = RedisStore(
-    host='eu2-arriving-honeybee-30031.upstash.io',
-    password='8390b37d96074c5ba8b27653e8ec1957',
-    port=30031,
+    host=rc.HOST_NAME,
+    password=rc.PASSWORD,
+    port=rc.PORT,
     default_timeout=900)
 try:
     caching_backend.delete('test')
