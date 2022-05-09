@@ -545,10 +545,10 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
             yvalues = yvalues[0]
 
         n_y = len(yvalues)
-        x_length = xvalues.shape[-1]
-        z_length = yvalues.shape[-1]
+        n_x = xvalues.shape[-1]
+        n_z = yvalues.shape[-1]
 
-        if x_length == z_length + 1:
+        if n_x == n_z + 1:
             xvalues = ip.interpolate_1d(xvalues)
 
         if dropdown_key_2 is None:
@@ -716,13 +716,13 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         else:
             raise PreventUpdate
 
-        y_length = np.asarray(yvalues).shape[0]
+        n_y = np.asarray(yvalues).shape[0]
         if x_key in local_data:
             xvalues = np.asarray(local_data[x_key]['value'])
-            if len(xvalues) == y_length + 1:
+            if len(xvalues) == n_y + 1:
                 xvalues = ip.interpolate_1d(xvalues)
         else:
-            xvalues = np.asarray(list(range(y_length)))
+            xvalues = np.asarray(list(range(n_y)))
 
         if xvalues.ndim > 1:
             xvalues = xvalues[0]
@@ -738,7 +738,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 
         options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
                    for k in cells]
-        value = ['Cell {}'.format(str(i)) for i in range(y_length)]
+        value = ['Cell {}'.format(str(i)) for i in range(n_y)]
 
         if checklist is None:
             return fig, cells, options, value
@@ -764,7 +764,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                             checklist.remove(cell_name)
                     value = [val for val in value if val in checklist]
                 else:
-                    value = [value[i] for i in range(y_length)
+                    value = [value[i] for i in range(n_y)
                              if read[i] is True]
                 fig.for_each_trace(
                     lambda trace: trace.update(
