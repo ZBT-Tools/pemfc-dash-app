@@ -19,7 +19,7 @@ from pemfc_gui import data_transfer
 import pemfc_gui.input as gui_input
 
 from . import dash_functions as df, dash_layout as dl, \
-    dash_modal as dm, dash_collapse as dc
+    dash_modal as dm
 from .dash_tabs import tab3
 from .dash_tabs import tab1, tab2, tab4, tab6, tab5
 from pemfc_dash.dash_app import app
@@ -95,9 +95,14 @@ app.layout = dbc.Container(
               html.Div(   # LEFT MIDDLE BOTTOM
                   [html.Div(
                        [html.Div(
-                           [html.Button('Load Settings', id='load-button',
-                                        className='settings_button',
-                                        style={'display': 'flex'}),
+                           [
+                            dcc.Upload(id='upload-file',
+                                       children=html.Button(
+                                           'Load Settings',
+                                           id='load-button',
+                                           className='settings_button',
+                                           style={'display': 'flex'})),
+                            dcc.Download(id="savefile-json"),
                             html.Button('Save Settings', id='save-button',
                                         className='settings_button',
                                         style={'display': 'flex'}),
@@ -111,8 +116,8 @@ app.layout = dbc.Container(
                                   # 'margin': '5px',
                                   'justify-content': 'space-evenly'}
                        ),
-                        dcc.Download(id="savefile-json"),
-                        dc.collapses],
+                        # dc.collapses
+                       ],
                        className='neat-spacing')], style={'flex': '1'},
                   id='load_save_setting', className='pretty_container')],
              id="left-column", className='col-12 col-lg-4 mb-2'),
@@ -307,110 +312,6 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
         return input_data, n_click
     else:
         raise PreventUpdate
-
-
-@app.callback(
-    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output('upload-file', 'contents'),
-     Output('modal-title', 'children'),
-     Output('modal-body', 'children'),
-     Output('modal', 'is_open')],
-    Input('upload-file', 'contents'),
-    [State('upload-file', 'filename'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal', 'is_open')]
-)
-def upload_settings(contents, filename, value, multival, ids, ids2,
-                    modal_state):
-    if contents is None:
-        raise PreventUpdate
-    else:
-        if 'json' in filename:
-            try:
-                j_file, err_l = df.parse_contents(contents)
-
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
-
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
-                    # All JSON settings match Dash IDs
-                    modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-                else:
-                    # Some JSON settings do not match Dash IDs; return values
-                    # that matched with Dash IDs
-                    modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-            except Exception as E:
-                # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = \
-                    dm.modal_process('error', error=repr(E))
-                return value, multival, None, modal_title, modal_body, \
-                    not modal_state
-        else:
-            # Not JSON file; return old value
-            modal_title, modal_body = dm.modal_process('wrong-file')
-            return value, multival, None, modal_title, modal_body, \
-                not modal_state
-
-
-@app.callback(
-    [Output("savefile-json", "data"),
-     Output('save-as-button', "n_clicks")],
-    Input('save-as-button', "n_clicks"),
-    [State('save_as_input', 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id')],
-    prevent_initial_call=True,
-)
-def save_settings(n_clicks, name, val1, val2, ids, ids2):
-    if n_clicks is not None:
-        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
-        sep_id_list = [joined_id.split('-') for joined_id in
-                       dict_data.keys()]
-
-        val_list = dict_data.values()
-        new_dict = {}
-        for sep_id, vals in zip(sep_id_list, val_list):
-            current_level = new_dict
-            for id_l in sep_id:
-                if id_l not in current_level:
-                    if id_l != sep_id[-1]:
-                        current_level[id_l] = {}
-                    else:
-                        current_level[id_l] = vals
-                current_level = current_level[id_l]
-        if name:
-            setting_name = name if '.json' in name else name + '.json'
-        else:
-            setting_name = 'settings.json'
-
-        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                    filename=setting_name), None
 
 
 @app.callback(
@@ -860,6 +761,105 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
                 return table_columns, table_data, 'none', appended
             else:
                 return table_columns, table_data, 'csv', appended
+
+
+@app.callback(
+    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output('upload-file', 'contents'),
+     Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
+    Input('upload-file', 'contents'),
+    [State('upload-file', 'filename'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State('modal', 'is_open')]
+)
+def load_settings(contents, filename, value, multival, ids, ids2,
+                  modal_state):
+    if contents is None:
+        raise PreventUpdate
+    else:
+        if 'json' in filename:
+            try:
+                j_file, err_l = df.parse_contents(contents)
+
+                dict_ids = {id_l: val for id_l, val in
+                            zip([id_l['id'] for id_l in ids], value)}
+                dict_ids2 = {id_l: val for id_l, val in
+                             zip([id_l['id'] for id_l in ids2], multival)}
+
+                id_match = set.union(set(dict_ids),
+                                     set([item[:-2] for item in dict_ids2]))
+
+                for k, v in j_file.items():
+                    if k in id_match:
+                        if isinstance(v, list):
+                            for num, val in enumerate(v):
+                                dict_ids2[k+f'_{num}'] = df.check_ifbool(val)
+                        else:
+                            dict_ids[k] = df.check_ifbool(v)
+                    else:
+                        continue
+
+                if not err_l:
+                    # All JSON settings match Dash IDs
+                    modal_title, modal_body = dm.modal_process('loaded')
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+                else:
+                    # Some JSON settings do not match Dash IDs; return values
+                    # that matched with Dash IDs
+                    modal_title, modal_body = \
+                        dm.modal_process('id-not-loaded', err_l)
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+            except Exception as E:
+                # Error / JSON file cannot be processed; return old value
+                modal_title, modal_body = \
+                    dm.modal_process('error', error=repr(E))
+                return value, multival, None, modal_title, modal_body, \
+                    not modal_state
+        else:
+            # Not JSON file; return old value
+            modal_title, modal_body = dm.modal_process('wrong-file')
+            return value, multival, None, modal_title, modal_body, \
+                not modal_state
+
+
+@app.callback(
+    [Output("savefile-json", "data")],
+    Input('save-button', "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier':  ALL}, 'id')],
+    prevent_initial_call=True,
+)
+def save_settings(n_clicks, val1, val2, ids, ids2):
+    ctx = dash.callback_context.triggered[0]['prop_id']
+    if 'save-button.n_clicks' in ctx:
+        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+        sep_id_list = [joined_id.split('-') for joined_id in
+                       dict_data.keys()]
+
+        val_list = dict_data.values()
+        new_dict = {}
+        for sep_id, vals in zip(sep_id_list, val_list):
+            current_level = new_dict
+            for id_l in sep_id:
+                if id_l not in current_level:
+                    if id_l != sep_id[-1]:
+                        current_level[id_l] = {}
+                    else:
+                        current_level[id_l] = vals
+                current_level = current_level[id_l]
+
+        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                    filename='settings.json')
 
 
 if __name__ == "__main__":
