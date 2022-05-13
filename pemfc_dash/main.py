@@ -5,7 +5,7 @@ import numpy as np
 import json
 
 import dash
-from dash_extensions.enrich import Output, Input, State, ALL,  html, dcc, \
+from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
     ServersideOutput
 from dash import dash_table as dt
 import dash_bootstrap_components as dbc

@@ -1,6 +1,5 @@
-from dash import html
+from dash_extensions.enrich import html
 
-from ..dash_app import app
 import pemfc_gui.input as gui_input
 from .. import dash_layout as dl
 

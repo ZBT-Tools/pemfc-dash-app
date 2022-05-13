@@ -1,6 +1,5 @@
 
-from dash.dependencies import Input, Output, State, ALL
-from dash import html
+from dash_extensions.enrich import Output, Input, ALL, html
 
 from ..dash_app import app
 import pemfc_gui.input as gui_input

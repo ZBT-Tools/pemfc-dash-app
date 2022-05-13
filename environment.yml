@@ -8,7 +8,6 @@ dependencies:
     - matplotlib
     - dash
     - dash-bootstrap-components
-    - dash-extensions
     - flask-caching
     - plotly
     - glom
@@ -17,6 +16,7 @@ dependencies:
     - redis
     - pip
     - pip:
+        - dash-extensions>=0.1.1
         - gunicorn
         - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
         - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
