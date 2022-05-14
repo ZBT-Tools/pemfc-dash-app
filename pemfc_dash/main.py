@@ -29,26 +29,27 @@ tab_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
 
 server = app.server
 
-app._favicon = 'logo-zbt.ico'
+# app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
 app.layout = dbc.Container(
     [html.Div(  # HEADER
-        [html.Div(
-            html.Div(
-                html.Img(
-                    src=app.get_asset_url("logo-zbt.png"),
-                    id="zbt-image",
-                    style={"object-fit": 'contain',
-                           'position': 'center',
-                           "width": "auto",
-                           "margin": "auto"}),
-                id="logo-container", className="pretty_container h-100",
-                style={'display': 'flex', 'justify-content': 'center',
-                       'align-items': 'center'}
-            ),
-            className='col-12 col-lg-4 mb-2'
-        ),
+        [
+         # html.Div(
+         #    html.Div(
+         #        html.Img(
+         #            src=app.get_asset_url("logo-zbt.png"),
+         #            id="zbt-image",
+         #            style={"object-fit": 'contain',
+         #                   'position': 'center',
+         #                   "width": "auto",
+         #                   "margin": "auto"}),
+         #        id="logo-container", className="pretty_container h-100",
+         #        style={'display': 'flex', 'justify-content': 'center',
+         #               'align-items': 'center'}
+         #    ),
+         #    className='col-12 col-lg-4 mb-2'
+         # ),
          html.Div(
              html.Div(
                  html.H3("Fuel Cell Stack Model",
@@ -67,7 +68,7 @@ app.layout = dbc.Container(
                         'display': 'flex'}),
              # width=8, align='center',
              style={'justify-content': 'space-evenly'},
-             className='col-12 col-lg-8 mb-2'),
+             className='col-12 col-lg-12 mb-2'),
         ],
         id="header",
         className='row'
@@ -251,7 +252,19 @@ app.layout = dbc.Container(
              # columns=[{'filter_options': 'sensitive'}]),
               id='div_table', style={'overflow': 'auto',
                                      'position': 'relative',
-                                     'margin': '0 0.05% 0 0.7%'},
+                                     # 'margin': '0 0.05% 0 0.7%'
+                                     },
+              className='pretty_container'),
+     html.Div(html.A("Find source code here",
+                     href='https://www.github.com/zbt-tools/pemfc-dash-app',
+                     target="_blank"),
+              # columns=[{'filter_options': 'sensitive'}]),
+              id='github_link',
+              style={'overflow': 'auto',
+                     'position': 'relative',
+                     'justify-content': 'center',
+                     'align-items': 'center',
+                     'display': 'flex'},
               className='pretty_container')
     ],
     id="mainContainer",
