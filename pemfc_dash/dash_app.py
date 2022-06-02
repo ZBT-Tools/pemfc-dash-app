@@ -27,6 +27,7 @@ caching_backend = RedisStore(host='redis', port=6379)
 try:
     caching_backend.delete('test')
 except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
+    print('Warning: Redis host not found, using FileSystemStore')
     caching_backend = FileSystemStore()
 except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
     pass
