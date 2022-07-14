@@ -1,4 +1,4 @@
-from dash.dependencies import Input, Output, State, ALL  # ClientsideFunction
+from dash_extensions.enrich import Output, Input, State, ALL
 from dash import html
 
 from ..dash_app import app

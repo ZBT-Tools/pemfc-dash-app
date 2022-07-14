@@ -24,7 +24,8 @@ def tab_container(child, label, ids):
                  selected_className='custom-tab-selected')
          for _, (label_id, tab_id) in enumerate(zip(label, ids))],
         id='tabs', parent_className='some_container', value=ids[0],
-        className='custom-tabs')
+        className='custom-tabs flex-container'
+    )
     return tabs
 
 
@@ -378,7 +379,8 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
                 else:
                     if label == ' ':
                         inputs = \
-                            html.Div("empty", style={'visibility': 'hidden'},
+                            html.Div("empty", style={'visibility': 'hidden',
+                                                     'height': '0.75rem'},
                                      className="row-lay r_flex g-0")
                     else:
                         inputs = html.Div(
@@ -401,4 +403,6 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
     return inputs
 
 
-
+graph_font_props = {'small': {'size': 12, 'color': 'black', 'family': 'Arial'},
+                    'medium': {'size': 16, 'color': 'black', 'family': 'Arial'},
+                    'large': {'size': 20, 'color': 'black', 'family': 'Arial'}}

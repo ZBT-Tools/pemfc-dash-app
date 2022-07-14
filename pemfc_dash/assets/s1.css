@@ -49,6 +49,7 @@
   width: 100%;
   float: left;
   box-sizing: border-box;
+  display: flex;
 }
 
 /* For devices larger than 400px */
@@ -64,6 +65,7 @@
   .container {
     width: 80%;
   }
+
   .column,
   .columns {
     margin-left: 4%;
@@ -409,6 +411,11 @@ input[type="checkbox"],
 input[type="radio"] {
   display: inline;
 }
+
+/*input[type="checkbox"]:checked{
+  background-color: #ccc !important;
+}*/
+
 label > .label-body {
   display: inline-block;
   margin-left: 0.5rem;
@@ -532,8 +539,8 @@ there.
 */
 
 /* Larger than mobile, screen sizes larger than 400px */
-@media (min-width: 400px) {
-}
+/*@media (min-width: 400px) {
+}*/
 
 /* Larger than phablet (also point when grid becomes active), screen larger than 550px */
 @media (min-width: 550px) {
@@ -564,13 +571,19 @@ there.
 
 /* Larger than tablet, for screens smaller than 768px */
 @media (max-width: 650px) {  /*550px*/
-  .flex-display {
+/*  .flex-display {
     display: block !important;
-  }
+  }*/
   .pretty_container {
-    margin: 0 !important;
-    margin-bottom: 25px !important;
+    /*margin: 0 !important;*/
+    /*margin-bottom: 25px !important;*/
   }
+
+  .custom-tabs-container{
+    width: fit-content(stretch);
+    flex-direction: row;
+  }
+
   #individual_graph,
   #count_graph,
   #aggregate_graph {
@@ -579,20 +592,8 @@ there.
   .container-display {
     display: flex;
   }
-  #wells,
-  #gas,
-  #oil {
-    margin-right: 10px;
-  }
-
-  #wells {
-    margin-left: 0px;
-  }
-  #water {
-    margin-right: 0px;
-  }
   .mini_container {
-    margin-bottom: 25px !important;
+    /*margin-bottom: 25px !important;*/
     border-radius: 5px;
     background-color: #f9f9f9;
     padding: 15px;
@@ -605,7 +606,7 @@ there.
 
   #zbt-image {
     margin-bottom: 0px !important;
-    height: 45px !important;
+    /*height: 45px !important;*/
     /* max-width: 100%; */
   }
   #learn-more-button {
