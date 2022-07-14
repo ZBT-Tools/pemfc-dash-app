@@ -5,7 +5,23 @@ import dash
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
 import redis
-import pemfc_dash.redis_credentials as rc
+try:
+    import pemfc_dash.redis_credentials as rc
+    caching_backend = RedisStore(
+        host=rc.HOST_NAME,
+        password=rc.PASSWORD,
+        port=rc.PORT,
+        default_timeout=900)
+    try:
+        caching_backend.delete('test')
+    except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
+        caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
+    except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
+        pass
+except ImportError:
+    caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
+
+
 # from celery import Celery
 # import diskcache
 
@@ -23,18 +39,6 @@ dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.
 bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
               '/bootstrap.min.css')
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
-
-caching_backend = RedisStore(
-    host=rc.HOST_NAME,
-    password=rc.PASSWORD,
-    port=rc.PORT,
-    default_timeout=900)
-try:
-    caching_backend.delete('test')
-except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
-    caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
-except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
-    pass
 
 external_stylesheets = [bs_5_css]
 app = DashProxy(__name__, external_stylesheets=external_stylesheets,
