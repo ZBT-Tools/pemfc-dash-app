@@ -1,10 +1,13 @@
-import dash
+
 # import dash_bootstrap_components as dbc
 # from dash.long_callback import CeleryLongCallbackManager, \
 #     DiskcacheLongCallbackManager
+import os
+import redis
+from pemfc_dash import util
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
-import redis
+
 try:
     import pemfc_dash.redis_credentials as rc
     caching_backend = RedisStore(
@@ -19,7 +22,9 @@ try:
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
 except ImportError:
-    caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
+    tmpdir = os.getcwd() + '/.tmp/'
+    util.clear_cache(tmpdir)
+    caching_backend = FileSystemStore(cache_dir=tmpdir)
 
 
 # from celery import Celery
