@@ -1,8 +1,9 @@
-import pathlib
+# import pathlib
 import re
 import copy
 import numpy as np
 import json
+import os
 
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
@@ -12,6 +13,7 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
+import pemfc
 from pemfc.src import interpolation as ip
 from pemfc.data import input_dicts
 from pemfc import main_app
@@ -306,8 +308,13 @@ def run_simulation(signal, input_data, modal_state):
     if signal is None:
         raise PreventUpdate
     try:
-        data_transfer.gui_to_sim_transfer(input_data, input_dicts.sim_dict)
-        global_data, local_data, sim = main_app.main()
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+        settings, name_lists = \
+            data_transfer.gui_to_sim_transfer(input_data, settings)
+        global_data, local_data, sim = main_app.main(settings=settings)
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
