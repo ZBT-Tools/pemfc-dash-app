@@ -5,6 +5,7 @@ venv/
 output/
 build/
 bin/
+.tmp/
 pemfc/bin
 pemfc/build
 *.pyc
