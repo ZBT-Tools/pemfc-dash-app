@@ -22,7 +22,7 @@ try:
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
 except ImportError:
-    tmpdir = os.getcwd() + '/.tmp/'
+    tmpdir = os.path.join(os.getcwd(), '/temp/file_system_store')
     util.clear_cache(tmpdir)
     caching_backend = FileSystemStore(cache_dir=tmpdir)
 
