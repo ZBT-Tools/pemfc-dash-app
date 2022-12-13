@@ -4,9 +4,16 @@
 #     DiskcacheLongCallbackManager
 import os
 import redis
-from pemfc_dash import util
+import shutil
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
+
+
+def clear_cache(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path)
+
 
 try:
     import pemfc_dash.redis_credentials as rc
@@ -23,7 +30,7 @@ try:
         pass
 except ImportError:
     tmpdir = os.path.join(os.getcwd(), '/temp/file_system_store')
-    util.clear_cache(tmpdir)
+    clear_cache(tmpdir)
     caching_backend = FileSystemStore(cache_dir=tmpdir)
 
 
