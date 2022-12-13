@@ -1,7 +1,7 @@
 dash>=2.0.0
 dash-bootstrap-components>=1.0.2
-dash-extensions==0.1.1
-flask-caching==1.10.1
+dash-extensions>=0.1.1
+flask-caching>=1.10.1
 glom>=20.11.0
 matplotlib>=3.5.1
 numpy>=1.22.1
