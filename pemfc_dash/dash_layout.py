@@ -3,14 +3,12 @@ from dash import html
 from dash import dcc
 import copy
 
-from pemfc.src import global_functions as gf
-
 ID_LIST = []  # Keep track with generated IDs
 CONTAINER_LIST = []
 # Keep track with generated container IDs (generated at  frame level)
 
 
-def make_list(lst):
+def make_list(lst) -> list:
     if not isinstance(lst, list):
         out = [lst]
     else:
@@ -18,7 +16,7 @@ def make_list(lst):
     return out
 
 
-def tab_container(child, label, ids):
+def tab_container(child: list, label: list, ids: list) -> dcc.Tabs:
     tabs = dcc.Tabs(
         [dcc.Tab(child[_], label=label_id, value=tab_id, className='custom-tab',
                  selected_className='custom-tab-selected')
