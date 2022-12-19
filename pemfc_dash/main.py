@@ -22,12 +22,9 @@ import pemfc_gui.input as gui_input
 
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
-from .dash_tabs import tab3
-from .dash_tabs import tab1, tab2, tab4, tab6, tab5
 from pemfc_dash.dash_app import app
 
-tab_list = [tab1.tab_layout, tab2.tab_layout, tab3.tab_layout,
-            tab4.tab_layout, tab5.tab_layout, tab6.tab_layout]
+tab_list = [html.Div(dl.frame(tabdict)) for tabdict in gui_input.main_frame_dicts]
 
 server = app.server
 
