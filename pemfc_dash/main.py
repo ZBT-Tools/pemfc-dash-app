@@ -24,8 +24,6 @@ from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
 from pemfc_dash.dash_app import app
 
-tab_list = [html.Div(dl.frame(tabdict)) for tabdict in gui_input.main_frame_dicts]
-
 server = app.server
 
 app._favicon = 'logo-zbt.ico'
@@ -84,8 +82,8 @@ app.layout = dbc.Container([
         [html.Div(  # LEFT MIDDLE / Menu Column
             [html.Div(  # LEFT MIDDLE MIDDLE / Tab definition
                 [dl.tab_container(
-                    tab_list, label=
-                    [k['title'] for k in gui_input.main_frame_dicts],
+                    [html.Div(dl.frame(tabdict)) for tabdict in gui_input.main_frame_dicts],
+                    label=[k['title'] for k in gui_input.main_frame_dicts],
                     ids=['tab{}'.format(num + 1) for num in
                          range(len(gui_input.main_frame_dicts))])],
                 id='setting_container',  # style={'flex': '1'}
