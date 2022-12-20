@@ -11,6 +11,9 @@ CONTAINER_LIST = []
 
 
 def make_list(lst) -> list:
+    """
+    If passed object is no list, make list of it.
+    """
     if not isinstance(lst, list):
         out = [lst]
     else:
@@ -23,6 +26,9 @@ def tab_container(tab_dicts: list) -> dcc.Tabs:
      ToDo:
      - documentation
      - value of dcc.Tabs makes no sense, tidy up
+
+     Input:
+        gui_input.main_frame_dicts from pemfc_gui.input
     """
 
     tabs = dcc.Tabs(
@@ -92,10 +98,23 @@ def checklist(checked):
     return [] if checked is False else [1]
 
 
-# Processing id/val from dict_input to Dash
 def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
-    # id_list = [ids] if not isinstance(ids, list) else ids
+    """
+    # Processing id/val from dict_input to Dash
+
+    Returns:
+        dict_ids: dict of structure {"id1":value1,"id2":value2",...}
+        id_list: ["id1","id2",...]
+        inp_type: "input" or "multiinput"
+
+    """
+
     if ids:
+        # Create single ids by joining list elements with "-"
+        # Example:
+        #    [['anode', 'channel', 'rib_width'],['cathode', 'channel', 'rib_width']]
+        #    is converted to
+        #    [['anode-channel-rib_width'],['cathode-channel-rib_width']]
         id_list = ['-'.join(ids)] if not isinstance(ids[0], list) else \
             ['-'.join([item for item in inside if isinstance(item, str)]) for
              inside in ids]
@@ -109,7 +128,7 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
 
         if number is None:
             if num_id == num_val:
-                number = num_id  # or num_val
+                number = num_id
             else:
                 number = 1
 
@@ -117,7 +136,10 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
             id_list = [i_d + f'_{num}' for i_d in id_list
                        for num in range(num_val)]
 
-        if number != num_val:
+        if number != num_val:  # Passed number of ids doesn't match number of passed values,
+            # example: IDs for BPP Thickness for Anode and Cathode, but only one default value
+            # for both
+
             if isinstance(val_list[0], list):
                 val_list = val_list  # multiinput
 
@@ -154,8 +176,17 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
     return dict_ids, id_list, inp_type
 
 
-# Processing label from list of widget to Dash
-def label_gui_to_dash(widget_dicts_list):
+def label_gui_to_dash(widget_dicts_list: list) -> list:
+    """
+    Processing label from list of widget to Dash
+    ToDo Documentation
+    Description:
+        Modifies widget_dicts_list. Consecutive 'label-widgets' (no entry set, e.g. "anode" and "cathode" labels), will
+         be merged into one widget. Label of merged widget contains merged labels in list.
+    Returns "updated widget_dicts_list"
+
+    """
+
     new_widg_dict_l = copy.deepcopy(widget_dicts_list)
     row_check = []
     check_list = []
@@ -197,6 +228,9 @@ def implement_widget(kwargs):
 
 
 def frame(tab_dict):
+    """
+    Creates dcc.Tab - Children input
+    """
     if 'sub_frame_dicts' in tab_dict:
         return html.Div([sub_frame(subframe) for subframe in
                          tab_dict['sub_frame_dicts']],
@@ -204,6 +238,11 @@ def frame(tab_dict):
 
 
 def sub_frame(sub_frame_dict):
+    """
+    Creates dcc.Tab - Children input
+    ToDo Documentation
+    """
+
     bold = 'bolded' if 'bold' in sub_frame_dict.get('font', '') else ''
 
     if 'highlightbackground' and 'highlightthickness' in sub_frame_dict:
@@ -216,38 +255,36 @@ def sub_frame(sub_frame_dict):
         cname = None
 
     if 'sub_frame_dicts' in sub_frame_dict:
-        if sub_frame_dict['title'] and sub_frame_dict['show_title'] is True:
-            return html.Div(
-                [html.Div(children=sub_frame_dict['title'],
-                          className=f'title {bold}')] + \
-                [html.Div([sub_frame(subframe) for subframe in
-                           sub_frame_dict['sub_frame_dicts']])],
-                style=border, className=cname)
-        else:
-            return html.Div([sub_frame(subframe) for subframe in
-                             sub_frame_dict['sub_frame_dicts']],
-                            style=border, className=cname)
+        div_child = []
+
+        if sub_frame_dict['title'] and sub_frame_dict['show_title'] is True:  # ... add title
+
+            div_child = [html.Div(children=sub_frame_dict['title'],
+                                  className=f'title {bold}')]
+        div_child.extend([sub_frame(subframe) for subframe in sub_frame_dict['sub_frame_dicts']])
+
+        return html.Div(div_child, style=border, className=cname)
 
     elif 'widget_dicts' in sub_frame_dict:
+        title = sub_frame_dict['title']
+        show_title = sub_frame_dict.get('show_title', False)
+
         size = {'size_label': sub_frame_dict['size_label']} if 'size_label' \
                                                                in sub_frame_dict else {}
         size_u = {'size_unit': sub_frame_dict['size_unit']} \
             if 'size_unit' in sub_frame_dict else {}
-        new_widg_list = label_gui_to_dash(sub_frame_dict['widget_dicts'])
-
-        # size_u = get_spacing_dimensions(new_widg_list)
-        title = sub_frame_dict['title']
-        show_title = sub_frame_dict.get('show_title', False)
 
         spec = sub_frame_dict.get('specifier') if 'specifier' in \
                                                   sub_frame_dict else ''
         id_container = \
             {'type': 'container', 'id': title, 'specifier': spec}
 
+        # Reformat list of widgets
+        new_widg_list = label_gui_to_dash(sub_frame_dict['widget_dicts'])
+
         for widg in new_widg_list:
             widg.update(size) if 'size_label' not in widg else widg.update({})
             widg.update(size_u) if 'size_unit' not in widg else widg.update({})
-        # print(new_widg_list)
 
         if show_title:
             if spec:
@@ -316,7 +353,6 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
                callback
     """
     n_ids = kwargs['sim_name'] if 'sim_name' in kwargs else ids
-    # print(n_ids)
 
     dict_ids, id_list, types = \
         id_val_gui_to_dash(label, n_ids, value, number, type)
