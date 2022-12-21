@@ -73,6 +73,9 @@ def flatten(t):
 
 def spacing(label, dimensions):
     """
+    :Description:
+        Converts spacing definitions from pemfc gui to dash
+
     label: xs=33%, s=38%, m=45%, l=50%, xl=70%
     dimensions: s=5%, m=9%, l=12%, xl=15%
     {n:name, p:percentage}
@@ -102,7 +105,7 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
     """
     # Processing id/val from dict_input to Dash
 
-    Returns:
+    :Returns:
         dict_ids: dict of structure {"id1":value1,"id2":value2",...}
         id_list: ["id1","id2",...]
         inp_type: "input" or "multiinput"
@@ -360,15 +363,14 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
 
     bold = 'bolded' if 'bold' in kwargs.pop('font', '') else ''
 
-    if type == 'EntrySet':  # input
+    if type == 'EntrySet':  # ...create list of input fields (dbc.Input components)
         children = \
             [dbc.Input(
                 id={'type': types, 'id': input_id, 'specifier':
                     specifier},
                 persistence=True, persistence_type="memory", value=val,
                 debounce=True, className='val_input', disabled=disabled)
-                for (input_id, val) in
-                zip(list(dict_ids.keys()), list(dict_ids.values()))]
+                for input_id, val in dict_ids.items()]
     elif type == 'ComboboxSet':  # dropdown
         dd_options = [{'label': val, 'value': val} for val in value] \
             if not options else options
@@ -386,7 +388,7 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
             id={"type": types, "id": input_id, 'specifier': specifier},
             inline=True, persistence=True, persistence_type="memory",
             className='checklist')) for input_id, val in zip(id_list, value)]
-    elif type == 'Label':  # label
+    elif type == 'Label':
         new_label = make_list(label)
         children = [dbc.Col(html.Div(lbl), className='sm-label') for lbl in
                     new_label]
@@ -394,9 +396,9 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
         children = ''
         # raise NotImplementedError('Type of Component not implemented')
 
-    # Input
+    # Now, that input fields are defined in 'children'...
     if children:
-        if types == 'multiinput':
+        if types == 'multiinput': # .,..add given IDs to ID_LIST
             ID_LIST.extend(
                 [{'type': types, 'id': input_id, 'specifier': specifier}
                  for input_id in dict_ids.keys()])
@@ -404,6 +406,7 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
             ID_LIST.extend(
                 [{'type': types, 'id': input_id, 'specifier': specifier}
                  for input_id in id_list])
+
         if specifier in ['visibility', 'disabled_cooling']:
             # ID container has to make sure that there's only 1 id and number
             # print(id_list)
@@ -436,7 +439,7 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
                              html.Div(dimensions,
                                       className=s_unit['n'] + ' g-0')],
                             className="row-lay r_flex g-0")
-            else:
+            else:  # ... merge data fields (children) with label
                 inputs = html.Div(
                     [dbc.Label(label, className=s_label['n'] + ' g-0'),
                      html.Div(children, className='centered r_flex g-0',
