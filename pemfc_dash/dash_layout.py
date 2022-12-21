@@ -3,14 +3,14 @@ from dash import html
 from dash import dcc
 import copy
 
-from pemfc.src import global_functions as gf
-
 ID_LIST = []  # Keep track with generated IDs
 CONTAINER_LIST = []
+
+
 # Keep track with generated container IDs (generated at  frame level)
 
 
-def make_list(lst):
+def make_list(lst) -> list:
     if not isinstance(lst, list):
         out = [lst]
     else:
@@ -18,12 +18,22 @@ def make_list(lst):
     return out
 
 
-def tab_container(child, label, ids):
+def tab_container(tab_dicts: list) -> dcc.Tabs:
+    """
+     ToDo:
+     - documentation
+     - value of dcc.Tabs makes no sense, tidy up
+    """
+
     tabs = dcc.Tabs(
-        [dcc.Tab(child[_], label=label_id, value=tab_id, className='custom-tab',
+        [dcc.Tab(html.Div(frame(tabdict)),
+                 label=tabdict['title'],
+                 value=f"tab{n + 1}",
+                 className='custom-tab',
                  selected_className='custom-tab-selected')
-         for _, (label_id, tab_id) in enumerate(zip(label, ids))],
-        id='tabs', parent_className='some_container', value=ids[0],
+         for n, tabdict in enumerate(tab_dicts)
+         ],
+        id='tabs', parent_className='some_container', value="tab1",
         className='custom-tabs flex-container'
     )
     return tabs
@@ -31,8 +41,8 @@ def tab_container(child, label, ids):
 
 def val_container(ids, types='output'):
     row_break = html.Div(className='row-break')
-    div_per_row = int(len(ids)/2)
-    width_cont = {'min-width': f'{100/div_per_row}%'}
+    div_per_row = int(len(ids) / 2)
+    width_cont = {'min-width': f'{100 / div_per_row}%'}
     child = [html.Div(
         [html.Div(id={"type": 'global_children', "id": cont_id},
                   className='gd-desc centered'),
@@ -220,7 +230,7 @@ def sub_frame(sub_frame_dict):
 
     elif 'widget_dicts' in sub_frame_dict:
         size = {'size_label': sub_frame_dict['size_label']} if 'size_label' \
-                in sub_frame_dict else {}
+                                                               in sub_frame_dict else {}
         size_u = {'size_unit': sub_frame_dict['size_unit']} \
             if 'size_unit' in sub_frame_dict else {}
         new_widg_list = label_gui_to_dash(sub_frame_dict['widget_dicts'])
