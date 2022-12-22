@@ -1,3 +1,7 @@
+"""
+See: https://dash-bootstrap-components.opensource.faculty.ai/docs/components/modal/
+"""
+
 from dash import html
 import dash_bootstrap_components as dbc
 

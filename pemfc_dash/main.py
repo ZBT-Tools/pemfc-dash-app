@@ -30,7 +30,7 @@ app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
 app.layout = dbc.Container([
-    html.Div([  # HEADER / Header Row
+    html.Div([  # HEADER (Header Row)
         html.Div(  # Logo
             html.Div(
                 html.Img(
@@ -287,7 +287,17 @@ app.layout = dbc.Container([
     prevent_initial_call=True
 )
 def run_simulation(signal, input_data, modal_state):
-    if signal is None:
+    """
+    ToDo: Documentation
+    Description:
+
+    @param signal:
+    @param input_data:
+    @param modal_state:
+    @return:
+    """
+
+    if signal is None:  # prevent_initial_call=True should be sufficient.
         raise PreventUpdate
     try:
         pemfc_base_dir = os.path.dirname(pemfc.__file__)
@@ -319,19 +329,25 @@ def run_simulation(signal, input_data, modal_state):
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
-)
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True)
 def generate_inputs(n_click, inputs, inputs2, ids, ids2):
-    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'run_button' in changed_id and n_click is not None:
-        dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
+    """
+    #ToDO: Why seperation between run_simulation() and generate_inputs()
 
-        input_data = {}
-        for k, v in dict_data.items():
-            input_data[k] = {'sim_name': k.split('-'), 'value': v}
-        return input_data, n_click
-    else:
-        raise PreventUpdate
+    @param n_click:
+    @param inputs:
+    @param inputs2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+
+    dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
+    input_data = {}
+    for k, v in dict_data.items():
+        input_data[k] = {'sim_name': k.split('-'), 'value': v}
+    return input_data, n_click
 
 
 @app.callback(
