@@ -79,12 +79,12 @@ app.layout = dbc.Container([
     # modal for any warning
     dm.create_modal(),
     html.Div(  # MIDDLE
-        [html.Div(  # LEFT MIDDLE / Menu Column
-            [html.Div(  # LEFT MIDDLE MIDDLE / Tab definition
+        [html.Div(  # LEFT MIDDLE / (Menu Column)
+            [html.Div(  # LEFT MIDDLE MIDDLE (Tabs with Settings)
                 [dl.tab_container(gui_input.main_frame_dicts)],
                 id='setting_container',  # style={'flex': '1'}
             ),
-                html.Div(  # LEFT MIDDLE BOTTOM
+                html.Div(  # LEFT MIDDLE BOTTOM (Buttons)
                     [html.Div(
                         [html.Div(
                             [
@@ -107,14 +107,12 @@ app.layout = dbc.Container([
                                    # 'flex-direction': 'column',
                                    # 'margin': '5px',
                                    'justify-content': 'space-evenly'}
-                        ),
-                            # dc.collapses
-                        ],
+                        )],
                         className='neat-spacing')], style={'flex': '1'},
                     id='load_save_setting', className='pretty_container')],
             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-            html.Div(  # RIGHT MIDDLE / Result Column
+            html.Div(  # RIGHT MIDDLE  (Result Column)
                 [html.Div(
                     [html.Div('Global Results', className='title'),
                      dt.DataTable(id='global_data_table',
@@ -234,10 +232,8 @@ app.layout = dbc.Container([
                 id='right-column', className='col-12 col-lg-8 mb-2')],
         className="row",
         style={'justify-content': 'space-evenly'}),
-    # html.Div(
-    #     [],
-    #     style={'position': 'relative',
-    #            'margin': '0 0.05% 0 0.7%'})
+
+    # Data Table created from "Plots"
     html.Div(dt.DataTable(id='table', editable=True,
                           column_selectable='multi'),
              # columns=[{'filter_options': 'sensitive'}]),
@@ -246,27 +242,24 @@ app.layout = dbc.Container([
                                     # 'margin': '0 0.05% 0 0.7%'
                                     },
              className='pretty_container'),
-    html.Div(
-        html.Div(
-            [
 
-                html.A('Source code:'),
-                html.A('web interface',
-                       href='https://www.github.com/zbt-tools/pemfc-dash-app',
-                       target="_blank"),
-                html.A("fuel cell model",
-                       href='https://www.github.com/zbt-tools/pemfc-core',
-                       target="_blank"),
-            ],
+    # Bottom, Links to GitHub,...
+    html.Div(
+        html.Div([
+            html.A('Source code:'),
+            html.A('web interface',
+                   href='https://www.github.com/zbt-tools/pemfc-dash-app',
+                   target="_blank"),
+            html.A("fuel cell model",
+                   href='https://www.github.com/zbt-tools/pemfc-core',
+                   target="_blank")],
             id='github_links',
             style={'overflow': 'auto',
                    'position': 'relative',
                    'justify-content': 'space-evenly',
                    'align-items': 'center',
                    'min-width': '30%',
-                   'display': 'flex'},
-        ),
-        # columns=[{'filter_options': 'sensitive'}]),
+                   'display': 'flex'}),
         id='link_container',
         style={'overflow': 'auto',
                'position': 'relative',
