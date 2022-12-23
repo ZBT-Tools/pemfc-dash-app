@@ -358,23 +358,20 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     prevent_initial_call=True
 )
 def global_outputs_table(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        global_result_dict = results[0]
-        names = list(global_result_dict.keys())
-        values = [v['value'] for k, v in global_result_dict.items()]
-        units = [v['units'] for k, v in global_result_dict.items()]
+    global_result_dict = results[0]
+    names = list(global_result_dict.keys())
+    values = [v['value'] for k, v in global_result_dict.items()]
+    units = [v['units'] for k, v in global_result_dict.items()]
 
-        column_names = ['Quantity', 'Value', 'Units']
-        columns = [{'deletable': True, 'renamable': True,
-                    'selectable': True, 'name': col, 'id': col}
-                   for col in column_names]
-        datas = [{column_names[0]: names[i],
-                  column_names[1]: values[i],
-                  column_names[2]: units[i]} for i in range(len(values))]
+    column_names = ['Quantity', 'Value', 'Units']
+    columns = [{'deletable': True, 'renamable': True,
+                'selectable': True, 'name': col, 'id': col}
+               for col in column_names]
+    datas = [{column_names[0]: names[i],
+              column_names[1]: values[i],
+              column_names[2]: units[i]} for i in range(len(values))]
 
-        return columns, datas, 'csv',
+    return columns, datas, 'csv',
 
 
 @app.callback(
@@ -384,14 +381,11 @@ def global_outputs_table(results):
     prevent_initial_call=True
 )
 def get_dropdown_options_heatmap(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        local_data = results[1]
-        values = [{'label': key, 'value': key} for key in local_data
-                  if 'xkey' in local_data[key]
-                  and local_data[key]['xkey'] == 'Channel Location']
-        return values, 'Current Density'
+    local_data = results[1]
+    values = [{'label': key, 'value': key} for key in local_data
+              if 'xkey' in local_data[key]
+              and local_data[key]['xkey'] == 'Channel Location']
+    return values, 'Current Density'
 
 
 @app.callback(
@@ -401,12 +395,9 @@ def get_dropdown_options_heatmap(results):
     prevent_initial_call=True
 )
 def get_dropdown_options_line_graph(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        local_data = results[1]
-        values = [{'label': key, 'value': key} for key in local_data]
-        return values, 'Current Density'
+    local_data = results[1]
+    values = [{'label': key, 'value': key} for key in local_data]
+    return values, 'Current Density'
 
 
 @app.callback(
