@@ -2,6 +2,7 @@
 import re
 import copy
 import numpy as np
+import pandas as pd
 import json
 import os
 
@@ -23,6 +24,8 @@ import pemfc_gui.input as gui_input
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
 from pemfc_dash.dash_app import app
+
+
 
 server = app.server
 
@@ -333,7 +336,15 @@ def run_simulation(signal, input_data, modal_state):
     prevent_initial_call=True)
 def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     """
-    #ToDO: Why seperation between run_simulation() and generate_inputs()
+    Changelog:
+
+    Rework fkl 12/22:   Preparation for multiple input sets:
+                        Instead of passing dict of structure
+                        input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
+                        pd.DataFrame is created
+                        Columns are keys of former input_data dict, e.g. stack-cell_number'.
+                        Each row is one input set. Simples case: One calculation -> One row.
+
 
     @param n_click:
     @param inputs:
@@ -342,11 +353,13 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     @param ids2:
     @return:
     """
-
+    df_input = pd.DataFrame()
     dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
     input_data = {}
     for k, v in dict_data.items():
         input_data[k] = {'sim_name': k.split('-'), 'value': v}
+        df_input.loc["nominal", k] = v
+
     return input_data, n_click
 
 
