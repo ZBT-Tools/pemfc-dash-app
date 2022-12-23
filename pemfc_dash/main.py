@@ -868,25 +868,57 @@ def load_settings(contents, filename, value, multival, ids, ids2,
     prevent_initial_call=True,
 )
 def save_settings(n_clicks, val1, val2, ids, ids2):
+    """
+
+    @param n_clicks:
+    @param val1:
+    @param val2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+    save_complete = True
 
     dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
-    sep_id_list = [joined_id.split('-') for joined_id in
-                   dict_data.keys()]
 
-    val_list = dict_data.values()
-    new_dict = {}
-    for sep_id, vals in zip(sep_id_list, val_list):
-        current_level = new_dict
-        for id_l in sep_id:
-            if id_l not in current_level:
-                if id_l != sep_id[-1]:
-                    current_level[id_l] = {}
-                else:
-                    current_level[id_l] = vals
-            current_level = current_level[id_l]
+    if not save_complete:  # ... save only GUI inputs
+        sep_id_list = [joined_id.split('-') for joined_id in
+                       dict_data.keys()]
 
-    return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                filename='settings.json')
+        val_list = dict_data.values()
+        new_dict = {}
+        for sep_id, vals in zip(sep_id_list, val_list):
+            current_level = new_dict
+            for id_l in sep_id:
+                if id_l not in current_level:
+                    if id_l != sep_id[-1]:
+                        current_level[id_l] = {}
+                    else:
+                        current_level[id_l] = vals
+                current_level = current_level[id_l]
+
+        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                    filename='settings.json')
+
+    else:  # ... save complete settings as passed to pemfc simulation
+
+        # code portion of generate_inputs()
+        # ------------------------
+        input_data = {}
+        for k, v in dict_data.items():
+            input_data[k] = {'sim_name': k.split('-'), 'value': v}
+
+        # code portion of run_simulation()
+        # ------------------------
+
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+        settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
+
+        return dict(content=json.dumps(settings, indent=2),
+                    filename='settings.json')
 
 
 if __name__ == "__main__":
