@@ -868,26 +868,25 @@ def load_settings(contents, filename, value, multival, ids, ids2,
     prevent_initial_call=True,
 )
 def save_settings(n_clicks, val1, val2, ids, ids2):
-    ctx = dash.callback_context.triggered[0]['prop_id']
-    if 'save-button.n_clicks' in ctx:
-        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
-        sep_id_list = [joined_id.split('-') for joined_id in
-                       dict_data.keys()]
 
-        val_list = dict_data.values()
-        new_dict = {}
-        for sep_id, vals in zip(sep_id_list, val_list):
-            current_level = new_dict
-            for id_l in sep_id:
-                if id_l not in current_level:
-                    if id_l != sep_id[-1]:
-                        current_level[id_l] = {}
-                    else:
-                        current_level[id_l] = vals
-                current_level = current_level[id_l]
+    dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+    sep_id_list = [joined_id.split('-') for joined_id in
+                   dict_data.keys()]
 
-        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                    filename='settings.json')
+    val_list = dict_data.values()
+    new_dict = {}
+    for sep_id, vals in zip(sep_id_list, val_list):
+        current_level = new_dict
+        for id_l in sep_id:
+            if id_l not in current_level:
+                if id_l != sep_id[-1]:
+                    current_level[id_l] = {}
+                else:
+                    current_level[id_l] = vals
+            current_level = current_level[id_l]
+
+    return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                filename='settings.json')
 
 
 if __name__ == "__main__":
