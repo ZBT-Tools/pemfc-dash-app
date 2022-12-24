@@ -13,6 +13,7 @@ from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
+import plotly.express as px
 
 import pemfc
 from pemfc.src import interpolation as ip
@@ -24,8 +25,9 @@ import pemfc_gui.input as gui_input
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
 from pemfc_dash.dash_app import app
+from pandarallel import pandarallel
 
-
+pandarallel.initialize()
 
 server = app.server
 
@@ -72,9 +74,11 @@ app.layout = dbc.Container([
         className='row'
     ),
     dcc.Store(id="input_data"),
+    dcc.Store(id="df_input_data"),
     dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
                 spinner_class_name='loading_spinner',
                 fullscreen_class_name='loading_spinner_bg'),
+    dcc.Store(id='df_result_data_store'),
     dcc.Store(id='signal'),
 
     # empty Div to trigger javascript file for graph resizing
@@ -103,6 +107,9 @@ app.layout = dbc.Container([
                                             style={'display': 'flex'}),
                                 html.Button('Run Simulation', id='run_button',
                                             className='settings_button',
+                                            style={'display': 'flex'}),
+                                html.Button('Run Multi Simulation', id='run_multi_button',
+                                            className='settings_button',
                                             style={'display': 'flex'})
                             ],
                             style={'display': 'flex',
@@ -117,13 +124,20 @@ app.layout = dbc.Container([
 
             html.Div(  # RIGHT MIDDLE  (Result Column)
                 [html.Div(
-                    [html.Div('Global Results', className='title'),
-                     dt.DataTable(id='global_data_table',
-                                  editable=True,
-                                  column_selectable='multi')],
-                    id='div_global_table',
+                    [html.Div('U-I-Curve', className='title'),
+                     dcc.Graph(id='ui')],
+                    id='div_ui',
                     className='pretty_container',
                     style={'overflow': 'auto'}),
+
+                    html.Div(
+                        [html.Div('Global Results', className='title'),
+                         dt.DataTable(id='global_data_table',
+                                      editable=True,
+                                      column_selectable='multi')],
+                        id='div_global_table',
+                        className='pretty_container',
+                        style={'overflow': 'auto'}),
                     html.Div(
                         [html.Div('Heatmap', className='title'),
                          html.Div(
@@ -279,11 +293,12 @@ app.layout = dbc.Container([
 
 @app.callback(
     ServersideOutput("result_data_store", "data"),
+    ServersideOutput("df_result_data_store", "data"),
     Output('modal-title', 'children'),
     Output('modal-body', 'children'),
     Output('modal', 'is_open'),
     Input("signal", "data"),
-    State('input_data', 'data'),
+    State('df_input_data', 'data'),
     # interval=1e10,
     State('modal', 'is_open'),
     # running=[(Output("run_button", "disabled"), True, False)],
@@ -300,21 +315,22 @@ def run_simulation(signal, input_data, modal_state):
     @return:
     """
 
+    input_table = df.read_data(input_data)
+
     if signal is None:  # prevent_initial_call=True should be sufficient.
         raise PreventUpdate
     try:
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-                as file:
-            settings = json.load(file)
-        settings, name_lists = \
-            data_transfer.gui_to_sim_transfer(input_data, settings)
-        global_data, local_data, sim = main_app.main(settings=settings)
+        result_table = input_table["settings"].apply(main_app.main)
+        input_table["global_data"] = result_table.apply(lambda x: x[0][0])
+        input_table["local_data"] = result_table.apply(lambda x: x[1][0])
+        df_result_store = df.store_data(input_table)
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
         return None, modal_title, modal_body, not modal_state
-    return [global_data[0], local_data[0]], None, None, modal_state
+
+    return [input_table.loc["nominal", "global_data"], input_table.loc["nominal", "local_data"]], \
+        df_result_store, None, None, modal_state
 
 
 # def try_simulation_store(**kwargs):
@@ -327,6 +343,7 @@ def run_simulation(signal, input_data, modal_state):
 
 @app.callback(
     [Output('input_data', 'data'),
+     Output('df_input_data', 'data'),
      Output('signal', 'data')],
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -334,7 +351,7 @@ def run_simulation(signal, input_data, modal_state):
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     prevent_initial_call=True)
-def generate_inputs(n_click, inputs, inputs2, ids, ids2):
+def generate_single_inputs(n_click, inputs, inputs2, ids, ids2):
     """
     Changelog:
 
@@ -353,14 +370,144 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     @param ids2:
     @return:
     """
+
+    # 1. Read data from input fields and save input in dict/dataframe
+    # ------------------------------------------------------------
     df_input = pd.DataFrame()
     dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
     input_data = {}
     for k, v in dict_data.items():
         input_data[k] = {'sim_name': k.split('-'), 'value': v}
-        df_input.loc["nominal", k] = v
+        # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
+        # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
+        # Column must be of type object to accept list-objects
+        # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
+        df_input.at["nominal", k] = None
+        df_input[k] = df_input[k].astype(object)
+        df_input.at["nominal", k] = v
 
-    return input_data, n_click
+    # 2. Create complete setting file for each row in df_input, append it in additional column
+    # ------------------------------------------------------------
+    try:
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+
+        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+        df_temp = pd.DataFrame(columns=["input_data", "settings"])
+        df_temp['input_data'] = df_temp['input_data'].astype(object)
+        df_temp['settings'] = df_temp['input_data'].astype(object)
+
+        df_temp['input_data'] = df_input.apply(
+            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+        df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+        df_input = df_input.join(df_temp)
+
+    except Exception as E:
+        modal_title, modal_body = \
+            dm.modal_process('input-error', error=repr(E))
+
+    df_input_store = df.store_data(df_input)
+    return input_data, df_input_store, n_click
+
+
+@app.callback(
+    [Output('input_data', 'data'),
+     Output('df_input_data', 'data'),
+     Output('signal', 'data')],
+    Input("run_multi_button", "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True)
+def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
+    """
+    Changelog:
+
+    Rework fkl 12/22:   Preparation for multiple input sets:
+                        Instead of passing dict of structure
+                        input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
+                        pd.DataFrame is created
+                        Columns are keys of former input_data dict, e.g. stack-cell_number'.
+                        Each row is one input set. Simples case: One calculation -> One row.
+
+
+    @param n_click:
+    @param inputs:
+    @param inputs2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+
+    # 1. Read data from input fields and save input in dict/dataframe
+    # ------------------------------------------------------------
+    df_input = pd.DataFrame()
+    dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
+    input_data = {}
+    for k, v in dict_data.items():
+        input_data[k] = {'sim_name': k.split('-'), 'value': v}
+        # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
+        # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
+        # Column must be of type object to accept list-objects
+        # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
+        df_input.at["nominal", k] = None
+        df_input[k] = df_input[k].astype(object)
+        df_input.at["nominal", k] = v
+
+    # Example logic: Create modified data points
+    for i in [1,50,100,150,200,250,500,1000,2000,4000,6000,8000,10000,12000,15000,17500, 20000]:
+        df_input.loc[i, :] = df_input.loc["nominal", :]
+        df_input.loc[i, "simulation-current_density"] = i
+
+    # 2. Create complete setting file for each row in df_input, append it in additional column
+    # ------------------------------------------------------------
+    try:
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+
+        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+        df_temp = pd.DataFrame(columns=["input_data", "settings"])
+        df_temp['input_data'] = df_temp['input_data'].astype(object)
+        df_temp['settings'] = df_temp['settings'].astype(object)
+
+        # For legacy: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+        df_temp['input_data'] = df_input.apply(
+            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+
+        df_temp['settings'] = df_temp['input_data'].apply(data_transfer.gui_to_sim_transfer, target_dict=settings)
+        # df_temp.apply(lambda row: data_transfer.gui_to_sim_transfer(row["input_data"], target_dict=settings), axis=1)
+        df_temp['settings'] = df_temp['settings'].apply(lambda x: x[0])
+        df_input = df_input.join(df_temp)
+
+    except Exception as E:
+        modal_title, modal_body = \
+            dm.modal_process('input-error', error=repr(E))
+
+    df_input_store = df.store_data(df_input)
+    return input_data, df_input_store, n_click
+
+
+@app.callback(
+    Output('ui', 'figure'),
+    Input('df_result_data_store', 'data'),
+    prevent_initial_call=True)
+def update_ui_figure(inp):
+    results = df.read_data(inp)
+
+    # Extract Results
+    results["Voltage"] = results["global_data"].apply(lambda x: x["Stack Voltage"]["value"])
+
+    fig = px.scatter(results, x="simulation-current_density", y="Voltage")
+
+    #fig.update_layout()
+
+    return fig
 
 
 @app.callback(

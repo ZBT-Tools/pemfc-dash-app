@@ -3,11 +3,34 @@ from flask_caching import Cache
 import base64
 import io
 import json
-import copy
+import pickle
+import jsonpickle
 import collections
 from glom import glom
 
 from . import dash_layout as dl
+
+
+def store_data(data):
+    """
+    # https://github.com/jsonpickle/jsonpickle, as json.dumps can only handle simple variables, no objects, DataFrames..
+    # Info: Eigentlich sollte jsonpickle reichen, um dict mit Klassenobjekten, in denen DataFrames sind, zu speichern,
+    #       Es gibt jedoch Fehlermeldungen. Daher wird Datenstruktur vorher in pickle (Binärformat)
+    #       gespeichert und dieser anschließend in json konvertiert.
+    #       (Konvertierung in json ist notwendig für lokalen dcc storage)
+    """
+    data = pickle.dumps(data)
+    data = jsonpickle.dumps(data)
+
+    return data
+
+
+def read_data(data):
+    # Read NH3 data from storage
+    data = jsonpickle.loads(data)
+    data = pickle.loads(data)
+
+    return data
 
 
 def unstringify(val):
@@ -179,13 +202,16 @@ def dash_kwarg(inputs):
     retrieve multiple values from multiple inputs in creating id-value
     dictionary from given parameter
     """
+
     def accept_func(func):
         @wraps(func)
         def wrapper(*args):
             input_names = [item.component_id for item in inputs]
             kwargs_dict = dict(zip(input_names, args))
             return func(**kwargs_dict)
+
         return wrapper
+
     return accept_func
 
 
@@ -203,10 +229,6 @@ def compile_data(**kwargs):
         else:
             dash_dict[k]['value'] = c_v[0]
     return dict(dash_dict)
-
-
-
-
 
 # def parse_contents(contents):
 #     content_type, content_string = contents.split(',')
@@ -226,4 +248,4 @@ def compile_data(**kwargs):
 #         return js_out
 #     except Exception as e:
 #         return f'Error {e}'
-        # return f'{e}: There was an error processing this file.'
+# return f'{e}: There was an error processing this file.'
