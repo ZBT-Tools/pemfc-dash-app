@@ -30,7 +30,7 @@ app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
 app.layout = dbc.Container([
-    html.Div([  # HEADER / Header Row
+    html.Div([  # HEADER (Header Row)
         html.Div(  # Logo
             html.Div(
                 html.Img(
@@ -79,12 +79,12 @@ app.layout = dbc.Container([
     # modal for any warning
     dm.create_modal(),
     html.Div(  # MIDDLE
-        [html.Div(  # LEFT MIDDLE / Menu Column
-            [html.Div(  # LEFT MIDDLE MIDDLE / Tab definition
+        [html.Div(  # LEFT MIDDLE / (Menu Column)
+            [html.Div(  # LEFT MIDDLE MIDDLE (Tabs with Settings)
                 [dl.tab_container(gui_input.main_frame_dicts)],
                 id='setting_container',  # style={'flex': '1'}
             ),
-                html.Div(  # LEFT MIDDLE BOTTOM
+                html.Div(  # LEFT MIDDLE BOTTOM (Buttons)
                     [html.Div(
                         [html.Div(
                             [
@@ -107,14 +107,12 @@ app.layout = dbc.Container([
                                    # 'flex-direction': 'column',
                                    # 'margin': '5px',
                                    'justify-content': 'space-evenly'}
-                        ),
-                            # dc.collapses
-                        ],
+                        )],
                         className='neat-spacing')], style={'flex': '1'},
                     id='load_save_setting', className='pretty_container')],
             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-            html.Div(  # RIGHT MIDDLE / Result Column
+            html.Div(  # RIGHT MIDDLE  (Result Column)
                 [html.Div(
                     [html.Div('Global Results', className='title'),
                      dt.DataTable(id='global_data_table',
@@ -234,10 +232,8 @@ app.layout = dbc.Container([
                 id='right-column', className='col-12 col-lg-8 mb-2')],
         className="row",
         style={'justify-content': 'space-evenly'}),
-    # html.Div(
-    #     [],
-    #     style={'position': 'relative',
-    #            'margin': '0 0.05% 0 0.7%'})
+
+    # Data Table created from "Plots"
     html.Div(dt.DataTable(id='table', editable=True,
                           column_selectable='multi'),
              # columns=[{'filter_options': 'sensitive'}]),
@@ -246,27 +242,24 @@ app.layout = dbc.Container([
                                     # 'margin': '0 0.05% 0 0.7%'
                                     },
              className='pretty_container'),
-    html.Div(
-        html.Div(
-            [
 
-                html.A('Source code:'),
-                html.A('web interface',
-                       href='https://www.github.com/zbt-tools/pemfc-dash-app',
-                       target="_blank"),
-                html.A("fuel cell model",
-                       href='https://www.github.com/zbt-tools/pemfc-core',
-                       target="_blank"),
-            ],
+    # Bottom, Links to GitHub,...
+    html.Div(
+        html.Div([
+            html.A('Source code:'),
+            html.A('web interface',
+                   href='https://www.github.com/zbt-tools/pemfc-dash-app',
+                   target="_blank"),
+            html.A("fuel cell model",
+                   href='https://www.github.com/zbt-tools/pemfc-core',
+                   target="_blank")],
             id='github_links',
             style={'overflow': 'auto',
                    'position': 'relative',
                    'justify-content': 'space-evenly',
                    'align-items': 'center',
                    'min-width': '30%',
-                   'display': 'flex'},
-        ),
-        # columns=[{'filter_options': 'sensitive'}]),
+                   'display': 'flex'}),
         id='link_container',
         style={'overflow': 'auto',
                'position': 'relative',
@@ -294,7 +287,17 @@ app.layout = dbc.Container([
     prevent_initial_call=True
 )
 def run_simulation(signal, input_data, modal_state):
-    if signal is None:
+    """
+    ToDo: Documentation
+    Description:
+
+    @param signal:
+    @param input_data:
+    @param modal_state:
+    @return:
+    """
+
+    if signal is None:  # prevent_initial_call=True should be sufficient.
         raise PreventUpdate
     try:
         # Initially get default simulation settings from settings.json file
@@ -334,19 +337,25 @@ def run_simulation(signal, input_data, modal_state):
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
-)
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True)
 def generate_inputs(n_click, inputs, inputs2, ids, ids2):
-    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'run_button' in changed_id and n_click is not None:
-        dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
+    """
+    #ToDO: Why seperation between run_simulation() and generate_inputs()
 
-        input_data = {}
-        for k, v in dict_data.items():
-            input_data[k] = {'sim_name': k.split('-'), 'value': v}
-        return input_data, n_click
-    else:
-        raise PreventUpdate
+    @param n_click:
+    @param inputs:
+    @param inputs2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+
+    dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
+    input_data = {}
+    for k, v in dict_data.items():
+        input_data[k] = {'sim_name': k.split('-'), 'value': v}
+    return input_data, n_click
 
 
 @app.callback(
@@ -357,23 +366,20 @@ def generate_inputs(n_click, inputs, inputs2, ids, ids2):
     prevent_initial_call=True
 )
 def global_outputs_table(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        global_result_dict = results[0]
-        names = list(global_result_dict.keys())
-        values = [v['value'] for k, v in global_result_dict.items()]
-        units = [v['units'] for k, v in global_result_dict.items()]
+    global_result_dict = results[0]
+    names = list(global_result_dict.keys())
+    values = [v['value'] for k, v in global_result_dict.items()]
+    units = [v['units'] for k, v in global_result_dict.items()]
 
-        column_names = ['Quantity', 'Value', 'Units']
-        columns = [{'deletable': True, 'renamable': True,
-                    'selectable': True, 'name': col, 'id': col}
-                   for col in column_names]
-        datas = [{column_names[0]: names[i],
-                  column_names[1]: values[i],
-                  column_names[2]: units[i]} for i in range(len(values))]
+    column_names = ['Quantity', 'Value', 'Units']
+    columns = [{'deletable': True, 'renamable': True,
+                'selectable': True, 'name': col, 'id': col}
+               for col in column_names]
+    datas = [{column_names[0]: names[i],
+              column_names[1]: values[i],
+              column_names[2]: units[i]} for i in range(len(values))]
 
-        return columns, datas, 'csv',
+    return columns, datas, 'csv',
 
 
 @app.callback(
@@ -383,14 +389,11 @@ def global_outputs_table(results):
     prevent_initial_call=True
 )
 def get_dropdown_options_heatmap(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        local_data = results[1]
-        values = [{'label': key, 'value': key} for key in local_data
-                  if 'xkey' in local_data[key]
-                  and local_data[key]['xkey'] == 'Channel Location']
-        return values, 'Current Density'
+    local_data = results[1]
+    values = [{'label': key, 'value': key} for key in local_data
+              if 'xkey' in local_data[key]
+              and local_data[key]['xkey'] == 'Channel Location']
+    return values, 'Current Density'
 
 
 @app.callback(
@@ -400,12 +403,9 @@ def get_dropdown_options_heatmap(results):
     prevent_initial_call=True
 )
 def get_dropdown_options_line_graph(results):
-    if results is None:
-        raise PreventUpdate
-    else:
-        local_data = results[1]
-        values = [{'label': key, 'value': key} for key in local_data]
-        return values, 'Current Density'
+    local_data = results[1]
+    values = [{'label': key, 'value': key} for key in local_data]
+    return values, 'Current Density'
 
 
 @app.callback(
@@ -876,9 +876,20 @@ def load_settings(contents, filename, value, multival, ids, ids2,
     prevent_initial_call=True,
 )
 def save_settings(n_clicks, val1, val2, ids, ids2):
-    ctx = dash.callback_context.triggered[0]['prop_id']
-    if 'save-button.n_clicks' in ctx:
-        dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+    """
+
+    @param n_clicks:
+    @param val1:
+    @param val2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+    save_complete = True
+
+    dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+
+    if not save_complete:  # ... save only GUI inputs
         sep_id_list = [joined_id.split('-') for joined_id in
                        dict_data.keys()]
 
@@ -895,6 +906,26 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
                 current_level = current_level[id_l]
 
         return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                    filename='settings.json')
+
+    else:  # ... save complete settings as passed to pemfc simulation
+
+        # code portion of generate_inputs()
+        # ------------------------
+        input_data = {}
+        for k, v in dict_data.items():
+            input_data[k] = {'sim_name': k.split('-'), 'value': v}
+
+        # code portion of run_simulation()
+        # ------------------------
+
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+        settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
+
+        return dict(content=json.dumps(settings, indent=2),
                     filename='settings.json')
 
 
