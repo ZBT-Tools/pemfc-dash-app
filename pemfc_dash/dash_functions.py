@@ -7,6 +7,7 @@ import pickle
 import jsonpickle
 import collections
 from glom import glom
+import pandas as pd
 
 from . import dash_layout as dl
 
@@ -120,8 +121,14 @@ def check_ifbool(val):
         return val
 
 
-def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs):
+def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs, returntype="dict"):
     """
+
+    Returns dict_data dictionary of format
+        dict_data = {'stack-cell_number':1, ...}
+    or pd.DataFrame with row "nominal", columns=['stack-cell_number',...]
+
+
     Used in matching key-value (id-value) in the order of the initialised
     Dash's IDs
     (multi inputs handle two value and has multiple IDs assigned to it)
@@ -140,12 +147,28 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs):
 
     new_ids = [id_l['id'] for id_l in id_inputs] + \
               [id_l['id'] for id_l in id_multiinputs]
-    # [print(x) for x in new_ids]
+
     dict_data = {}
     for id_l, v_l in zip(new_ids, new_inputs):
         dict_data.update({id_l: v_l})
     new_dict_data = multi_inputs(dict_data)
-    return new_dict_data
+
+    if returntype == "dict":
+        return new_dict_data
+    elif returntype == "DataFrame":
+        df_data = pd.DataFrame()
+        input_data = {}
+        for k, v in dict_data.items():
+            # input_data[k] = {'sim_name': k.split('-'), 'value': v}
+
+            # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
+            # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
+            # Column must be of type object to accept list-objects
+            # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
+            df_data.at["nominal", k] = None
+            df_data[k] = df_data[k].astype(object)
+            df_data.at["nominal", k] = v
+        return df_data
 
 
 def dict_inputs(value='', ids=''):

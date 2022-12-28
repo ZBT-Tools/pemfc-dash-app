@@ -8,12 +8,13 @@ import os
 
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
-    ServersideOutput
+    ServersideOutput, ctx
 from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 
 import pemfc
 from pemfc.src import interpolation as ip
@@ -25,9 +26,13 @@ import pemfc_gui.input as gui_input
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
 from pemfc_dash.dash_app import app
-from pandarallel import pandarallel
+# from pandarallel import pandarallel
+from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
+from tqdm import tqdm
 
-pandarallel.initialize()
+tqdm.pandas()
+
+# pandarallel.initialize()
 
 server = app.server
 
@@ -79,6 +84,7 @@ app.layout = dbc.Container([
                 spinner_class_name='loading_spinner',
                 fullscreen_class_name='loading_spinner_bg'),
     dcc.Store(id='df_result_data_store'),
+    dcc.Store(id='df_input_store'),
     dcc.Store(id='signal'),
 
     # empty Div to trigger javascript file for graph resizing
@@ -110,7 +116,14 @@ app.layout = dbc.Container([
                                             style={'display': 'flex'}),
                                 html.Button('Run Multi Simulation', id='run_multi_button',
                                             className='settings_button',
+                                            style={'display': 'flex'}),
+                                html.Button('init ui', id='btn_init_ui',
+                                            className='settings_button',
+                                            style={'display': 'flex'}),
+                                html.Button('refine ui', id='btn_refine_ui',
+                                            className='settings_button',
                                             style={'display': 'flex'})
+
                             ],
                             style={'display': 'flex',
                                    'flex-wrap': 'wrap',
@@ -291,6 +304,14 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
+def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
+    result_table = input_table["settings"].progress_apply(main_app.main)
+    input_table["global_data"] = result_table.apply(lambda x: x[0][0])
+    input_table["local_data"] = result_table.apply(lambda x: x[1][0])
+
+    return input_table
+
+
 @app.callback(
     ServersideOutput("result_data_store", "data"),
     ServersideOutput("df_result_data_store", "data"),
@@ -314,7 +335,7 @@ def run_simulation(signal, input_data, modal_state):
     @param modal_state:
     @return:
     """
-
+    # Read pickled / json frmo storage
     input_table = df.read_data(input_data)
 
     if signal is None:  # prevent_initial_call=True should be sufficient.
@@ -331,14 +352,6 @@ def run_simulation(signal, input_data, modal_state):
 
     return [input_table.loc["nominal", "global_data"], input_table.loc["nominal", "local_data"]], \
         df_result_store, None, None, modal_state
-
-
-# def try_simulation_store(**kwargs):
-#     try:
-#         results = simulation_store(**kwargs)
-#     except Exception as E:
-#         raise PreventUpdate
-#     return results
 
 
 @app.callback(
@@ -459,7 +472,7 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
         df_input.at["nominal", k] = v
 
     # Example logic: Create modified data points
-    for i in [1,50,100,150,200,250,500,1000,2000,4000,6000,8000,10000,12000,15000,17500, 20000]:
+    for i in [1, 50, 100, 150, 200, 250, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 15000, 17500, 20000]:
         df_input.loc[i, :] = df_input.loc["nominal", :]
         df_input.loc[i, "simulation-current_density"] = i
 
@@ -494,18 +507,102 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
 
 
 @app.callback(
+    Output('df_result_data_store', 'data'),
+    Output('df_input_store','data'),
+    Input("btn_init_ui", "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True)
+def uicalc_init(btn, inputs, inputs2, ids, ids2):
+    # 1. Read data from input fields and save input in dict/dataframe
+    # ------------------------------------------------------------
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+
+    pemfc_base_dir = os.path.dirname(pemfc.__file__)
+    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+            as file:
+        settings = json.load(file)
+
+    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, 18500], settings=settings)
+    df_results = just_run(df_results)
+
+    dict_results = {"Baseline":df_results}
+
+    results = df.store_data(dict_results)
+    df_input_store = df.store_data(df_input)
+    return results, df_input_store
+
+
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Input("btn_refine_ui", "n_clicks"),
+    State('df_result_data_store', 'data'),
+    State('df_input_store', 'data'),
+    prevent_initial_call=True)
+def uicalc_refine(inp, state, state2):
+    n_refinements = 3
+    # State-Store access returns None, I don't know why (FKL)
+    df_results = df.read_data(ctx.states["df_result_data_store.data"])
+    df_results = df_results["Baseline"]
+
+    df_nominal = df.read_data(ctx.states["df_input_store.data"])
+    pemfc_base_dir = os.path.dirname(pemfc.__file__)
+    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+            as file:
+        settings = json.load(file)
+
+    # Refinement loop
+    for _ in range(n_refinements):
+        df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
+        df_refine = just_run(df_refine)
+        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+    dict_results = {"Baseline": df_results}
+    results = df.store_data(dict_results)
+    return results
+
+
+@app.callback(
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     prevent_initial_call=True)
 def update_ui_figure(inp):
-    results = df.read_data(inp)
+    print(inp)
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])["Baseline"]
 
     # Extract Results
     results["Voltage"] = results["global_data"].apply(lambda x: x["Stack Voltage"]["value"])
+    results["Power"] = results["global_data"].apply(lambda x: x["Stack Power"]["value"])
 
-    fig = px.scatter(results, x="simulation-current_density", y="Voltage")
+    #fig = px.scatter(results, x="simulation-current_density", y="Voltage")
 
-    #fig.update_layout()
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Add traces
+    fig.add_trace(
+        go.Scatter(x=results["simulation-current_density"], y=results["Voltage"], name="U [V]",mode = 'markers'),
+        secondary_y=False,
+    )
+
+    fig.add_trace(
+        go.Scatter(x=results["simulation-current_density"], y=results["Power"], name="Power",mode = 'markers'),
+        secondary_y=True,
+    )
+
+    # Add figure title
+    fig.update_layout(
+        title_text="Double Y Axis Example"
+    )
+
+    # Set x-axis title
+    fig.update_xaxes(title_text="xaxis title")
+
+    # Set y-axes titles
+    fig.update_yaxes(title_text="<b>primary</b> yaxis title", secondary_y=False)
+    fig.update_yaxes(title_text="<b>secondary</b> yaxis title", secondary_y=True)
 
     return fig
 
