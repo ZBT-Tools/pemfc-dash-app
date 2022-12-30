@@ -1,6 +1,8 @@
 # import pathlib
 import re
 import copy
+import sys
+
 import numpy as np
 import pandas as pd
 import json
@@ -13,25 +15,22 @@ from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
+from . import dash_functions as df, dash_layout as dl, \
+    dash_modal as dm
+from pemfc_dash.dash_app import app
 
 import pemfc
 from pemfc.src import interpolation as ip
-from pemfc.data import input_dicts
 from pemfc import main_app
 from pemfc_gui import data_transfer
 import pemfc_gui.input as gui_input
 
-from . import dash_functions as df, dash_layout as dl, \
-    dash_modal as dm
-from pemfc_dash.dash_app import app
 # from pandarallel import pandarallel
 from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
 from tqdm import tqdm
 
 tqdm.pandas()
-
 # pandarallel.initialize()
 
 server = app.server
@@ -39,8 +38,31 @@ server = app.server
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
+# Component Initialization & App layout
+# ----------------------------------------
+
+# Process bar components
+pbar = dbc.Progress(id='pbar')
+timer_progress = dcc.Interval(id='timer_progress',
+                              interval=1000)
+
 app.layout = dbc.Container([
-    html.Div([  # HEADER (Header Row)
+
+    dcc.Store(id="input_data"),
+    dcc.Store(id="df_input_data"),
+    dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
+                spinner_class_name='loading_spinner',
+                fullscreen_class_name='loading_spinner_bg'),
+    dcc.Store(id='df_result_data_store'),
+    dcc.Store(id='df_input_store'),
+    dcc.Store(id='signal'),
+
+    # empty Div to trigger javascript file for graph resizing
+    html.Div(id="output-clientside"),
+    # modal for any warning
+    dm.create_modal(),
+
+    html.Div([  # HEADER (Header row, logo and title)
         html.Div(  # Logo
             html.Div(
                 html.Img(
@@ -78,188 +100,191 @@ app.layout = dbc.Container([
         id="header",
         className='row'
     ),
-    dcc.Store(id="input_data"),
-    dcc.Store(id="df_input_data"),
-    dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
-                spinner_class_name='loading_spinner',
-                fullscreen_class_name='loading_spinner_bg'),
-    dcc.Store(id='df_result_data_store'),
-    dcc.Store(id='df_input_store'),
-    dcc.Store(id='signal'),
 
-    # empty Div to trigger javascript file for graph resizing
-    html.Div(id="output-clientside"),
-    # modal for any warning
-    dm.create_modal(),
-    html.Div(  # MIDDLE
-        [html.Div(  # LEFT MIDDLE / (Menu Column)
-            [html.Div(  # LEFT MIDDLE MIDDLE (Tabs with Settings)
-                [dl.tab_container(gui_input.main_frame_dicts)],
-                id='setting_container',  # style={'flex': '1'}
-            ),
-                html.Div(  # LEFT MIDDLE BOTTOM (Buttons)
-                    [html.Div(
-                        [html.Div(
-                            [
-                                dcc.Upload(id='upload-file',
-                                           children=html.Button(
-                                               'Load Settings',
-                                               id='load-button',
-                                               className='settings_button',
-                                               style={'display': 'flex'})),
-                                dcc.Download(id="savefile-json"),
-                                html.Button('Save Settings', id='save-button',
-                                            className='settings_button',
-                                            style={'display': 'flex'}),
-                                html.Button('Run Simulation', id='run_button',
-                                            className='settings_button',
-                                            style={'display': 'flex'}),
-                                html.Button('Run Multi Simulation', id='run_multi_button',
-                                            className='settings_button',
-                                            style={'display': 'flex'}),
-                                html.Button('init ui', id='btn_init_ui',
-                                            className='settings_button',
-                                            style={'display': 'flex'}),
-                                html.Button('refine ui', id='btn_refine_ui',
-                                            className='settings_button',
-                                            style={'display': 'flex'})
+    html.Div([  # MIDDLE
+        html.Div([  # LEFT MIDDLE / (Menu Column)
+            html.Div([  # LEFT MIDDLE MIDDLE (Tabs with Settings)
+                dl.tab_container(gui_input.main_frame_dicts)],
+                id='setting_container'),  # style={'flex': '1'}
+            html.Div([  # LEFT MIDDLE: Buttons
+                html.Div([
+                    html.Div([
+                        dcc.Upload(id='upload-file',
+                                   children=html.Button(
+                                       'Load Settings',
+                                       id='load-button',
+                                       className='settings_button',
+                                       style={'display': 'flex'})),
+                        dcc.Download(id="savefile-json"),
+                        html.Button('Save Settings', id='save-button',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('Run Simulation', id='run_button',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('Run Multi Simulation', id='run_multi_button',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('init ui', id='btn_init_ui',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('refine ui', id='btn_refine_ui',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('study', id='btn_study',
+                                    className='settings_button',
+                                    style={'display': 'flex'}),
+                        html.Button('plot', id='btn_plot',
+                                    className='settings_button',
+                                    style={'display': 'flex'})
+                    ],
 
-                            ],
-                            style={'display': 'flex',
-                                   'flex-wrap': 'wrap',
-                                   # 'flex-direction': 'column',
-                                   # 'margin': '5px',
-                                   'justify-content': 'space-evenly'}
-                        )],
-                        className='neat-spacing')], style={'flex': '1'},
-                    id='load_save_setting', className='pretty_container')],
+                        style={'display': 'flex',
+                               'flex-wrap': 'wrap',
+                               # 'flex-direction': 'column',
+                               # 'margin': '5px',
+                               'justify-content': 'space-evenly'}
+                    )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='load_save_setting', className='pretty_container'),
+            html.Div([  # LEFT MIDDLE: Progress Bar
+                # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+                html.Div([
+                    html.Div([dbc.Spinner(html.Div(id="spinner_run")), pbar, timer_progress],
+
+                             # style={'display': 'flex',
+                             #       'flex-wrap': 'wrap',
+                             #       'justify-content': 'space-evenly'}
+                             )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='progress_bar', className='pretty_container')],
             id="left-column", className='col-12 col-lg-4 mb-2'),
 
-            html.Div(  # RIGHT MIDDLE  (Result Column)
-                [html.Div(
-                    [html.Div('U-I-Curve', className='title'),
-                     dcc.Graph(id='ui')],
-                    id='div_ui',
-                    className='pretty_container',
-                    style={'overflow': 'auto'}),
+        html.Div([  # RIGHT MIDDLE  (Result Column)
+            html.Div(
+                [html.Div('U-I-Curve', className='title'),
+                 dcc.Graph(id='ui')],
+                id='div_ui',
+                className='pretty_container',
+                style={'overflow': 'auto'}),
 
-                    html.Div(
-                        [html.Div('Global Results', className='title'),
-                         dt.DataTable(id='global_data_table',
-                                      editable=True,
-                                      column_selectable='multi')],
-                        id='div_global_table',
-                        className='pretty_container',
-                        style={'overflow': 'auto'}),
-                    html.Div(
-                        [html.Div('Heatmap', className='title'),
+            html.Div([
+                html.Div('Global Results', className='title'),
+                 dt.DataTable(id='global_data_table',
+                              editable=True,
+                              column_selectable='multi')],
+                id='div_global_table',
+                className='pretty_container',
+                style={'overflow': 'auto'}),
+            html.Div([
+                html.Div('Heatmap', className='title'),
+                 html.Div(
+                     [html.Div(
+                         dcc.Dropdown(
+                             id='dropdown_heatmap',
+                             placeholder='Select Variable',
+                             className='dropdown_input'),
+                         id='div_results_dropdown',
+                         # style={'padding': '1px', 'min-width': '200px'}
+                     ),
                          html.Div(
-                             [html.Div(
-                                 dcc.Dropdown(
-                                     id='dropdown_heatmap',
-                                     placeholder='Select Variable',
-                                     className='dropdown_input'),
-                                 id='div_results_dropdown',
-                                 # style={'padding': '1px', 'min-width': '200px'}
-                             ),
-                                 html.Div(
-                                     dcc.Dropdown(id='dropdown_heatmap_2',
-                                                  className='dropdown_input',
-                                                  style={'visibility': 'hidden'}),
-                                     id='div_results_dropdown_2',
-                                 )
-                             ],
-                             style={'display': 'flex',
-                                    'flex-direction': 'row',
-                                    'flex-wrap': 'wrap',
-                                    'justify-content': 'left'},
-                         ),
-                         # RIGHT MIDDLE BOTTOM
-                         dbc.Spinner(dcc.Graph(id="heatmap_graph"),
-                                     spinner_class_name='loading_spinner',
-                                     fullscreen_class_name='loading_spinner_bg'),
-                         ],
-                        id='heatmap_container',
-                        className='graph pretty_container'),
+                             dcc.Dropdown(id='dropdown_heatmap_2',
+                                          className='dropdown_input',
+                                          style={'visibility': 'hidden'}),
+                             id='div_results_dropdown_2',
+                         )
+                     ],
+                     style={'display': 'flex',
+                            'flex-direction': 'row',
+                            'flex-wrap': 'wrap',
+                            'justify-content': 'left'},
+                 ),
+                 # RIGHT MIDDLE BOTTOM
+                 dbc.Spinner(dcc.Graph(id="heatmap_graph"),
+                             spinner_class_name='loading_spinner',
+                             fullscreen_class_name='loading_spinner_bg'),
+                 ],
+                id='heatmap_container',
+                className='graph pretty_container'),
 
+            html.Div([
+                html.Div('Plots', className='title'),
+                html.Div(
+                    [html.Div(
+                        dcc.Dropdown(
+                            id='dropdown_line',
+                            placeholder='Select Variable',
+                            className='dropdown_input'),
+                        id='div_dropdown_line',
+                        # style={'padding': '1px', 'min-width': '200px'}
+                    ),
+                        html.Div(
+                            dcc.Dropdown(id='dropdown_line2',
+                                         className='dropdown_input',
+                                         style={'visibility': 'hidden'}),
+                            id='div_dropdown_line_2',
+                            # style={'padding': '1px', 'min-width': '200px'}
+                        )],
+                    style={'display': 'flex', 'flex-direction': 'row',
+                           'flex-wrap': 'wrap',
+                           'justify-content': 'left'},
+                ),
+                html.Div([
                     html.Div(
-                        [html.Div('Plots', className='title'),
-                         html.Div(
-                             [html.Div(
-                                 dcc.Dropdown(
-                                     id='dropdown_line',
-                                     placeholder='Select Variable',
-                                     className='dropdown_input'),
-                                 id='div_dropdown_line',
-                                 # style={'padding': '1px', 'min-width': '200px'}
-                             ),
-                                 html.Div(
-                                     dcc.Dropdown(id='dropdown_line2',
-                                                  className='dropdown_input',
-                                                  style={'visibility': 'hidden'}),
-                                     id='div_dropdown_line_2',
-                                     # style={'padding': '1px', 'min-width': '200px'}
-                                 )],
-                             style={'display': 'flex', 'flex-direction': 'row',
+                        [
+                            dcc.Store(id='append_check'),
+                            html.Div(
+                                [html.Div(
+                                    children=dbc.DropdownMenu(
+                                        id='checklist_dropdown',
+                                        children=[
+                                            dbc.Checklist(
+                                                id='data_checklist',
+                                                # input_checked_class_name='checkbox',
+                                                style={
+                                                    'max-height': '400px',
+                                                    'overflow': 'auto'})],
+                                        toggle_style={
+                                            'textTransform': 'none',
+                                            'background': '#fff',
+                                            'border': '#ccc',
+                                            'letter-spacing': '0',
+                                            'font-size': '11px',
+                                        },
+                                        align_end=True,
+                                        toggle_class_name='dropdown_input',
+                                        label="Select Cells"), ),
+                                    html.Button('Clear All', id='clear_all_button',
+                                                className='local_data_buttons'),
+                                    html.Button('Select All',
+                                                id='select_all_button',
+                                                className='local_data_buttons'),
+                                    html.Button('Export to Table',
+                                                id='export_b',
+                                                className='local_data_buttons'),
+                                    html.Button('Append to Table',
+                                                id='append_b',
+                                                className='local_data_buttons'),
+                                    html.Button('Clear Table', id='clear_table_b',
+                                                className='local_data_buttons')],
+                                style={
+                                    'display': 'flex',
                                     'flex-wrap': 'wrap',
-                                    'justify-content': 'left'},
-                         ),
-                         html.Div(
-                             [html.Div(
-                                 [
-                                     dcc.Store(id='append_check'),
-                                     html.Div(
-                                         [html.Div(
-                                             children=dbc.DropdownMenu(
-                                                 id='checklist_dropdown',
-                                                 children=[
-                                                     dbc.Checklist(
-                                                         id='data_checklist',
-                                                         # input_checked_class_name='checkbox',
-                                                         style={
-                                                             'max-height': '400px',
-                                                             'overflow': 'auto'})],
-                                                 toggle_style={
-                                                     'textTransform': 'none',
-                                                     'background': '#fff',
-                                                     'border': '#ccc',
-                                                     'letter-spacing': '0',
-                                                     'font-size': '11px',
-                                                 },
-                                                 align_end=True,
-                                                 toggle_class_name='dropdown_input',
-                                                 label="Select Cells"), ),
-                                             html.Button('Clear All', id='clear_all_button',
-                                                         className='local_data_buttons'),
-                                             html.Button('Select All',
-                                                         id='select_all_button',
-                                                         className='local_data_buttons'),
-                                             html.Button('Export to Table',
-                                                         id='export_b',
-                                                         className='local_data_buttons'),
-                                             html.Button('Append to Table',
-                                                         id='append_b',
-                                                         className='local_data_buttons'),
-                                             html.Button('Clear Table', id='clear_table_b',
-                                                         className='local_data_buttons')],
-                                         style={
-                                             'display': 'flex',
-                                             'flex-wrap': 'wrap',
-                                             'margin-bottom': '5px'}
-                                     )],
-                                 # style={'width': '200px'}
-                             ),
-                                 dcc.Store(id='cells_data')],
-                             style={'display': 'flex', 'flex-direction': 'column',
-                                    'justify-content': 'left'}),
-                         dbc.Spinner(dcc.Graph(id='line_graph'),
-                                     spinner_class_name='loading_spinner',
-                                     fullscreen_class_name='loading_spinner_bg')],
-                        className="pretty_container",
-                        style={'display': 'flex', 'flex-direction':
-                            'column', 'justify-content': 'space-evenly'}
-                    )],
-                id='right-column', className='col-12 col-lg-8 mb-2')],
+                                    'margin-bottom': '5px'}
+                            )],
+                        # style={'width': '200px'}
+                    ),
+                        dcc.Store(id='cells_data')],
+                    style={'display': 'flex', 'flex-direction': 'column',
+                           'justify-content': 'left'}),
+                dbc.Spinner(dcc.Graph(id='line_graph'),
+                            spinner_class_name='loading_spinner',
+                            fullscreen_class_name='loading_spinner_bg')],
+                className="pretty_container",
+                style={'display': 'flex', 'flex-direction':
+                    'column', 'justify-content': 'space-evenly'}
+            )],
+            id='right-column', className='col-12 col-lg-8 mb-2')],
         className="row",
         style={'justify-content': 'space-evenly'}),
 
@@ -273,7 +298,7 @@ app.layout = dbc.Container([
                                     },
              className='pretty_container'),
 
-    # Bottom, Links to GitHub,...
+    # Bottom row, links to GitHub,...
     html.Div(
         html.Div([
             html.A('Source code:'),
@@ -304,10 +329,57 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
+def create_settings(data, settings):
+    # Update Settings,... #ToDO rewrite
+    # -----------------------------------------------------------------------
+    df_temp = pd.DataFrame(columns=["input_data", "settings"])
+    df_temp['input_data'] = df_temp['input_data'].astype(object)
+    df_temp['settings'] = df_temp['input_data'].astype(object)
+    df_temp['input_data'] = data.apply(
+        lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+    df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+    data = data.join(df_temp)
+
+    return data
+
+
+def variate_current_density():
+    ...
+
+
+def variate_hardware_conditions(df_input: pd.DataFrame) -> dict:
+    """
+
+    """
+    var_par = "stack-cell_number"
+    var_par_vals = [1, 5]
+    dict_data = {}
+    for val in var_par_vals:
+        inp = df_input.copy()
+        inp.loc["nominal",var_par] = int(val)
+        dict_data[int(val)] = inp
+
+    return dict_data
+
+
 def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
-    result_table = input_table["settings"].progress_apply(main_app.main)
-    input_table["global_data"] = result_table.apply(lambda x: x[0][0])
-    input_table["local_data"] = result_table.apply(lambda x: x[1][0])
+    """
+    - Run input_table rows, catch exceptions of single calculations
+            https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
+    - Append result columns to input_table
+    - Return DataFrame
+    """
+
+    def func(settings):
+        try:
+            return main_app.main(settings)
+        except:
+            return None
+
+    result_table = input_table["settings"].progress_apply(func)
+
+    input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (x is not None) else None)
+    input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (x is not None) else None)
 
     return input_table
 
@@ -456,20 +528,9 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
     @return:
     """
 
-    # 1. Read data from input fields and save input in dict/dataframe
+    # Read data from input fields
     # ------------------------------------------------------------
-    df_input = pd.DataFrame()
-    dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
-    input_data = {}
-    for k, v in dict_data.items():
-        input_data[k] = {'sim_name': k.split('-'), 'value': v}
-        # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
-        # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
-        # Column must be of type object to accept list-objects
-        # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
-        df_input.at["nominal", k] = None
-        df_input[k] = df_input[k].astype(object)
-        df_input.at["nominal", k] = v
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
     # Example logic: Create modified data points
     for i in [1, 50, 100, 150, 200, 250, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 15000, 17500, 20000]:
@@ -508,7 +569,8 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
 
 @app.callback(
     Output('df_result_data_store', 'data'),
-    Output('df_input_store','data'),
+    Output('df_input_store', 'data'),
+    Output('spinner_run', 'children'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -516,7 +578,12 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     prevent_initial_call=True)
 def uicalc_init(btn, inputs, inputs2, ids, ids2):
-    # 1. Read data from input fields and save input in dict/dataframe
+    # Progress bar init
+    std_err_backup = sys.stderr
+    file_prog = open('progress.txt', 'w')
+    sys.stderr = file_prog
+
+    # Read data from input fields
     # ------------------------------------------------------------
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
@@ -525,84 +592,235 @@ def uicalc_init(btn, inputs, inputs2, ids, ids2):
             as file:
         settings = json.load(file)
 
-    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, 18500], settings=settings)
+    # Find highest current density
+    converged = False
+    max_i = 50000
+    min_i = 0
+    n_cells = df_input.loc["nominal", "stack-cell_number"]
+
+    while ((max_i - min_i) > 2000) or not converged:
+        df_convergence = df_input.copy()
+        run_i = (max_i - min_i) / 2 + min_i
+        df_convergence.loc["nominal", "simulation-current_density"] = (max_i - min_i) / 2 + min_i
+        # Update Settings,... #ToDO rewrite
+        # -----------------------------------------------------------------------
+        df_temp = pd.DataFrame(columns=["input_data", "settings"])
+        df_temp['input_data'] = df_temp['input_data'].astype(object)
+        df_temp['settings'] = df_temp['input_data'].astype(object)
+        df_temp['input_data'] = df_convergence.apply(
+            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+        df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+        df_convergence = df_convergence.join(df_temp)
+
+        df_convergence = just_run(df_convergence)
+        if (df_convergence["global_data"] is not None) and \
+                (float(df_convergence["global_data"]["nominal"]["Stack Voltage"]["value"]) > 0.1 * n_cells):
+            min_i = (max_i - min_i) / 2 + min_i
+            converged = True
+        else:
+            max_i = (max_i - min_i) / 2 + min_i
+            converged = False
+
+        print(f"Calulated_i: {run_i}")
+        print(f"Converged: {converged}: {df_convergence['global_data']['nominal']['Stack Voltage']['value']}")
+
+    print(f"Final_i: {run_i}")
+    print(f"Converged: {converged}: {df_convergence['global_data']['nominal']['Stack Voltage']['value']}")
+
+    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, run_i], settings=settings)
     df_results = just_run(df_results)
 
-    dict_results = {"Baseline":df_results}
+    dict_results = {"Baseline": df_results}
 
     results = df.store_data(dict_results)
     df_input_store = df.store_data(df_input)
-    return results, df_input_store
+
+    file_prog.close()
+    sys.stderr = std_err_backup
+    return results, df_input_store, None
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
+    Output('spinner_run', 'children'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
     prevent_initial_call=True)
 def uicalc_refine(inp, state, state2):
-    n_refinements = 3
-    # State-Store access returns None, I don't know why (FKL)
-    df_results = df.read_data(ctx.states["df_result_data_store.data"])
-    df_results = df_results["Baseline"]
+    # Progress bar init
+    std_err_backup = sys.stderr
+    file_prog = open('progress.txt', 'w')
+    sys.stderr = file_prog
 
+    n_refinements = 1
+    # State-Store access returns None, I don't know why (FKL)
+    dict_results = df.read_data(ctx.states["df_result_data_store.data"])
     df_nominal = df.read_data(ctx.states["df_input_store.data"])
+
     pemfc_base_dir = os.path.dirname(pemfc.__file__)
     with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
             as file:
         settings = json.load(file)
 
-    # Refinement loop
-    for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
-        df_refine = just_run(df_refine)
-        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+    for k, v in dict_results.items():
 
-    dict_results = {"Baseline": df_results}
+        # Refinement loop
+        for _ in range(n_refinements):
+            print(f"Refine {k}_{_}")
+            df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=v, settings=settings)
+            df_refine = just_run(df_refine)
+            df_results = pd.concat([v, df_refine], ignore_index=True)
+
+        dict_results[k] = df_results
+
     results = df.store_data(dict_results)
-    return results
+    file_prog.close()
+    sys.stderr = std_err_backup
+    return results, None
+
+
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Output('df_input_store', 'data'),
+    Input("btn_study", "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True)
+def study(btn, inputs, inputs2, ids, ids2):
+    # Progress bar init
+    std_err_backup = sys.stderr
+    file_prog = open('progress.txt', 'w')
+    sys.stderr = file_prog
+
+    # Read data from input fields
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+
+    # Read settings #ToDo: Do this once in callback at initialization
+    pemfc_base_dir = os.path.dirname(pemfc.__file__)
+    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+            as file:
+        settings = json.load(file)
+
+    # Create multiple hardware parameter sets
+    dict_data = variate_hardware_conditions(df_input)
+
+    for k, v in dict_data.items():
+        print(f"Find highest i for parameter set {k} ...")
+
+        # For each hardware configuration find highest current density
+        converged = False
+        max_i = 50000
+        min_i = 0
+        n_cells = v.loc["nominal", "stack-cell_number"]
+
+        while ((max_i - min_i) > 2000) or not converged:
+            df_convergence = v.copy()
+            run_i = (max_i - min_i) / 2 + min_i
+            df_convergence.loc["nominal", "simulation-current_density"] = (max_i - min_i) / 2 + min_i
+            df_convergence = create_settings(df_convergence, settings)
+            df_convergence = just_run(df_convergence)
+
+            if (df_convergence.loc["nominal", "global_data"] is not None) and \
+                    (float(df_convergence.loc["nominal", "global_data"]["Stack Voltage"]["value"]) > 0.1 * n_cells):
+                min_i = (max_i - min_i) / 2 + min_i
+                converged = True
+                print(
+                    f'Parameter Set {k}, i: {run_i}, converged, U: {df_convergence.loc["nominal", "global_data"]["Stack Voltage"]["value"]}')
+            else:
+                max_i = (max_i - min_i) / 2 + min_i
+                converged = False
+                print(
+                    f'Parameter Set {k}, i: {run_i}, not converged.')
+
+        # 2. Perform initial UI-Calculation
+        df_results = uicalc_prepare_initcalc(input_df=v, i_limits=[1, run_i], settings=settings)
+        df_results = just_run(df_results)
+        # 3. Refinement
+        # todo implement
+        # 4. Save Results
+        dict_data[k] = df_results
+
+    results = df.store_data(dict_data)
+    df_input_store = df.store_data(df_input)
+
+    file_prog.close()
+    sys.stderr = std_err_backup
+    return results, df_input_store
+
+
+@app.callback(
+    Output('pbar', 'value'),
+    Output('pbar', 'label'),
+    Output('pbar', 'color'),
+    Input('timer_progress', 'n_intervals'),
+    prevent_initial_call=True)
+def callback_progress(n_intervals: int) -> (float, str):
+    """
+    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+    """
+
+    try:
+        with open('progress.txt', 'r') as file:
+            str_raw = file.read()
+        last_line = list(filter(None, str_raw.split('\n')))[-1]
+        percent = float(last_line.split('%')[0])
+
+    except:
+        percent = 0
+
+    finally:
+        text = f'{percent:.0f}%'
+        if int(percent) == 100:
+            color = "success"
+        else:
+            color = "primary"
+        return percent, text, color
 
 
 @app.callback(
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
+    Input('btn_plot', 'n_clicks'),
     prevent_initial_call=True)
-def update_ui_figure(inp):
-    print(inp)
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])["Baseline"]
-
-    # Extract Results
-    results["Voltage"] = results["global_data"].apply(lambda x: x["Stack Voltage"]["value"])
-    results["Power"] = results["global_data"].apply(lambda x: x["Stack Power"]["value"])
-
-    #fig = px.scatter(results, x="simulation-current_density", y="Voltage")
-
-    # Create figure with secondary y-axis
+def update_ui_figure(inp1, inp2):
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Add traces
-    fig.add_trace(
-        go.Scatter(x=results["simulation-current_density"], y=results["Voltage"], name="U [V]",mode = 'markers'),
-        secondary_y=False,
-    )
+    for k, v in results.items():
+        # Extract Results
+        v.sort_values("simulation-current_density", ignore_index=True, inplace=True)
+        v["Voltage"] = v["global_data"].apply(lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
+        v["Power"] = v["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
 
-    fig.add_trace(
-        go.Scatter(x=results["simulation-current_density"], y=results["Power"], name="Power",mode = 'markers'),
-        secondary_y=True,
-    )
+        # Create figure with secondary y-axis
+
+        # Add traces
+        fig.add_trace(
+            go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"n={k},  U [V]",
+                       mode='lines+markers'),
+            secondary_y=False,
+        )
+
+        fig.add_trace(
+            go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"n={k}, Power",
+                       mode='lines+markers'),
+            secondary_y=True,
+        )
 
     # Add figure title
     fig.update_layout(
-        title_text="Double Y Axis Example"
+        title_text="U-i-Curve"
     )
 
     # Set x-axis title
-    fig.update_xaxes(title_text="xaxis title")
+    fig.update_xaxes(title_text="i [A/mm²]")
 
     # Set y-axes titles
-    fig.update_yaxes(title_text="<b>primary</b> yaxis title", secondary_y=False)
-    fig.update_yaxes(title_text="<b>secondary</b> yaxis title", secondary_y=True)
+    fig.update_yaxes(title_text="<b>Voltage</b> U [V]", secondary_y=False)
+    fig.update_yaxes(title_text="<b>Power</b> P [W]", secondary_y=True)
 
     return fig
 

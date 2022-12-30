@@ -14,6 +14,8 @@ dependencies:
     - diskcache
     - celery
     - redis
+    - pandarallel
+    - tqdm
     - pip
     - pip:
         - gunicorn

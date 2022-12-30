@@ -158,7 +158,7 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs, returntype="d
     elif returntype == "DataFrame":
         df_data = pd.DataFrame()
         input_data = {}
-        for k, v in dict_data.items():
+        for k, v in new_dict_data.items():
             # input_data[k] = {'sim_name': k.split('-'), 'value': v}
 
             # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
