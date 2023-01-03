@@ -1,8 +1,10 @@
 # import pathlib
+import pickle
 import re
 import copy
 import sys
 
+import jsonpickle
 import numpy as np
 import pandas as pd
 import json
@@ -55,7 +57,9 @@ app.layout = dbc.Container([
                 fullscreen_class_name='loading_spinner_bg'),
     dcc.Store(id='df_result_data_store'),
     dcc.Store(id='df_input_store'),
+    dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
+    html.Div(id="dummy"),
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -136,7 +140,16 @@ app.layout = dbc.Container([
                                     style={'display': 'flex'}),
                         html.Button('plot', id='btn_plot',
                                     className='settings_button',
-                                    style={'display': 'flex'})
+                                    style={'display': 'flex'}
+                                    ),
+                        html.Button('SaveResults', id='btn_saveres',
+                                    className='settings_button',
+                                    style={'display': 'flex'}
+                                    ),
+                        html.Button('LoadResults', id='btn_loadres',
+                                    className='settings_button',
+                                    style={'display': 'flex'}
+                                    )
                     ],
 
                         style={'display': 'flex',
@@ -147,10 +160,21 @@ app.layout = dbc.Container([
                     )],
                     className='neat-spacing')], style={'flex': '1'},
                 id='load_save_setting', className='pretty_container'),
+            html.Div([  # LEFT MIDDLE: Spinner
+                html.Div([
+                    html.Div([dbc.Spinner(html.Div(id="spinner_run1")), dbc.Spinner(html.Div(id="spinner_run2"))],
+
+                             # style={'display': 'flex',
+                             #       'flex-wrap': 'wrap',
+                             #       'justify-content': 'space-evenly'}
+                             )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='spinner_bar', className='pretty_container'),
+
             html.Div([  # LEFT MIDDLE: Progress Bar
                 # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
                 html.Div([
-                    html.Div([dbc.Spinner(html.Div(id="spinner_run")), pbar, timer_progress],
+                    html.Div([pbar, timer_progress],
 
                              # style={'display': 'flex',
                              #       'flex-wrap': 'wrap',
@@ -170,40 +194,40 @@ app.layout = dbc.Container([
 
             html.Div([
                 html.Div('Global Results', className='title'),
-                 dt.DataTable(id='global_data_table',
-                              editable=True,
-                              column_selectable='multi')],
+                dt.DataTable(id='global_data_table',
+                             editable=True,
+                             column_selectable='multi')],
                 id='div_global_table',
                 className='pretty_container',
                 style={'overflow': 'auto'}),
             html.Div([
                 html.Div('Heatmap', className='title'),
-                 html.Div(
-                     [html.Div(
-                         dcc.Dropdown(
-                             id='dropdown_heatmap',
-                             placeholder='Select Variable',
-                             className='dropdown_input'),
-                         id='div_results_dropdown',
-                         # style={'padding': '1px', 'min-width': '200px'}
-                     ),
-                         html.Div(
-                             dcc.Dropdown(id='dropdown_heatmap_2',
-                                          className='dropdown_input',
-                                          style={'visibility': 'hidden'}),
-                             id='div_results_dropdown_2',
-                         )
-                     ],
-                     style={'display': 'flex',
-                            'flex-direction': 'row',
-                            'flex-wrap': 'wrap',
-                            'justify-content': 'left'},
-                 ),
-                 # RIGHT MIDDLE BOTTOM
-                 dbc.Spinner(dcc.Graph(id="heatmap_graph"),
-                             spinner_class_name='loading_spinner',
-                             fullscreen_class_name='loading_spinner_bg'),
-                 ],
+                html.Div(
+                    [html.Div(
+                        dcc.Dropdown(
+                            id='dropdown_heatmap',
+                            placeholder='Select Variable',
+                            className='dropdown_input'),
+                        id='div_results_dropdown',
+                        # style={'padding': '1px', 'min-width': '200px'}
+                    ),
+                        html.Div(
+                            dcc.Dropdown(id='dropdown_heatmap_2',
+                                         className='dropdown_input',
+                                         style={'visibility': 'hidden'}),
+                            id='div_results_dropdown_2',
+                        )
+                    ],
+                    style={'display': 'flex',
+                           'flex-direction': 'row',
+                           'flex-wrap': 'wrap',
+                           'justify-content': 'left'},
+                ),
+                # RIGHT MIDDLE BOTTOM
+                dbc.Spinner(dcc.Graph(id="heatmap_graph"),
+                            spinner_class_name='loading_spinner',
+                            fullscreen_class_name='loading_spinner_bg'),
+            ],
                 id='heatmap_container',
                 className='graph pretty_container'),
 
@@ -274,7 +298,7 @@ app.layout = dbc.Container([
                             )],
                         # style={'width': '200px'}
                     ),
-                        dcc.Store(id='cells_data')],
+                    dcc.Store(id='cells_data')],
                     style={'display': 'flex', 'flex-direction': 'column',
                            'justify-content': 'left'}),
                 dbc.Spinner(dcc.Graph(id='line_graph'),
@@ -343,23 +367,24 @@ def create_settings(data, settings):
     return data
 
 
-def variate_current_density():
-    ...
-
-
-def variate_hardware_conditions(df_input: pd.DataFrame) -> dict:
+def variation_parameter(df_input: pd.DataFrame) -> (dict, str):
     """
 
     """
+
+    # var_par = "membrane-thickness"
+    # var_par_vals = [0.25e-05]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
+
     var_par = "stack-cell_number"
-    var_par_vals = [1, 5]
+    var_par_vals = [1, 20]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
+
     dict_data = {}
     for val in var_par_vals:
         inp = df_input.copy()
-        inp.loc["nominal",var_par] = int(val)
+        inp.loc["nominal", var_par] = int(val)
         dict_data[int(val)] = inp
 
-    return dict_data
+    return dict_data, var_par
 
 
 def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
@@ -382,6 +407,15 @@ def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
     input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (x is not None) else None)
 
     return input_table
+
+@app.callback(
+    ServersideOutput("result_data_store", "data"))
+def read_settings
+    # Read settings #ToDo: Do this once in callback at initialization
+    pemfc_base_dir = os.path.dirname(pemfc.__file__)
+    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+            as file:
+        settings = json.load(file)
 
 
 @app.callback(
@@ -570,7 +604,7 @@ def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
-    Output('spinner_run', 'children'),
+
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -637,12 +671,12 @@ def uicalc_init(btn, inputs, inputs2, ids, ids2):
 
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, df_input_store, None
+    return results, df_input_store, ""
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
-    Output('spinner_run', 'children'),
+    Output('spinner_run2', 'children'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
@@ -653,10 +687,10 @@ def uicalc_refine(inp, state, state2):
     file_prog = open('progress.txt', 'w')
     sys.stderr = file_prog
 
-    n_refinements = 1
+    n_refinements = 10
     # State-Store access returns None, I don't know why (FKL)
     dict_results = df.read_data(ctx.states["df_result_data_store.data"])
-    df_nominal = df.read_data(ctx.states["df_input_store.data"])
+    # df_nominal = df.read_data(ctx.states["df_input_store.data"])
 
     pemfc_base_dir = os.path.dirname(pemfc.__file__)
     with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
@@ -664,25 +698,57 @@ def uicalc_refine(inp, state, state2):
         settings = json.load(file)
 
     for k, v in dict_results.items():
+        # ToDo rework
+        df_nominal = v.iloc[[0]].copy()
+        df_nominal = df_nominal.rename(index={v.index[0]: 'nominal'})
+        df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred', 'u_pred_diff', 'global_data', 'local_data'],
+                                     axis=1)
 
         # Refinement loop
+        df_results = v
         for _ in range(n_refinements):
             print(f"Refine {k}_{_}")
-            df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=v, settings=settings)
+            df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
             df_refine = just_run(df_refine)
-            df_results = pd.concat([v, df_refine], ignore_index=True)
+            df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
         dict_results[k] = df_results
 
     results = df.store_data(dict_results)
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, None
+    return results, ""
+
+
+@app.callback(
+    Output('dummy', 'children'),
+    Input("btn_saveres", "n_clicks"),
+    State('df_result_data_store', 'data'),
+    prevent_initial_call=True)
+def save_results(inp, state):
+    # State-Store access returns None, I don't know why (FKL)
+    data = ctx.states["df_result_data_store.data"]
+    with open('temp_results.pickle', 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    print("saved")
+
+
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Input("btn_loadres", "n_clicks"),
+    prevent_initial_call=True)
+def load_results(inp):
+    with open('temp_results.pickle', 'rb') as handle:
+        b = pickle.load(handle)
+    return b
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
+    Output('variation_parameter', 'data'),
+    Output('spinner_run1', 'children'),
     Input("btn_study", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -705,7 +771,7 @@ def study(btn, inputs, inputs2, ids, ids2):
         settings = json.load(file)
 
     # Create multiple hardware parameter sets
-    dict_data = variate_hardware_conditions(df_input)
+    dict_data, variation_parameter = variation_parameter(df_input)
 
     for k, v in dict_data.items():
         print(f"Find highest i for parameter set {k} ...")
@@ -748,7 +814,8 @@ def study(btn, inputs, inputs2, ids, ids2):
 
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, df_input_store
+
+    return results, df_input_store, variation_parameter, "."
 
 
 @app.callback(
@@ -784,8 +851,9 @@ def callback_progress(n_intervals: int) -> (float, str):
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     Input('btn_plot', 'n_clicks'),
+    State('variation_parameter', 'data'),
     prevent_initial_call=True)
-def update_ui_figure(inp1, inp2):
+def update_ui_figure(inp1, inp2, variationpar):
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -799,24 +867,24 @@ def update_ui_figure(inp1, inp2):
 
         # Add traces
         fig.add_trace(
-            go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"n={k},  U [V]",
+            go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"{k},  U [V]",
                        mode='lines+markers'),
             secondary_y=False,
         )
 
         fig.add_trace(
-            go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"n={k}, Power",
+            go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"{k}, Power",
                        mode='lines+markers'),
             secondary_y=True,
         )
 
     # Add figure title
     fig.update_layout(
-        title_text="U-i-Curve"
+        title_text=f"U-i-Curve, variation parameter: {variationpar}"
     )
 
     # Set x-axis title
-    fig.update_xaxes(title_text="i [A/mm²]")
+    fig.update_xaxes(title_text="i [A/m²]")
 
     # Set y-axes titles
     fig.update_yaxes(title_text="<b>Voltage</b> U [V]", secondary_y=False)

@@ -46,6 +46,7 @@ def uicalc_prepare_refinement(data_df,input_df,settings):
     """
     new_columns = ["input_data", "settings", "u_pred", "u_pred_diff"]
 
+
     n = data_df.shape[0]
     new_data_df = pd.DataFrame(columns=input_df.columns)
     data_df.sort_values("simulation-current_density", ignore_index=True, inplace=True)
