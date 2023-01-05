@@ -367,7 +367,7 @@ def create_settings(data, settings):
     return data
 
 
-def variation_parameter(df_input: pd.DataFrame) -> (dict, str):
+def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
     """
 
     """
@@ -378,13 +378,17 @@ def variation_parameter(df_input: pd.DataFrame) -> (dict, str):
     var_par = "stack-cell_number"
     var_par_vals = [1, 2]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
 
-    dict_data = {}
+    clms = list(df_input.columns)
+    clms.extend(["variation_parameter"])
+    data = pd.DataFrame(columns=clms)
     for val in var_par_vals:
         inp = df_input.copy()
         inp.loc["nominal", var_par] = int(val)
-        dict_data[int(val)] = inp
+        inp.loc["nominal", "variation_parameter"] = var_par
+        data = pd.concat([data, inp], ignore_index=True)
+    data = pd.concat([data, df_input])
 
-    return dict_data, var_par
+    return data
 
 
 def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
@@ -426,6 +430,7 @@ def read_pemfc_settings(*args):
     print("saved settings.json")
 
     return results
+
 
 @app.callback(
     ServersideOutput("result_data_store", "data"),
@@ -777,8 +782,10 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
     # Create multiple hardware parameter sets
-    dict_data, variation_par = variation_parameter(df_input)
+    data = variation_parameter(df_input)
+    varpars = data["variation_parameters"].unique()
 
+    # Find maximum current density for
     for k, v in dict_data.items():
         print(f"Find highest i for parameter set {k} ...")
 
