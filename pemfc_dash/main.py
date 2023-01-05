@@ -49,7 +49,7 @@ timer_progress = dcc.Interval(id='timer_progress',
                               interval=1000)
 
 app.layout = dbc.Container([
-
+    dcc.Store(id="pemfc_settings_file"),
     dcc.Store(id="input_data"),
     dcc.Store(id="df_input_data"),
     dbc.Spinner(dcc.Store(id='result_data_store'), fullscreen=True,
@@ -376,7 +376,7 @@ def variation_parameter(df_input: pd.DataFrame) -> (dict, str):
     # var_par_vals = [0.25e-05]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
 
     var_par = "stack-cell_number"
-    var_par_vals = [1, 20]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
+    var_par_vals = [1, 2]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
 
     dict_data = {}
     for val in var_par_vals:
@@ -408,15 +408,24 @@ def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
 
     return input_table
 
-@app.callback(
-    ServersideOutput("result_data_store", "data"))
-def read_settings
-    # Read settings #ToDo: Do this once in callback at initialization
-    pemfc_base_dir = os.path.dirname(pemfc.__file__)
-    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-            as file:
-        settings = json.load(file)
 
+@app.callback(
+    Output("pemfc_settings_file", "data"),
+    Input("dummy", "children")
+)
+def read_pemfc_settings(*args):
+    try:
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+    except Exception as E:
+        print(repr(E))
+
+    results = df.store_data(settings)
+    print("saved settings.json")
+
+    return results
 
 @app.callback(
     ServersideOutput("result_data_store", "data"),
@@ -687,7 +696,7 @@ def uicalc_refine(inp, state, state2):
     file_prog = open('progress.txt', 'w')
     sys.stderr = file_prog
 
-    n_refinements = 10
+    n_refinements = 2
     # State-Store access returns None, I don't know why (FKL)
     dict_results = df.read_data(ctx.states["df_result_data_store.data"])
     # df_nominal = df.read_data(ctx.states["df_input_store.data"])
@@ -754,24 +763,21 @@ def load_results(inp):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    State("pemfc_settings_file", "data"),
     prevent_initial_call=True)
-def study(btn, inputs, inputs2, ids, ids2):
+def study(btn, inputs, inputs2, ids, ids2, settings):
     # Progress bar init
     std_err_backup = sys.stderr
     file_prog = open('progress.txt', 'w')
     sys.stderr = file_prog
 
+    settings = df.read_data(settings)
+
     # Read data from input fields
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
-    # Read settings #ToDo: Do this once in callback at initialization
-    pemfc_base_dir = os.path.dirname(pemfc.__file__)
-    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-            as file:
-        settings = json.load(file)
-
     # Create multiple hardware parameter sets
-    dict_data, variation_parameter = variation_parameter(df_input)
+    dict_data, variation_par = variation_parameter(df_input)
 
     for k, v in dict_data.items():
         print(f"Find highest i for parameter set {k} ...")
@@ -779,7 +785,7 @@ def study(btn, inputs, inputs2, ids, ids2):
         # For each hardware configuration find highest current density
         converged = False
         max_i = 50000
-        min_i = 0
+        min_i = 1
         n_cells = v.loc["nominal", "stack-cell_number"]
 
         while ((max_i - min_i) > 2000) or not converged:
@@ -815,7 +821,7 @@ def study(btn, inputs, inputs2, ids, ids2):
     file_prog.close()
     sys.stderr = std_err_backup
 
-    return results, df_input_store, variation_parameter, "."
+    return results, df_input_store, variation_par, "."
 
 
 @app.callback(
