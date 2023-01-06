@@ -3,8 +3,6 @@ import numpy as np
 from pemfc_gui import data_transfer
 
 
-
-
 def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
     """
     Initial calculations for Ui-curve
@@ -13,7 +11,6 @@ def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
     data_df = pd.DataFrame(columns=input_df.columns)
 
     # Create initial input sets
-    #
     i_calc = np.linspace(i_limits[0], i_limits[1], 3)
     for i in i_calc:
         data_df.loc[i, :] = input_df.loc["nominal", :]
@@ -39,13 +36,12 @@ def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
     return data_df
 
 
-def uicalc_prepare_refinement(data_df,input_df,settings):
+def uicalc_prepare_refinement(data_df, input_df, settings):
     """
     Returns new calculation row(s)
     @return:
     """
     new_columns = ["input_data", "settings", "u_pred", "u_pred_diff"]
-
 
     n = data_df.shape[0]
     new_data_df = pd.DataFrame(columns=input_df.columns)

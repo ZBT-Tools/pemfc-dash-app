@@ -354,7 +354,7 @@ app.layout = dbc.Container([
 
 
 def create_settings(data, settings):
-    # Update Settings,... #ToDO rewrite
+    # Update Settings,...
     # -----------------------------------------------------------------------
     df_temp = pd.DataFrame(columns=["input_data", "settings"])
     df_temp['input_data'] = df_temp['input_data'].astype(object)
@@ -391,8 +391,38 @@ def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
+@app.callback(
+    Output('pbar', 'value'),
+    Output('pbar', 'label'),
+    Output('pbar', 'color'),
+    Input('timer_progress', 'n_intervals'),
+    prevent_initial_call=True)
+def callback_progress(n_intervals: int) -> (float, str):
     """
+    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+    """
+
+    try:
+        with open('progress.txt', 'r') as file:
+            str_raw = file.read()
+        last_line = list(filter(None, str_raw.split('\n')))[-1]
+        percent = float(last_line.split('%')[0])
+
+    except:
+        percent = 0
+
+    finally:
+        text = f'{percent:.0f}%'
+        if int(percent) == 100:
+            color = "success"
+        else:
+            color = "primary"
+        return percent, text, color
+
+
+def run_simulation(input_table: pd.DataFrame) -> (pd.DataFrame, bool):
+    """
+
     - Run input_table rows, catch exceptions of single calculations
             https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
     - Append result columns to input_table
@@ -402,15 +432,18 @@ def just_run(input_table: pd.DataFrame) -> pd.DataFrame:
     def func(settings):
         try:
             return main_app.main(settings)
-        except:
-            return None
+        except Exception as E:
+            return repr(E)
 
     result_table = input_table["settings"].progress_apply(func)
 
     input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (x is not None) else None)
     input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (x is not None) else None)
+    input_table["successful_run"] = result_table.apply(lambda x: True if (isinstance(x[0], list)) else False)
 
-    return input_table
+    all_successfull = True if input_table["successful_run"].all() else False
+
+    return input_table, all_successfull
 
 
 @app.callback(
@@ -432,314 +465,260 @@ def read_pemfc_settings(*args):
     return results
 
 
+# @app.callback(
+#     ServersideOutput("df_result_data_store", "data"),
+#     Output('modal-title', 'children'),
+#     Output('modal-body', 'children'),
+#     Output('modal', 'is_open'),
+#     Input("signal", "data"),
+#     State('df_input_data', 'data'),
+#     State('modal', 'is_open'),
+#     # interval=1e10,
+#     # running=[(Output("run_button", "disabled"), True, False)],
+#     prevent_initial_call=True
+# )
+# def obsolete_run_simulation(signal, input_data, modal_state):
+#     """
+#     ToDo: Documentation
+#     Description:
+#
+#     @param signal:
+#     @param input_data:
+#     @param modal_state:
+#     @return:
+#     """
+#     # Read pickled / json from storage
+#     input_table = df.read_data(input_data)
+#
+#     if signal is None:  # prevent_initial_call=True should be sufficient.
+#         raise PreventUpdate
+#     try:
+#         result_table = input_table["settings"].apply(main_app.main)
+#         input_table["global_data"] = result_table.apply(lambda x: x[0][0])
+#         input_table["local_data"] = result_table.apply(lambda x: x[1][0])
+#         df_result_store = df.store_data(input_table)
+#     except Exception as E:
+#         modal_title, modal_body = \
+#             dm.modal_process('input-error', error=repr(E))
+#         return None, modal_title, modal_body, not modal_state
+#
+#     return [input_table.loc["nominal", "global_data"], input_table.loc["nominal", "local_data"]], \
+#         df_result_store, None, None, modal_state
+
+
 @app.callback(
-    ServersideOutput("result_data_store", "data"),
-    ServersideOutput("df_result_data_store", "data"),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
-    Input("signal", "data"),
-    State('df_input_data', 'data'),
-    # interval=1e10,
-    State('modal', 'is_open'),
-    # running=[(Output("run_button", "disabled"), True, False)],
-    prevent_initial_call=True
-)
-def run_simulation(signal, input_data, modal_state):
-    """
-    ToDo: Documentation
-    Description:
-
-    @param signal:
-    @param input_data:
-    @param modal_state:
-    @return:
-    """
-    # Read pickled / json frmo storage
-    input_table = df.read_data(input_data)
-
-    if signal is None:  # prevent_initial_call=True should be sufficient.
-        raise PreventUpdate
-    try:
-        result_table = input_table["settings"].apply(main_app.main)
-        input_table["global_data"] = result_table.apply(lambda x: x[0][0])
-        input_table["local_data"] = result_table.apply(lambda x: x[1][0])
-        df_result_store = df.store_data(input_table)
-    except Exception as E:
-        modal_title, modal_body = \
-            dm.modal_process('input-error', error=repr(E))
-        return None, modal_title, modal_body, not modal_state
-
-    return [input_table.loc["nominal", "global_data"], input_table.loc["nominal", "local_data"]], \
-        df_result_store, None, None, modal_state
-
-
-@app.callback(
-    [Output('input_data', 'data'),
-     Output('df_input_data', 'data'),
+    [Output('df_result_data_store', 'data'),
      Output('signal', 'data')],
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State("pemfc_settings_file","data")],
     prevent_initial_call=True)
-def generate_single_inputs(n_click, inputs, inputs2, ids, ids2):
+def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
     """
     Changelog:
 
-    Rework fkl 12/22:   Preparation for multiple input sets:
-                        Instead of passing dict of structure
-                        input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
-                        pd.DataFrame is created
-                        Columns are keys of former input_data dict, e.g. stack-cell_number'.
-                        Each row is one input set. Simples case: One calculation -> One row.
-
-
-    @param n_click:
-    @param inputs:
-    @param inputs2:
-    @param ids:
-    @param ids2:
-    @return:
     """
-
-    # 1. Read data from input fields and save input in dict/dataframe
-    # ------------------------------------------------------------
-    df_input = pd.DataFrame()
-    dict_data = df.process_inputs(inputs, inputs2, ids, ids2)
-    input_data = {}
-    for k, v in dict_data.items():
-        input_data[k] = {'sim_name': k.split('-'), 'value': v}
-        # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
-        # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
-        # Column must be of type object to accept list-objects
-        # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
-        df_input.at["nominal", k] = None
-        df_input[k] = df_input[k].astype(object)
-        df_input.at["nominal", k] = v
-
-    # 2. Create complete setting file for each row in df_input, append it in additional column
-    # ------------------------------------------------------------
     try:
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-                as file:
-            settings = json.load(file)
+        # Read pemfc settings.json from store
+        settings = df.read_data(settings)
 
-        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-        df_temp = pd.DataFrame(columns=["input_data", "settings"])
-        df_temp['input_data'] = df_temp['input_data'].astype(object)
-        df_temp['settings'] = df_temp['input_data'].astype(object)
+        # Read data from input fields and save input in dict/dataframe (one row "nominal")
+        df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
-        df_temp['input_data'] = df_input.apply(
-            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
-        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-        df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
-        df_input = df_input.join(df_temp)
+        # Create complete setting dict, append it in additional column "settings" to df_input
+        df_input = create_settings(df_input, settings)
+
+        # Run simulation
+        df_result, _ = run_simulation(df_input)
+
+        # Convert results json string
+        df_result_store = df.store_data(df_result)
 
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
 
-    df_input_store = df.store_data(df_input)
-    return input_data, df_input_store, n_click
+    return df_result_store, n_click
 
 
-@app.callback(
-    [Output('input_data', 'data'),
-     Output('df_input_data', 'data'),
-     Output('signal', 'data')],
-    Input("run_multi_button", "n_clicks"),
-    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-    prevent_initial_call=True)
-def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
-    """
-    Changelog:
-
-    Rework fkl 12/22:   Preparation for multiple input sets:
-                        Instead of passing dict of structure
-                        input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
-                        pd.DataFrame is created
-                        Columns are keys of former input_data dict, e.g. stack-cell_number'.
-                        Each row is one input set. Simples case: One calculation -> One row.
-
-
-    @param n_click:
-    @param inputs:
-    @param inputs2:
-    @param ids:
-    @param ids2:
-    @return:
-    """
-
-    # Read data from input fields
-    # ------------------------------------------------------------
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
-
-    # Example logic: Create modified data points
-    for i in [1, 50, 100, 150, 200, 250, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 15000, 17500, 20000]:
-        df_input.loc[i, :] = df_input.loc["nominal", :]
-        df_input.loc[i, "simulation-current_density"] = i
-
-    # 2. Create complete setting file for each row in df_input, append it in additional column
-    # ------------------------------------------------------------
-    try:
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-                as file:
-            settings = json.load(file)
-
-        # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-        df_temp = pd.DataFrame(columns=["input_data", "settings"])
-        df_temp['input_data'] = df_temp['input_data'].astype(object)
-        df_temp['settings'] = df_temp['settings'].astype(object)
-
-        # For legacy: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-        df_temp['input_data'] = df_input.apply(
-            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
-
-        df_temp['settings'] = df_temp['input_data'].apply(data_transfer.gui_to_sim_transfer, target_dict=settings)
-        # df_temp.apply(lambda row: data_transfer.gui_to_sim_transfer(row["input_data"], target_dict=settings), axis=1)
-        df_temp['settings'] = df_temp['settings'].apply(lambda x: x[0])
-        df_input = df_input.join(df_temp)
-
-    except Exception as E:
-        modal_title, modal_body = \
-            dm.modal_process('input-error', error=repr(E))
-
-    df_input_store = df.store_data(df_input)
-    return input_data, df_input_store, n_click
+# @app.callback(
+#     [Output('input_data', 'data'),
+#      Output('df_input_data', 'data'),
+#      Output('signal', 'data')],
+#     Input("run_multi_button", "n_clicks"),
+#     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+#      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+#     prevent_initial_call=True)
+# def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
+#     """
+#     Changelog:
+#
+#     Rework fkl 12/22:   Preparation for multiple input sets:
+#                         Instead of passing dict of structure
+#                         input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
+#                         pd.DataFrame is created
+#                         Columns are keys of former input_data dict, e.g. stack-cell_number'.
+#                         Each row is one input set. Simples case: One calculation -> One row.
+#
+#
+#     @param n_click:
+#     @param inputs:
+#     @param inputs2:
+#     @param ids:
+#     @param ids2:
+#     @return:
+#     """
+#
+#     # Read data from input fields
+#     # ------------------------------------------------------------
+#     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+#
+#     # Example logic: Create modified data points
+#     for i in [1, 50, 100, 150, 200, 250, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 15000, 17500, 20000]:
+#         df_input.loc[i, :] = df_input.loc["nominal", :]
+#         df_input.loc[i, "simulation-current_density"] = i
+#
+#     # 2. Create complete setting file for each row in df_input, append it in additional column
+#     # ------------------------------------------------------------
+#     try:
+#         pemfc_base_dir = os.path.dirname(pemfc.__file__)
+#         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+#                 as file:
+#             settings = json.load(file)
+#
+#         # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+#         df_temp = pd.DataFrame(columns=["input_data", "settings"])
+#         df_temp['input_data'] = df_temp['input_data'].astype(object)
+#         df_temp['settings'] = df_temp['settings'].astype(object)
+#
+#         # For legacy: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
+#         df_temp['input_data'] = df_input.apply(
+#             lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+#
+#         df_temp['settings'] = df_temp['input_data'].apply(data_transfer.gui_to_sim_transfer, target_dict=settings)
+#         # df_temp.apply(lambda row: data_transfer.gui_to_sim_transfer(row["input_data"], target_dict=settings), axis=1)
+#         df_temp['settings'] = df_temp['settings'].apply(lambda x: x[0])
+#         df_input = df_input.join(df_temp)
+#
+#     except Exception as E:
+#         modal_title, modal_body = \
+#             dm.modal_process('input-error', error=repr(E))
+#
+#     df_input_store = df.store_data(df_input)
+#     return input_data, df_input_store, n_click
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
-
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
-def uicalc_init(btn, inputs, inputs2, ids, ids2):
+def run_Ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     # Progress bar init
     std_err_backup = sys.stderr
     file_prog = open('progress.txt', 'w')
     sys.stderr = file_prog
 
-    # Read data from input fields
-    # ------------------------------------------------------------
+    # Read pemfc settings.json from store
+    settings = df.read_data(settings)
+    # Read data from input fields and save input in dict/dataframe (one row "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
-    pemfc_base_dir = os.path.dirname(pemfc.__file__)
-    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-            as file:
-        settings = json.load(file)
-
     # Find highest current density
+    # ----------------------------
     converged = False
-    max_i = 50000
-    min_i = 0
-    n_cells = df_input.loc["nominal", "stack-cell_number"]
+    u_min = 0.15  # V
 
-    while ((max_i - min_i) > 2000) or not converged:
-        df_convergence = df_input.copy()
-        run_i = (max_i - min_i) / 2 + min_i
-        df_convergence.loc["nominal", "simulation-current_density"] = (max_i - min_i) / 2 + min_i
-        # Update Settings,... #ToDO rewrite
-        # -----------------------------------------------------------------------
-        df_temp = pd.DataFrame(columns=["input_data", "settings"])
-        df_temp['input_data'] = df_temp['input_data'].astype(object)
-        df_temp['settings'] = df_temp['input_data'].astype(object)
-        df_temp['input_data'] = df_convergence.apply(
-            lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
-        df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
-        df_convergence = df_convergence.join(df_temp)
+    # Change solver settings temporarily to voltage control
+    df_input.loc["nominal", "simulation-operation_control"] = "Voltage"
+    df_input.loc["nominal", "simulation-average_cell_voltage"] = u_min
 
-        df_convergence = just_run(df_convergence)
-        if (df_convergence["global_data"] is not None) and \
-                (float(df_convergence["global_data"]["nominal"]["Stack Voltage"]["value"]) > 0.1 * n_cells):
-            min_i = (max_i - min_i) / 2 + min_i
-            converged = True
-        else:
-            max_i = (max_i - min_i) / 2 + min_i
-            converged = False
+    # Create complete setting dict, append it in additional column "settings" to df_input
+    df_input = create_settings(df_input, settings)
 
-        print(f"Calulated_i: {run_i}")
-        print(f"Converged: {converged}: {df_convergence['global_data']['nominal']['Stack Voltage']['value']}")
+    # Run simulation
+    df_result, success = run_simulation(df_input)
+    max_i = df_result.loc["nominal", "global_data"]["Average Current Density"]["value"]
 
-    print(f"Final_i: {run_i}")
-    print(f"Converged: {converged}: {df_convergence['global_data']['nominal']['Stack Voltage']['value']}")
+    # Reset solver settings
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
 
-    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, run_i], settings=settings)
-    df_results = just_run(df_results)
+    # Prepare & calculate initial points
+    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i], settings=settings)
+    df_results, success = run_simulation(df_results)
 
-    dict_results = {"Baseline": df_results}
-
-    results = df.store_data(dict_results)
+    results = df.store_data(df_results)
     df_input_store = df.store_data(df_input)
 
+    # Close process bar files
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, df_input_store, ""
+    return results, df_input_store
 
 
-@app.callback(
-    Output('df_result_data_store', 'data'),
-    Output('spinner_run2', 'children'),
-    Input("btn_refine_ui", "n_clicks"),
-    State('df_result_data_store', 'data'),
-    State('df_input_store', 'data'),
-    prevent_initial_call=True)
-def uicalc_refine(inp, state, state2):
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+#
+# @app.callback(
+#     Output('df_result_data_store', 'data'),
+#     Output('spinner_run2', 'children'),
+#     Input("btn_refine_ui", "n_clicks"),
+#     State('df_result_data_store', 'data'),
+#     State('df_input_store', 'data'),
+#     prevent_initial_call=True)
+# def uicalc_refine(inp, state, state2):
+#     # Progress bar init
+#     std_err_backup = sys.stderr
+#     file_prog = open('progress.txt', 'w')
+#     sys.stderr = file_prog
+#
+#     n_refinements = 2
+#     # State-Store access returns None, I don't know why (FKL)
+#     dict_results = df.read_data(ctx.states["df_result_data_store.data"])
+#     # df_nominal = df.read_data(ctx.states["df_input_store.data"])
+#
+#     pemfc_base_dir = os.path.dirname(pemfc.__file__)
+#     with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+#             as file:
+#         settings = json.load(file)
+#
+#     for k, v in dict_results.items():
+#         # ToDo rework
+#         df_nominal = v.iloc[[0]].copy()
+#         df_nominal = df_nominal.rename(index={v.index[0]: 'nominal'})
+#         df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred', 'u_pred_diff', 'global_data', 'local_data'],
+#                                      axis=1)
+#
+#         # Refinement loop
+#         df_results = v
+#         for _ in range(n_refinements):
+#             print(f"Refine {k}_{_}")
+#             df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
+#             df_refine = just_run(df_refine)
+#             df_results = pd.concat([df_results, df_refine], ignore_index=True)
+#
+#         dict_results[k] = df_results
+#
+#     results = df.store_data(dict_results)
+#     file_prog.close()
+#     sys.stderr = std_err_backup
+#     return results, ""
 
-    n_refinements = 2
-    # State-Store access returns None, I don't know why (FKL)
-    dict_results = df.read_data(ctx.states["df_result_data_store.data"])
-    # df_nominal = df.read_data(ctx.states["df_input_store.data"])
 
-    pemfc_base_dir = os.path.dirname(pemfc.__file__)
-    with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-            as file:
-        settings = json.load(file)
-
-    for k, v in dict_results.items():
-        # ToDo rework
-        df_nominal = v.iloc[[0]].copy()
-        df_nominal = df_nominal.rename(index={v.index[0]: 'nominal'})
-        df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred', 'u_pred_diff', 'global_data', 'local_data'],
-                                     axis=1)
-
-        # Refinement loop
-        df_results = v
-        for _ in range(n_refinements):
-            print(f"Refine {k}_{_}")
-            df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
-            df_refine = just_run(df_refine)
-            df_results = pd.concat([df_results, df_refine], ignore_index=True)
-
-        dict_results[k] = df_results
-
-    results = df.store_data(dict_results)
-    file_prog.close()
-    sys.stderr = std_err_backup
-    return results, ""
-
-
-@app.callback(
-    Output('dummy', 'children'),
-    Input("btn_saveres", "n_clicks"),
-    State('df_result_data_store', 'data'),
-    prevent_initial_call=True)
-def save_results(inp, state):
+# @app.callback(
+#     Output('dummy', 'children'),
+#     Input("btn_saveres", "n_clicks"),
+#     State('df_result_data_store', 'data'),
+#     prevent_initial_call=True)
+def debug_save_results(inp, state):
     # State-Store access returns None, I don't know why (FKL)
     data = ctx.states["df_result_data_store.data"]
     with open('temp_results.pickle', 'wb') as handle:
@@ -748,11 +727,11 @@ def save_results(inp, state):
     print("saved")
 
 
-@app.callback(
-    Output('df_result_data_store', 'data'),
-    Input("btn_loadres", "n_clicks"),
-    prevent_initial_call=True)
-def load_results(inp):
+# @app.callback(
+#     Output('df_result_data_store', 'data'),
+#     Input("btn_loadres", "n_clicks"),
+#     prevent_initial_call=True)
+def debug_load_results(inp):
     with open('temp_results.pickle', 'rb') as handle:
         b = pickle.load(handle)
     return b
@@ -832,35 +811,6 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
 
 
 @app.callback(
-    Output('pbar', 'value'),
-    Output('pbar', 'label'),
-    Output('pbar', 'color'),
-    Input('timer_progress', 'n_intervals'),
-    prevent_initial_call=True)
-def callback_progress(n_intervals: int) -> (float, str):
-    """
-    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
-    """
-
-    try:
-        with open('progress.txt', 'r') as file:
-            str_raw = file.read()
-        last_line = list(filter(None, str_raw.split('\n')))[-1]
-        percent = float(last_line.split('%')[0])
-
-    except:
-        percent = 0
-
-    finally:
-        text = f'{percent:.0f}%'
-        if int(percent) == 100:
-            color = "success"
-        else:
-            color = "primary"
-        return percent, text, color
-
-
-@app.callback(
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     Input('btn_plot', 'n_clicks'),
@@ -870,31 +820,55 @@ def update_ui_figure(inp1, inp2, variationpar):
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    for k, v in results.items():
+    if "variation_parameters" in results.columns:
+        for k, v in results.groupby("variation_parameters"):
+            # Extract Results
+            v.sort_values("simulation-current_density", ignore_index=True, inplace=True)
+            v["Voltage"] = v["global_data"].apply(lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
+            v["Power"] = v["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
+
+            # Create figure with secondary y-axis
+
+            # Add traces
+            fig.add_trace(
+                go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"{k},  U [V]",
+                           mode='lines+markers'),
+                secondary_y=False,
+            )
+
+            fig.add_trace(
+                go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"{k}, Power",
+                           mode='lines+markers'),
+                secondary_y=True,
+            )
+
+        # Add figure title
+        fig.update_layout(
+            title_text=f"U-i-Curve, variation parameter: {variationpar}"
+        )
+
+    else:
         # Extract Results
-        v.sort_values("simulation-current_density", ignore_index=True, inplace=True)
-        v["Voltage"] = v["global_data"].apply(lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
-        v["Power"] = v["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
+        results.sort_values("simulation-current_density", ignore_index=True, inplace=True)
+        results["Voltage"] = results["global_data"].apply(
+            lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
+        results["Power"] = results["global_data"].apply(
+            lambda x: x["Stack Power"]["value"] if (x is not None) else None)
 
         # Create figure with secondary y-axis
 
         # Add traces
         fig.add_trace(
-            go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"{k},  U [V]",
+            go.Scatter(x=results["simulation-current_density"], y=results["Voltage"],
                        mode='lines+markers'),
             secondary_y=False,
         )
 
         fig.add_trace(
-            go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"{k}, Power",
+            go.Scatter(x=results["simulation-current_density"], y=results["Power"],
                        mode='lines+markers'),
             secondary_y=True,
         )
-
-    # Add figure title
-    fig.update_layout(
-        title_text=f"U-i-Curve, variation parameter: {variationpar}"
-    )
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
@@ -910,11 +884,22 @@ def update_ui_figure(inp1, inp2, variationpar):
     [Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
      Output('global_data_table', 'export_format')],
-    Input('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
-def global_outputs_table(results):
-    global_result_dict = results[0]
+def global_outputs_table(*args):
+    """
+    ToDo: Add additional input.
+    If storage triggered callback, use first result row,
+    if dropdown triggered callback, select this row.
+    """
+
+    # Read results
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    global_result_dict = result_set["global_data"]
     names = list(global_result_dict.keys())
     values = [v['value'] for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
@@ -933,11 +918,22 @@ def global_outputs_table(results):
 @app.callback(
     [Output('dropdown_heatmap', 'options'),
      Output('dropdown_heatmap', 'value')],
-    Input('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
 def get_dropdown_options_heatmap(results):
-    local_data = results[1]
+    """
+    ToDo: Add additional input.
+    If storage triggered callback, use first result row,
+    if dropdown triggered callback, select this row.
+    """
+
+    # Read results
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    local_data = result_set["local_data"]
     values = [{'label': key, 'value': key} for key in local_data
               if 'xkey' in local_data[key]
               and local_data[key]['xkey'] == 'Channel Location']
@@ -947,11 +943,22 @@ def get_dropdown_options_heatmap(results):
 @app.callback(
     [Output('dropdown_line', 'options'),
      Output('dropdown_line', 'value')],
-    Input('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
 def get_dropdown_options_line_graph(results):
-    local_data = results[1]
+    """
+    ToDo: Add additional input.
+    If storage triggered callback, use first result row,
+    if dropdown triggered callback, select this row.
+    """
+
+    # Read results
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    local_data = result_set["local_data"]
     values = [{'label': key, 'value': key} for key in local_data]
     return values, 'Current Density'
 
@@ -961,13 +968,17 @@ def get_dropdown_options_line_graph(results):
      Output('dropdown_heatmap_2', 'value'),
      Output('dropdown_heatmap_2', 'style')],
     [Input('dropdown_heatmap', 'value'),
-     Input('result_data_store', 'data')]
+     Input('df_result_data_store', 'data')]
 )
 def get_dropdown_options_heatmap_2(dropdown_key, results):
     if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        local_data = results[1]
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+        result_set = results.iloc[0]
+        local_data = result_set["local_data"]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
         else:
@@ -982,14 +993,19 @@ def get_dropdown_options_heatmap_2(dropdown_key, results):
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
     Input('dropdown_line', 'value'),
-    State('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
 def get_dropdown_options_line_graph_2(dropdown_key, results):
     if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        local_data = results[1]
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+        result_set = results.iloc[0]
+
+        local_data = result_set["local_data"]
         if 'value' in local_data[dropdown_key]:
             return [], None, {'visibility': 'hidden'}
         else:
@@ -1003,14 +1019,19 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
     Output("heatmap_graph", "figure"),
     [Input('dropdown_heatmap', 'value'),
      Input('dropdown_heatmap_2', 'value')],
-    State('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
     if dropdown_key is None or results is None:
         raise PreventUpdate
     else:
-        local_data = results[1]
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+        result_set = results.iloc[0]
+
+        local_data = result_set["local_data"]
 
         if 'value' in local_data[dropdown_key]:
             zvalues = local_data[dropdown_key]['value']
@@ -1149,18 +1170,23 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
      Input('select_all_button', 'n_clicks'),
      Input('clear_all_button', 'n_clicks'),
      Input('line_graph', 'restyleData')],
-    State('result_data_store', 'data'),
+    Input('df_result_data_store', 'data'),
     prevent_initial_call=True
 )
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                       clear_all_clicks, restyle_data, results):
-    ctx = dash.callback_context.triggered[0]['prop_id']
+    ctx_triggered = dash.callback_context.triggered[0]['prop_id']
     if drop1 is None or results is None:
         raise PreventUpdate
     else:
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+        result_set = results.iloc[0]
+
+        local_data = result_set["local_data"]
 
         fig = go.Figure()
-        local_data = results[1]
 
         default_x_key = 'Number'
         x_key = local_data[drop1].get('xkey', default_x_key)
@@ -1228,17 +1254,17 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         if checklist is None:
             return fig, cells, options, value
         else:
-            if 'clear_all_button.n_clicks' in ctx:
+            if 'clear_all_button.n_clicks' in ctx_triggered:
                 fig.for_each_trace(
                     lambda trace: trace.update(visible='legendonly'))
                 return fig, cells, options, []
-            elif 'data_checklist.value' in ctx:
+            elif 'data_checklist.value' in ctx_triggered:
                 fig.for_each_trace(
                     lambda trace: trace.update(
                         visible=True) if trace.name in checklist
                     else trace.update(visible='legendonly'))
                 return fig, cells, options, checklist
-            elif 'line_graph.restyleData' in ctx:
+            elif 'line_graph.restyleData' in ctx_triggered:
                 read = restyle_data[0]['visible']
                 if len(read) == 1:
                     cell_name = cells[restyle_data[1][0]]['name']
@@ -1271,7 +1297,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
      Input('clear_table_b', 'n_clicks')],
     [State('data_checklist', 'value'),  # from display
      State('cells_data', 'data'),  # from line graph
-     State('result_data_store', 'data'),
+     State('df_result_data_store', 'data'),
      State('table', 'columns'),
      State('table', 'data'),
      State('append_check', 'data')],
@@ -1283,7 +1309,12 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
     if data_checklist is None or results is None:
         raise PreventUpdate
     else:
-        local_data = results[1]
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+        result_set = results.iloc[0]
+
+        local_data = result_set["local_data"]
         digit_list = \
             sorted([int(re.sub('[^0-9\.]', '', inside))
                     for inside in data_checklist])
