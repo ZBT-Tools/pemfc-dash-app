@@ -107,9 +107,11 @@ app.layout = dbc.Container([
 
     html.Div([  # MIDDLE
         html.Div([  # LEFT MIDDLE / (Menu Column)
-            html.Div([  # LEFT MIDDLE MIDDLE (Tabs with Settings)
+            # Menu Tabs
+            html.Div([
                 dl.tab_container(gui_input.main_frame_dicts)],
                 id='setting_container'),  # style={'flex': '1'}
+            # Buttons 1 (Load/Save Settings, Run
             html.Div([  # LEFT MIDDLE: Buttons
                 html.Div([
                     html.Div([
@@ -123,18 +125,43 @@ app.layout = dbc.Container([
                         html.Button('Save Settings', id='save-button',
                                     className='settings_button',
                                     style={'display': 'flex'}),
-                        html.Button('Run Simulation', id='run_button',
+                        html.Button('Run single Simulation', id='run_button',
                                     className='settings_button',
-                                    style={'display': 'flex'}),
-                        html.Button('Run Multi Simulation', id='run_multi_button',
-                                    className='settings_button',
-                                    style={'display': 'flex'}),
-                        html.Button('init ui', id='btn_init_ui',
+                                    style={'display': 'flex'})
+                    ],
+
+                        style={'display': 'flex',
+                               'flex-wrap': 'wrap',
+                               # 'flex-direction': 'column',
+                               # 'margin': '5px',
+                               'justify-content': 'space-evenly'}
+                    )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='load_save_run', className='pretty_container'),
+            # Buttons 2 (UI Curve)
+            html.Div([  # LEFT MIDDLE: Buttons
+                html.Div([
+                    html.Div([
+                        html.Button('Calc. UI Curve', id='btn_init_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
                         html.Button('refine ui', id='btn_refine_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
+                    ],
+
+                        style={'display': 'flex',
+                               'flex-wrap': 'wrap',
+                               # 'flex-direction': 'column',
+                               # 'margin': '5px',
+                               'justify-content': 'space-evenly'}
+                    )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='multiple_runs', className='pretty_container'),
+            # Buttons 3 (Study)
+            html.Div([  # LEFT MIDDLE: Buttons
+                html.Div([
+                    html.Div([
                         html.Button('study', id='btn_study',
                                     className='settings_button',
                                     style={'display': 'flex'}),
@@ -159,7 +186,7 @@ app.layout = dbc.Container([
                                'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')], style={'flex': '1'},
-                id='load_save_setting', className='pretty_container'),
+                id='multiple_runs', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
                 html.Div([
                     html.Div([dbc.Spinner(html.Div(id="spinner_run1")), dbc.Spinner(html.Div(id="spinner_run2"))],
@@ -170,19 +197,14 @@ app.layout = dbc.Container([
                              )],
                     className='neat-spacing')], style={'flex': '1'},
                 id='spinner_bar', className='pretty_container'),
-
-            html.Div([  # LEFT MIDDLE: Progress Bar
+            # Progress Bar
+            html.Div([
                 # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
                 html.Div([
-                    html.Div([pbar, timer_progress],
-
-                             # style={'display': 'flex',
-                             #       'flex-wrap': 'wrap',
-                             #       'justify-content': 'space-evenly'}
-                             )],
+                    html.Div([pbar, timer_progress])],
                     className='neat-spacing')], style={'flex': '1'},
-                id='progress_bar', className='pretty_container')],
-            id="left-column", className='col-12 col-lg-4 mb-2'),
+                id='progress_bar', className='pretty_container')
+        ], id="left-column", className='col-12 col-lg-4 mb-2'),
 
         html.Div([  # RIGHT MIDDLE  (Result Column)
             html.Div(
@@ -437,8 +459,8 @@ def run_simulation(input_table: pd.DataFrame) -> (pd.DataFrame, bool):
 
     result_table = input_table["settings"].progress_apply(func)
 
-    input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (x is not None) else None)
-    input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (x is not None) else None)
+    input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (isinstance(x, tuple)) else None)
+    input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (isinstance(x, tuple)) else None)
     input_table["successful_run"] = result_table.apply(lambda x: True if (isinstance(x[0], list)) else False)
 
     all_successfull = True if input_table["successful_run"].all() else False
@@ -514,7 +536,7 @@ def read_pemfc_settings(*args):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State("pemfc_settings_file","data")],
+     State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
 def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
     """
@@ -544,78 +566,10 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
     return df_result_store, n_click
 
 
-# @app.callback(
-#     [Output('input_data', 'data'),
-#      Output('df_input_data', 'data'),
-#      Output('signal', 'data')],
-#     Input("run_multi_button", "n_clicks"),
-#     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-#      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-#     prevent_initial_call=True)
-# def generate_multi_inputs(n_click, inputs, inputs2, ids, ids2):
-#     """
-#     Changelog:
-#
-#     Rework fkl 12/22:   Preparation for multiple input sets:
-#                         Instead of passing dict of structure
-#                         input_data = { 'stack-cell_number' : {'sim_name':['stack','cell_number'],'value':10, ... }
-#                         pd.DataFrame is created
-#                         Columns are keys of former input_data dict, e.g. stack-cell_number'.
-#                         Each row is one input set. Simples case: One calculation -> One row.
-#
-#
-#     @param n_click:
-#     @param inputs:
-#     @param inputs2:
-#     @param ids:
-#     @param ids2:
-#     @return:
-#     """
-#
-#     # Read data from input fields
-#     # ------------------------------------------------------------
-#     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
-#
-#     # Example logic: Create modified data points
-#     for i in [1, 50, 100, 150, 200, 250, 500, 1000, 2000, 4000, 6000, 8000, 10000, 12000, 15000, 17500, 20000]:
-#         df_input.loc[i, :] = df_input.loc["nominal", :]
-#         df_input.loc[i, "simulation-current_density"] = i
-#
-#     # 2. Create complete setting file for each row in df_input, append it in additional column
-#     # ------------------------------------------------------------
-#     try:
-#         pemfc_base_dir = os.path.dirname(pemfc.__file__)
-#         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-#                 as file:
-#             settings = json.load(file)
-#
-#         # For legacy functions: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-#         df_temp = pd.DataFrame(columns=["input_data", "settings"])
-#         df_temp['input_data'] = df_temp['input_data'].astype(object)
-#         df_temp['settings'] = df_temp['settings'].astype(object)
-#
-#         # For legacy: Create "input_data"-dict, as required for data_transfer.gui_to_sim_transfer()
-#         df_temp['input_data'] = df_input.apply(
-#             lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
-#
-#         df_temp['settings'] = df_temp['input_data'].apply(data_transfer.gui_to_sim_transfer, target_dict=settings)
-#         # df_temp.apply(lambda row: data_transfer.gui_to_sim_transfer(row["input_data"], target_dict=settings), axis=1)
-#         df_temp['settings'] = df_temp['settings'].apply(lambda x: x[0])
-#         df_input = df_input.join(df_temp)
-#
-#     except Exception as E:
-#         modal_title, modal_body = \
-#             dm.modal_process('input-error', error=repr(E))
-#
-#     df_input_store = df.store_data(df_input)
-#     return input_data, df_input_store, n_click
-
-
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
+    Output('spinner_run1', 'children'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -623,7 +577,9 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
-def run_Ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+    n_refinements = 5
+
     # Progress bar init
     std_err_backup = sys.stderr
     file_prog = open('progress.txt', 'w')
@@ -633,84 +589,93 @@ def run_Ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     settings = df.read_data(settings)
     # Read data from input fields and save input in dict/dataframe (one row "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    df_input_backup = df_input.copy()
 
     # Find highest current density
     # ----------------------------
-    converged = False
-    u_min = 0.15  # V
+    success = False
+    u_min = 0.05  # V
 
-    # Change solver settings temporarily to voltage control
-    df_input.loc["nominal", "simulation-operation_control"] = "Voltage"
-    df_input.loc["nominal", "simulation-average_cell_voltage"] = u_min
+    while not success:
+        df_input = df_input_backup.copy()
+        u_min += 0.05
+        # Change solver settings temporarily to voltage control
+        df_input.loc["nominal", "simulation-operation_control"] = "Voltage"
+        df_input.loc["nominal", "simulation-average_cell_voltage"] = u_min
 
-    # Create complete setting dict, append it in additional column "settings" to df_input
-    df_input = create_settings(df_input, settings)
+        # Create complete setting dict, append it in additional column "settings" to df_input
+        df_input = create_settings(df_input, settings)
 
-    # Run simulation
-    df_result, success = run_simulation(df_input)
+        # Run simulation
+        df_result, success = run_simulation(df_input)
     max_i = df_result.loc["nominal", "global_data"]["Average Current Density"]["value"]
 
     # Reset solver settings
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    df_input = df_input_backup.copy()
 
     # Prepare & calculate initial points
     df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i], settings=settings)
     df_results, success = run_simulation(df_results)
 
+    # First refinement steps
+    for _ in range(n_refinements):
+        df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
+        df_refine, success = run_simulation(df_refine)
+        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+    # Save results
     results = df.store_data(df_results)
     df_input_store = df.store_data(df_input)
 
     # Close process bar files
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, df_input_store
+    return results, df_input_store, ""
 
 
-#
-# @app.callback(
-#     Output('df_result_data_store', 'data'),
-#     Output('spinner_run2', 'children'),
-#     Input("btn_refine_ui", "n_clicks"),
-#     State('df_result_data_store', 'data'),
-#     State('df_input_store', 'data'),
-#     prevent_initial_call=True)
-# def uicalc_refine(inp, state, state2):
-#     # Progress bar init
-#     std_err_backup = sys.stderr
-#     file_prog = open('progress.txt', 'w')
-#     sys.stderr = file_prog
-#
-#     n_refinements = 2
-#     # State-Store access returns None, I don't know why (FKL)
-#     dict_results = df.read_data(ctx.states["df_result_data_store.data"])
-#     # df_nominal = df.read_data(ctx.states["df_input_store.data"])
-#
-#     pemfc_base_dir = os.path.dirname(pemfc.__file__)
-#     with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-#             as file:
-#         settings = json.load(file)
-#
-#     for k, v in dict_results.items():
-#         # ToDo rework
-#         df_nominal = v.iloc[[0]].copy()
-#         df_nominal = df_nominal.rename(index={v.index[0]: 'nominal'})
-#         df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred', 'u_pred_diff', 'global_data', 'local_data'],
-#                                      axis=1)
-#
-#         # Refinement loop
-#         df_results = v
-#         for _ in range(n_refinements):
-#             print(f"Refine {k}_{_}")
-#             df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
-#             df_refine = just_run(df_refine)
-#             df_results = pd.concat([df_results, df_refine], ignore_index=True)
-#
-#         dict_results[k] = df_results
-#
-#     results = df.store_data(dict_results)
-#     file_prog.close()
-#     sys.stderr = std_err_backup
-#     return results, ""
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Output('spinner_run2', 'children'),
+    Input("btn_refine_ui", "n_clicks"),
+    State('df_result_data_store', 'data'),
+    State('df_input_store', 'data'),
+    State("pemfc_settings_file", "data"),
+    prevent_initial_call=True)
+def run_refinement_ui_calc(inp, state, state2, settings):
+    n_refinements = 3
+
+    # Progress bar init
+    std_err_backup = sys.stderr
+    file_prog = open('progress.txt', 'w')
+    sys.stderr = file_prog
+
+    # Read pemfc settings.json from store
+    settings = df.read_data(settings)
+
+    # State-Store access returns None, I don't know why (FKL)
+    df_results = df.read_data(ctx.states["df_result_data_store.data"])
+    df_nominal = df.read_data(ctx.states["df_input_store.data"])
+
+    # for k, v in dict_results.items(): # ToDo rework
+    #  df_nominal = v.iloc[[0]].copy() df_nominal = df_nominal.rename(
+    #  index={v.index[0]: 'nominal'}) df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred',
+    #  'u_pred_diff', 'global_data', 'local_data'], axis=1)
+
+    # Refinement loop
+    # df_results = v
+    for _ in range(n_refinements):
+        df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
+        df_refine, success = run_simulation(df_refine)
+        df_refine = df_refine.loc[df_refine["successful_run"] == True, :]
+        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+    # Save results
+    results = df.store_data(df_results)
+
+    # Close process bar files
+    file_prog.close()
+    sys.stderr = std_err_backup
+    return results, ""
 
 
 # @app.callback(
@@ -737,18 +702,18 @@ def debug_load_results(inp):
     return b
 
 
-@app.callback(
-    Output('df_result_data_store', 'data'),
-    Output('df_input_store', 'data'),
-    Output('variation_parameter', 'data'),
-    Output('spinner_run1', 'children'),
-    Input("btn_study", "n_clicks"),
-    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-    State("pemfc_settings_file", "data"),
-    prevent_initial_call=True)
+# @app.callback(
+#     Output('df_result_data_store', 'data'),
+#     Output('df_input_store', 'data'),
+#     Output('variation_parameter', 'data'),
+#     Output('spinner_run1', 'children'),
+#     Input("btn_study", "n_clicks"),
+#     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+#      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+#     State("pemfc_settings_file", "data"),
+#     prevent_initial_call=True)
 def study(btn, inputs, inputs2, ids, ids2, settings):
     # Progress bar init
     std_err_backup = sys.stderr

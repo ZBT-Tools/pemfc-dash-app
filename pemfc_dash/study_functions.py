@@ -3,7 +3,7 @@ import numpy as np
 from pemfc_gui import data_transfer
 
 
-def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
+def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings) -> pd.DataFrame:
     """
     Initial calculations for Ui-curve
     @return:
@@ -16,7 +16,7 @@ def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
         data_df.loc[i, :] = input_df.loc["nominal", :]
         data_df.loc[i, "simulation-current_density"] = float(i)
 
-    # Create calculation df: input_data and settings columns, refinement helper columns
+    # Create calculation DataFrame: input_data and settings columns, refinement helper columns
     new_columns = ["input_data", "settings", "u_pred", "u_pred_diff"]
     data_df.loc[:, "input_data"] = None
     data_df['input_data'] = data_df['input_data'].astype(object)
@@ -38,6 +38,7 @@ def uicalc_prepare_initcalc(input_df: pd.DataFrame, i_limits: list, settings):
 
 def uicalc_prepare_refinement(data_df, input_df, settings):
     """
+    #ToDO: Error handling: Handle None in results.
     Returns new calculation row(s)
     @return:
     """
