@@ -186,10 +186,14 @@ app.layout = dbc.Container([
                                'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')], style={'flex': '1'},
-                id='multiple_runs', className='pretty_container'),
+                id='study', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
                 html.Div([
-                    html.Div([dbc.Spinner(html.Div(id="spinner_run1")), dbc.Spinner(html.Div(id="spinner_run2"))],
+                    html.Div([dbc.Spinner(html.Div(id="spinner_run_single")),
+                              dbc.Spinner(html.Div(id="spinner_ui")),
+                              dbc.Spinner(html.Div(id="spinner_uirefine")),
+                              dbc.Spinner(html.Div(id="spinner_study")),
+                              ],
 
                              # style={'display': 'flex',
                              #       'flex-wrap': 'wrap',
@@ -375,37 +379,53 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
-def create_settings(data, settings):
-    # Update Settings,...
+def create_settings(df_data, settings, input_cols=None):
+    # Create settings dictionary
+    # If "input_cols" are given, only those will be used from "df_data".
+    # Usecase: if df_data contains additional columns as study information that needs
+    # to be excluded from settings dict
     # -----------------------------------------------------------------------
+    # Create object columns
     df_temp = pd.DataFrame(columns=["input_data", "settings"])
     df_temp['input_data'] = df_temp['input_data'].astype(object)
     df_temp['settings'] = df_temp['input_data'].astype(object)
-    df_temp['input_data'] = data.apply(
+
+    if input_cols is not None:
+        df_data_red = df_data.loc[:,input_cols]
+    else:
+        df_data_red = df_data
+
+    # Create input data dictionary (legacy)
+    df_temp['input_data'] = df_data_red.apply(
         lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+
     df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
-    data = data.join(df_temp)
+    data = df_data.join(df_temp)
 
     return data
 
 
 def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
     """
-
+    Important: Change casting_func to int(),float(),... accordingly!
     """
 
+    # Define parameter sets
+    # -----------------------
     # var_par = "membrane-thickness"
     # var_par_vals = [0.25e-05]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
-
+    # casting_func = float
     var_par = "stack-cell_number"
-    var_par_vals = [1, 2]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
+    var_par_vals = [1, 2,4]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
+    casting_func = int
 
     clms = list(df_input.columns)
+    # Add informational column "variation_parameter"
     clms.extend(["variation_parameter"])
     data = pd.DataFrame(columns=clms)
     for val in var_par_vals:
         inp = df_input.copy()
-        inp.loc["nominal", var_par] = int(val)
+        inp.loc["nominal", var_par] = casting_func(val)
         inp.loc["nominal", "variation_parameter"] = var_par
         data = pd.concat([data, inp], ignore_index=True)
     data = pd.concat([data, df_input])
@@ -529,8 +549,9 @@ def read_pemfc_settings(*args):
 
 
 @app.callback(
-    [Output('df_result_data_store', 'data'),
-     Output('signal', 'data')],
+    Output('df_result_data_store', 'data'),
+    Output('signal', 'data'),
+    Output("spinner_run_single", 'children'),
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -563,13 +584,13 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
 
-    return df_result_store, n_click
+    return df_result_store, n_click, ""
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
-    Output('spinner_run1', 'children'),
+    Output('spinner_ui', 'children'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -617,6 +638,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i], settings=settings)
     df_results, success = run_simulation(df_results)
 
+
     # First refinement steps
     for _ in range(n_refinements):
         df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
@@ -630,12 +652,12 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     # Close process bar files
     file_prog.close()
     sys.stderr = std_err_backup
-    return results, df_input_store, ""
+    return results, df_input_store, "."
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
-    Output('spinner_run2', 'children'),
+    Output('spinner_uirefine', 'children'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
@@ -702,90 +724,64 @@ def debug_load_results(inp):
     return b
 
 
-# @app.callback(
-#     Output('df_result_data_store', 'data'),
-#     Output('df_input_store', 'data'),
-#     Output('variation_parameter', 'data'),
-#     Output('spinner_run1', 'children'),
-#     Input("btn_study", "n_clicks"),
-#     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-#      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-#      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-#     State("pemfc_settings_file", "data"),
-#     prevent_initial_call=True)
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Output('df_input_store', 'data'),
+    Output('spinner_study', 'children'),
+    Input("btn_study", "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    State("pemfc_settings_file", "data"),
+    prevent_initial_call=True)
 def study(btn, inputs, inputs2, ids, ids2, settings):
+    """
+    #ToDO Documentation
+    """
+    ui_calculation = False
+
     # Progress bar init
     std_err_backup = sys.stderr
     file_prog = open('progress.txt', 'w')
     sys.stderr = file_prog
 
+    # Read pemfc settings.json from store
     settings = df.read_data(settings)
 
-    # Read data from input fields
+    # Read data from input fields and save input in dict/dataframe (one row "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    df_input_backup = df_input.copy()
 
-    # Create multiple hardware parameter sets
+    # Create multiple parameter sets
     data = variation_parameter(df_input)
-    varpars = data["variation_parameters"].unique()
+    varpars = data["variation_parameter"].unique()
 
-    # Find maximum current density for
-    for k, v in dict_data.items():
-        print(f"Find highest i for parameter set {k} ...")
+    if not ui_calculation:
+        # Create complete setting dict, append it in additional column "settings" to df_input
+        data = create_settings(data, settings, input_cols=df_input.columns)
+        # Run Simulation
+        results, success = run_simulation(data)
 
-        # For each hardware configuration find highest current density
-        converged = False
-        max_i = 50000
-        min_i = 1
-        n_cells = v.loc["nominal", "stack-cell_number"]
-
-        while ((max_i - min_i) > 2000) or not converged:
-            df_convergence = v.copy()
-            run_i = (max_i - min_i) / 2 + min_i
-            df_convergence.loc["nominal", "simulation-current_density"] = (max_i - min_i) / 2 + min_i
-            df_convergence = create_settings(df_convergence, settings)
-            df_convergence = just_run(df_convergence)
-
-            if (df_convergence.loc["nominal", "global_data"] is not None) and \
-                    (float(df_convergence.loc["nominal", "global_data"]["Stack Voltage"]["value"]) > 0.1 * n_cells):
-                min_i = (max_i - min_i) / 2 + min_i
-                converged = True
-                print(
-                    f'Parameter Set {k}, i: {run_i}, converged, U: {df_convergence.loc["nominal", "global_data"]["Stack Voltage"]["value"]}')
-            else:
-                max_i = (max_i - min_i) / 2 + min_i
-                converged = False
-                print(
-                    f'Parameter Set {k}, i: {run_i}, not converged.')
-
-        # 2. Perform initial UI-Calculation
-        df_results = uicalc_prepare_initcalc(input_df=v, i_limits=[1, run_i], settings=settings)
-        df_results = just_run(df_results)
-        # 3. Refinement
-        # todo implement
-        # 4. Save Results
-        dict_data[k] = df_results
-
-    results = df.store_data(dict_data)
-    df_input_store = df.store_data(df_input)
+        results = df.store_data(results)
+        df_input_store = df.store_data(df_input)
 
     file_prog.close()
     sys.stderr = std_err_backup
 
-    return results, df_input_store, variation_par, "."
+    return results, df_input_store, "."
 
 
 @app.callback(
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     Input('btn_plot', 'n_clicks'),
-    State('variation_parameter', 'data'),
     prevent_initial_call=True)
-def update_ui_figure(inp1, inp2, variationpar):
+def update_ui_figure(inp1, inp2):
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    if "variation_parameters" in results.columns:
+    if "variation_parameter" in results.columns:
         for k, v in results.groupby("variation_parameters"):
             # Extract Results
             v.sort_values("simulation-current_density", ignore_index=True, inplace=True)
@@ -809,7 +805,7 @@ def update_ui_figure(inp1, inp2, variationpar):
 
         # Add figure title
         fig.update_layout(
-            title_text=f"U-i-Curve, variation parameter: {variationpar}"
+            title_text=f"U-i-Curve, variation parameter: tbd"
         )
 
     else:
