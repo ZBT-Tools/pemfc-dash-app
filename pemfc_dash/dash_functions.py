@@ -1,5 +1,5 @@
 from functools import wraps
-from flask_caching import Cache
+from pemfc_gui import data_transfer
 import base64
 import io
 import json
@@ -30,6 +30,32 @@ def read_data(data):
     # Read NH3 data from storage
     data = jsonpickle.loads(data)
     data = pickle.loads(data)
+
+    return data
+
+
+def create_settings(df_data: pd.DataFrame, settings, input_cols=None) -> pd.DataFrame:
+    # Create settings dictionary
+    # If "input_cols" are given, only those will be used from "df_data".
+    # Usecase: df_data can contain additional columns as study information that needs
+    # to be excluded from settings dict
+    # -----------------------------------------------------------------------
+    # Create object columns
+    df_temp = pd.DataFrame(columns=["input_data", "settings"])
+    df_temp['input_data'] = df_temp['input_data'].astype(object)
+    df_temp['settings'] = df_temp['input_data'].astype(object)
+
+    if input_cols is not None:
+        df_data_red = df_data.loc[:, input_cols]
+    else:
+        df_data_red = df_data
+
+    # Create input data dictionary (legacy)
+    df_temp['input_data'] = df_data_red.apply(
+        lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+
+    df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+    data = df_data.join(df_temp)
 
     return data
 

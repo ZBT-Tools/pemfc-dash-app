@@ -1,14 +1,11 @@
-# import pathlib
+import os
+import numpy as np
+import pandas as pd
 import pickle
 import re
 import copy
 import sys
-
-import jsonpickle
-import numpy as np
-import pandas as pd
 import json
-import os
 
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
@@ -18,6 +15,9 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
+
+from pemfc_dash.dash_functions import create_settings
 from . import dash_functions as df, dash_layout as dl, \
     dash_modal as dm
 from pemfc_dash.dash_app import app
@@ -379,41 +379,16 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
-def create_settings(df_data, settings, input_cols=None):
-    # Create settings dictionary
-    # If "input_cols" are given, only those will be used from "df_data".
-    # Usecase: df_data can contain additional columns as study information that needs
-    # to be excluded from settings dict
-    # -----------------------------------------------------------------------
-    # Create object columns
-    df_temp = pd.DataFrame(columns=["input_data", "settings"])
-    df_temp['input_data'] = df_temp['input_data'].astype(object)
-    df_temp['settings'] = df_temp['input_data'].astype(object)
-
-    if input_cols is not None:
-        df_data_red = df_data.loc[:, input_cols]
-    else:
-        df_data_red = df_data
-
-    # Create input data dictionary (legacy)
-    df_temp['input_data'] = df_data_red.apply(
-        lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
-
-    df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
-    data = df_data.join(df_temp)
-
-    return data
-
-
-def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
+def variation_parameter(df_input: pd.DataFrame, keep_nominal=False) -> pd.DataFrame:
     """
     Important: Change casting_func to int(),float(),... accordingly!
+
     """
 
     # Define parameter sets
     # -----------------------
     var_par = "membrane-thickness"
-    var_par_vals = [0.25e-05, 0.5e-05, 1e-05]
+    var_par_vals = [0.1e-05, 0.25e-05, 0.5e-05, 1e-05, 2e-05]
     casting_func = float
     # var_par = "stack-cell_number"
     # var_par_vals = [1, 2, 4]
@@ -428,7 +403,9 @@ def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
         inp.loc["nominal", var_par] = casting_func(val)
         inp.loc["nominal", "variation_parameter"] = var_par
         data = pd.concat([data, inp], ignore_index=True)
-    data = pd.concat([data, df_input])
+
+    if keep_nominal:
+        data = pd.concat([data, df_input])
 
     return data
 
@@ -439,7 +416,7 @@ def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
     Output('pbar', 'color'),
     Input('timer_progress', 'n_intervals'),
     prevent_initial_call=True)
-def callback_progress(n_intervals: int) -> (float, str):
+def callback_progress(*args) -> (float, str):
     """
     # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
     """
@@ -462,7 +439,41 @@ def callback_progress(n_intervals: int) -> (float, str):
         return percent, text, color
 
 
-def run_simulation(input_table: pd.DataFrame) -> (pd.DataFrame, bool):
+def find_max_current_density(data: pd.DataFrame, df_input, settings):
+    """
+    Note: Expects one row DataFrame
+
+    @param df_input:
+    @param settings:
+    @return:
+    """
+    # Find highest current density
+    # ----------------------------
+    success = False
+    u_min = 0.05  # V
+
+    data_backup = data.copy()
+
+    while not success:
+        data = data_backup.copy()
+        u_min += 0.05
+
+        # Change solver settings temporarily to voltage control
+        data.loc[:, "simulation-operation_control"] = "Voltage"
+        data.loc[:, "simulation-average_cell_voltage"] = u_min
+
+        # Create complete setting dict, append it in additional column "settings" to df_input
+        data = create_settings(data, settings, input_cols=df_input.columns)
+
+        # Run simulation
+        df_result, success = run_simulation(data)
+
+    max_i = df_result["global_data"].iloc[0]["Average Current Density"]["value"]
+
+    return max_i
+
+
+def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.DataFrame, bool):
     """
 
     - Run input_table rows, catch exceptions of single calculations
@@ -484,6 +495,9 @@ def run_simulation(input_table: pd.DataFrame) -> (pd.DataFrame, bool):
     input_table["successful_run"] = result_table.apply(lambda x: True if (isinstance(x[0], list)) else False)
 
     all_successfull = True if input_table["successful_run"].all() else False
+
+    if not return_unsuccessful:
+        input_table = input_table.loc[input_table["successful_run"], :]
 
     return input_table, all_successfull
 
@@ -602,6 +616,20 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
      State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
 def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+    """
+
+    #ToDO: 
+        - Error handling: Handle None in results.
+
+    @param btn: 
+    @param inputs: 
+    @param inputs2: 
+    @param ids: 
+    @param ids2: 
+    @param settings:
+    @return: 
+    """
+
     n_refinements = 5
 
     # Progress bar init
@@ -616,24 +644,10 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
     df_input_backup = df_input.copy()
 
-    # Find highest current density
-    # ----------------------------
-    success = False
-    u_min = 0.05  # V
-
-    while not success:
-        df_input = df_input_backup.copy()
-        u_min += 0.05
-        # Change solver settings temporarily to voltage control
-        df_input.loc["nominal", "simulation-operation_control"] = "Voltage"
-        df_input.loc["nominal", "simulation-average_cell_voltage"] = u_min
-
-        # Create complete setting dict, append it in additional column "settings" to df_input
-        df_input = create_settings(df_input, settings)
-
-        # Run simulation
-        df_result, success = run_simulation(df_input)
-    max_i = df_result.loc["nominal", "global_data"]["Average Current Density"]["value"]
+    # Ensure DataFrame with double bracket
+    # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+    df_input_single = df_input.loc[["nominal"], :]
+    max_i = find_max_current_density(df_input_single, settings)
 
     # Reset solver settings
     df_input = df_input_backup.copy()
@@ -644,8 +658,8 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
 
     # First refinement steps
     for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
-        df_refine, success = run_simulation(df_refine)
+        df_refine = uicalc_prepare_refinement(data_df=df_results, input_df=df_input, settings=settings)
+        df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
         df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
     # Save results
@@ -684,8 +698,7 @@ def run_refinement_ui_calc(inp, state, state2, settings):
     # Refinement loop
     for _ in range(n_refinements):
         df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
-        df_refine, success = run_simulation(df_refine)
-        df_refine = df_refine.loc[df_refine["successful_run"] == True, :]
+        df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
         df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
     # Save results
@@ -735,7 +748,8 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     #ToDO Documentation
     """
     # Calculation of polarization curve for each dataset?
-    ui_calculation = False
+    ui_calculation = True
+    n_refinements = 15
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -750,20 +764,55 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     df_input_backup = df_input.copy()
 
     # Create multiple parameter sets
-    data = variation_parameter(df_input)
-    varpars = data["variation_parameter"].unique()
+    data = variation_parameter(df_input, keep_nominal=False)
+    varpars = list(data["variation_parameter"].unique())
 
     if not ui_calculation:
         # Create complete setting dict & append it in additional column "settings" to df_input
         data = create_settings(data, settings, input_cols=df_input.columns)
         # Run Simulation
         results, success = run_simulation(data)
-
         results = df.store_data(results)
-        df_input_store = df.store_data(df_input_backup)
 
-    else:
-        ...
+    else:  # ... calculate pol. curve for each parameter set
+        result_data = pd.DataFrame(columns=data.columns)
+        grouped_data = data.groupby(varpars, sort=False)
+
+        for _, group in grouped_data:
+
+            print(f"Group: {_},start")
+            # Ensure DataFrame with double bracket
+            # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+            # df_input_single = df_input.loc[[:], :]
+            print(f"Group: {_}, Calc maxi")
+            max_i = find_max_current_density(group, df_input, settings)
+
+            # # Reset solver settings
+            # df_input = df_input_backup.copy()
+
+            success = False
+            while not success:
+                print(f"Group: {_}, prep init ui, max_i:{max_i}")
+                # Prepare & calculate initial points
+                df_results = uicalc_prepare_initcalc(input_df=group, i_limits=[1, max_i], settings=settings,
+                                                     input_cols=df_input.columns)
+                print(f"Group: {_}, Calc init ui")
+                df_results, success = run_simulation(df_results)
+                max_i -= 2000
+
+            # First refinement steps
+            print(f"Group: {_}, prep refine")
+            for _ in range(n_refinements):
+                print(f"Refinement itenration {_}")
+                df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
+                df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
+                df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+            result_data = pd.concat([result_data, df_results], ignore_index=True)
+            print(f"Group: {_}, finish")
+        results = df.store_data(result_data)
+
+    df_input_store = df.store_data(df_input_backup)
 
     file_prog.close()
     sys.stderr = std_err_backup
@@ -786,6 +835,7 @@ def update_ui_figure(inp1, inp2, dfinp):
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     df_nominal = df.read_data(ctx.states["df_input_store.data"])
+    results = results.loc[results["successful_run"] == True, :]
 
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -809,11 +859,15 @@ def update_ui_figure(inp1, inp2, dfinp):
 
         # Add traces
         if "variation_parameter" in group.columns:
-            varpar = group["variation_parameter"][0]
-            setname = group[varpar][0]
+            try:
+                varpar = group["variation_parameter"][0]
+                setname = group[varpar][0]
+            except:
+                setname = "tbd"
 
         else:
             setname = ""
+
         fig.add_trace(
             go.Scatter(x=group["simulation-current_density"], y=group["Voltage"], name=f"{setname},  U [V]",
                        mode='lines+markers'),
