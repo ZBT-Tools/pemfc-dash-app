@@ -382,7 +382,7 @@ app.layout = dbc.Container([
 def create_settings(df_data, settings, input_cols=None):
     # Create settings dictionary
     # If "input_cols" are given, only those will be used from "df_data".
-    # Usecase: if df_data contains additional columns as study information that needs
+    # Usecase: df_data can contain additional columns as study information that needs
     # to be excluded from settings dict
     # -----------------------------------------------------------------------
     # Create object columns
@@ -391,7 +391,7 @@ def create_settings(df_data, settings, input_cols=None):
     df_temp['settings'] = df_temp['input_data'].astype(object)
 
     if input_cols is not None:
-        df_data_red = df_data.loc[:,input_cols]
+        df_data_red = df_data.loc[:, input_cols]
     else:
         df_data_red = df_data
 
@@ -412,15 +412,15 @@ def variation_parameter(df_input: pd.DataFrame) -> pd.DataFrame:
 
     # Define parameter sets
     # -----------------------
-    # var_par = "membrane-thickness"
-    # var_par_vals = [0.25e-05]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
-    # casting_func = float
-    var_par = "stack-cell_number"
-    var_par_vals = [1, 2,4]  # , 0.5e-05, 1e-05, 3e-05, 10e-05]  # [1.5e-05, 0.5e-05, 3e-05]
-    casting_func = int
+    var_par = "membrane-thickness"
+    var_par_vals = [0.25e-05, 0.5e-05, 1e-05]
+    casting_func = float
+    # var_par = "stack-cell_number"
+    # var_par_vals = [1, 2, 4]
+    # casting_func = int
 
-    clms = list(df_input.columns)
     # Add informational column "variation_parameter"
+    clms = list(df_input.columns)
     clms.extend(["variation_parameter"])
     data = pd.DataFrame(columns=clms)
     for val in var_par_vals:
@@ -550,6 +550,7 @@ def read_pemfc_settings(*args):
 
 @app.callback(
     Output('df_result_data_store', 'data'),
+    Output('df_input_store', 'data'),
     Output('signal', 'data'),
     Output("spinner_run_single", 'children'),
     Input("run_button", "n_clicks"),
@@ -570,6 +571,7 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
 
         # Read data from input fields and save input in dict/dataframe (one row "nominal")
         df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+        df_input_raw = df_input.copy()
 
         # Create complete setting dict, append it in additional column "settings" to df_input
         df_input = create_settings(df_input, settings)
@@ -577,14 +579,15 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
         # Run simulation
         df_result, _ = run_simulation(df_input)
 
-        # Convert results json string
+        # Save results
         df_result_store = df.store_data(df_result)
+        df_input_store = df.store_data(df_input_raw)
+
+        return df_result_store, df_input_store, n_click, ""
 
     except Exception as E:
         modal_title, modal_body = \
             dm.modal_process('input-error', error=repr(E))
-
-    return df_result_store, n_click, ""
 
 
 @app.callback(
@@ -608,6 +611,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
 
     # Read pemfc settings.json from store
     settings = df.read_data(settings)
+
     # Read data from input fields and save input in dict/dataframe (one row "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
     df_input_backup = df_input.copy()
@@ -638,7 +642,6 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i], settings=settings)
     df_results, success = run_simulation(df_results)
 
-
     # First refinement steps
     for _ in range(n_refinements):
         df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
@@ -647,7 +650,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
 
     # Save results
     results = df.store_data(df_results)
-    df_input_store = df.store_data(df_input)
+    df_input_store = df.store_data(df_input_backup)
 
     # Close process bar files
     file_prog.close()
@@ -674,17 +677,11 @@ def run_refinement_ui_calc(inp, state, state2, settings):
     # Read pemfc settings.json from store
     settings = df.read_data(settings)
 
-    # State-Store access returns None, I don't know why (FKL)
+    # State-Store access returns None, I don't know why (FKL), workaround:
     df_results = df.read_data(ctx.states["df_result_data_store.data"])
     df_nominal = df.read_data(ctx.states["df_input_store.data"])
 
-    # for k, v in dict_results.items(): # ToDo rework
-    #  df_nominal = v.iloc[[0]].copy() df_nominal = df_nominal.rename(
-    #  index={v.index[0]: 'nominal'}) df_nominal = df_nominal.drop(['input_data', 'settings', 'u_pred',
-    #  'u_pred_diff', 'global_data', 'local_data'], axis=1)
-
     # Refinement loop
-    # df_results = v
     for _ in range(n_refinements):
         df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
         df_refine, success = run_simulation(df_refine)
@@ -700,24 +697,22 @@ def run_refinement_ui_calc(inp, state, state2, settings):
     return results, ""
 
 
-# @app.callback(
-#     Output('dummy', 'children'),
-#     Input("btn_saveres", "n_clicks"),
-#     State('df_result_data_store', 'data'),
-#     prevent_initial_call=True)
+@app.callback(
+    Output('dummy', 'children'),
+    Input("btn_saveres", "n_clicks"),
+    State('df_result_data_store', 'data'),
+    prevent_initial_call=True)
 def debug_save_results(inp, state):
     # State-Store access returns None, I don't know why (FKL)
     data = ctx.states["df_result_data_store.data"]
     with open('temp_results.pickle', 'wb') as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print("saved")
 
-
-# @app.callback(
-#     Output('df_result_data_store', 'data'),
-#     Input("btn_loadres", "n_clicks"),
-#     prevent_initial_call=True)
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Input("btn_loadres", "n_clicks"),
+    prevent_initial_call=True)
 def debug_load_results(inp):
     with open('temp_results.pickle', 'rb') as handle:
         b = pickle.load(handle)
@@ -739,6 +734,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     """
     #ToDO Documentation
     """
+    # Calculation of polarization curve for each dataset?
     ui_calculation = False
 
     # Progress bar init
@@ -749,7 +745,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     # Read pemfc settings.json from store
     settings = df.read_data(settings)
 
-    # Read data from input fields and save input in dict/dataframe (one row "nominal")
+    # Read data from input fields and save input in dict (legacy) / pd.DataDrame (one row with index "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
     df_input_backup = df_input.copy()
 
@@ -758,13 +754,16 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     varpars = data["variation_parameter"].unique()
 
     if not ui_calculation:
-        # Create complete setting dict, append it in additional column "settings" to df_input
+        # Create complete setting dict & append it in additional column "settings" to df_input
         data = create_settings(data, settings, input_cols=df_input.columns)
         # Run Simulation
         results, success = run_simulation(data)
 
         results = df.store_data(results)
-        df_input_store = df.store_data(df_input)
+        df_input_store = df.store_data(df_input_backup)
+
+    else:
+        ...
 
     file_prog.close()
     sys.stderr = std_err_backup
@@ -776,60 +775,61 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     Input('btn_plot', 'n_clicks'),
+    State('df_input_store', 'data'),
     prevent_initial_call=True)
-def update_ui_figure(inp1, inp2):
+def update_ui_figure(inp1, inp2, dfinp):
+    """
+    Prior to plot: identification of same parameter sets with different current density.
+    Those points will be connected and have identical color
+    """
+
+    # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    df_nominal = df.read_data(ctx.states["df_input_store.data"])
+
+    # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.data = []
 
-    if "variation_parameter" in results.columns:
-        for k, v in results.groupby("variation_parameters"):
-            # Extract Results
-            v.sort_values("simulation-current_density", ignore_index=True, inplace=True)
-            v["Voltage"] = v["global_data"].apply(lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
-            v["Power"] = v["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
+    # Check for identical parameter, only different current density
+    gc = list(df_nominal.columns)
+    gc.remove('simulation-current_density')
+    # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
+    # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
+    # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
+    # results_red = results.loc[:, df_nominal.columns].copy()
+    results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
+    grouped = results.groupby(gc, sort=False)
 
-            # Create figure with secondary y-axis
-
-            # Add traces
-            fig.add_trace(
-                go.Scatter(x=v["simulation-current_density"], y=v["Voltage"], name=f"{k},  U [V]",
-                           mode='lines+markers'),
-                secondary_y=False,
-            )
-
-            fig.add_trace(
-                go.Scatter(x=v["simulation-current_density"], y=v["Power"], name=f"{k}, Power",
-                           mode='lines+markers'),
-                secondary_y=True,
-            )
-
-        # Add figure title
-        fig.update_layout(
-            title_text=f"U-i-Curve, variation parameter: tbd"
-        )
-
-    else:
-        # Extract Results
-        results.sort_values("simulation-current_density", ignore_index=True, inplace=True)
-        results["Voltage"] = results["global_data"].apply(
+    for _, group in grouped:
+        group.sort_values("simulation-current_density", ignore_index=True, inplace=True)
+        group["Voltage"] = group["global_data"].apply(
             lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
-        results["Power"] = results["global_data"].apply(
-            lambda x: x["Stack Power"]["value"] if (x is not None) else None)
-
-        # Create figure with secondary y-axis
+        group["Power"] = group["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
 
         # Add traces
+        if "variation_parameter" in group.columns:
+            varpar = group["variation_parameter"][0]
+            setname = group[varpar][0]
+
+        else:
+            setname = ""
         fig.add_trace(
-            go.Scatter(x=results["simulation-current_density"], y=results["Voltage"],
+            go.Scatter(x=group["simulation-current_density"], y=group["Voltage"], name=f"{setname},  U [V]",
                        mode='lines+markers'),
             secondary_y=False,
         )
 
         fig.add_trace(
-            go.Scatter(x=results["simulation-current_density"], y=results["Power"],
+            go.Scatter(x=group["simulation-current_density"], y=group["Power"], name=f"{setname}, Power",
                        mode='lines+markers'),
             secondary_y=True,
         )
+
+    # Add figure title
+    fig.update_layout(
+        title_text=f"U-i-Curve"
+    )
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
