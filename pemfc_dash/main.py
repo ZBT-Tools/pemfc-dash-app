@@ -387,9 +387,11 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False) -> pd.DataFr
 
     # Define parameter sets
     # -----------------------
-    var_par = "membrane-thickness"
-    var_par_vals = [0.1e-05, 0.25e-05, 0.5e-05, 1e-05, 2e-05]
-    casting_func = float
+    variation_parameter = {
+        "membrane-thickness": {"values": [0.25e-05,4e-05], "casting": float},
+        "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+        "anode-electrochemistry-thickness_gdl": {"values": [0.00005,  0.0008], "casting": float},
+        }
     # var_par = "stack-cell_number"
     # var_par_vals = [1, 2, 4]
     # casting_func = int
@@ -398,11 +400,13 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False) -> pd.DataFr
     clms = list(df_input.columns)
     clms.extend(["variation_parameter"])
     data = pd.DataFrame(columns=clms)
-    for val in var_par_vals:
-        inp = df_input.copy()
-        inp.loc["nominal", var_par] = casting_func(val)
-        inp.loc["nominal", "variation_parameter"] = var_par
-        data = pd.concat([data, inp], ignore_index=True)
+
+    for parname, attr in variation_parameter.items():
+        for val in attr["values"]:
+            inp = df_input.copy()
+            inp.loc["nominal", parname] = attr["casting"](val)
+            inp.loc["nominal", "variation_parameter"] = parname
+            data = pd.concat([data, inp], ignore_index=True)
 
     if keep_nominal:
         data = pd.concat([data, df_input])
@@ -749,7 +753,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     """
     # Calculation of polarization curve for each dataset?
     ui_calculation = True
-    n_refinements = 15
+    n_refinements = 10
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -861,7 +865,7 @@ def update_ui_figure(inp1, inp2, dfinp):
         if "variation_parameter" in group.columns:
             try:
                 varpar = group["variation_parameter"][0]
-                setname = group[varpar][0]
+                setname = f"{varpar}: {group[varpar][0]}"
             except:
                 setname = "tbd"
 
