@@ -929,5 +929,103 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
                     filename='settings.json')
 
 
+@app.callback(
+    Output({'type': ALL, 'id': ALL, 'specifier': 'disable_basewidth'},
+           'disabled'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'dropdown_activate_basewidth'},
+          'value'))
+def disabled_callback(value):
+    for num, val in enumerate(value):
+        if val == "trapezoidal":
+            value[num] = False
+        else:
+            value[num] = True
+    return value
+
+
+@app.callback(
+    Output({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'},
+           'disabled'),
+    Input({'type': ALL, 'id': ALL,
+           'specifier': 'checklist_activate_calculation'}, 'value'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'}, 'value'),
+
+)
+def activate_column(input1, input2):
+    len_state = len(input2)
+    list_state = [True for x in range(len_state)]  # disable=True for all inputs
+    for num, val in enumerate(input1):  # 3 inputs in input1 for 3 rows
+        if val == [1]:
+            list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
+                list_state[18 + num] = list_state[30 + num] = False
+            if input2[3+num] == 'circular':
+                list_state[6+num], list_state[9+num], list_state[12+num] = \
+                 False, True, True
+            else:
+                list_state[6+num], list_state[9+num], list_state[12+num] = \
+                    True, False, False
+            if input2[18+num] == 'circular':
+                list_state[21+num], list_state[24+num], list_state[27+num] = \
+                 False, True, True
+            else:
+                list_state[21+num], list_state[24+num], list_state[27+num] = \
+                    True, False, False
+    return list_state
+
+
+@app.callback(
+    Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+           'style'),
+    Input({'type': ALL, 'id': ALL, 'specifier':
+           'checklist_activate_cooling'}, 'value'),
+    State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+          'id'),
+    State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+          'style')
+)
+def disabled_cooling(input1, ids, styles):
+    len_val = len(ids)
+
+    new_styles = {'pointer-events': 'none', 'opacity': '0.4'}
+
+    if input1[0] == [1]:
+        list_state = [{}] * len_val
+    else:
+        list_state = [new_styles] * len_val
+    return list_state
+
+
+@app.callback(
+    Output({'type': 'container', 'id': ALL, 'specifier': 'visibility'},
+           'style'),
+    Input({'type': 'input', 'id': ALL, 'specifier': 'dropdown_activate'},
+          'value'),
+    State({'type': 'input', 'id': ALL, 'specifier': 'dropdown_activate'},
+          'options')
+)
+def visibility(inputs, options):
+    list_options = []
+    for opt in options:
+        list_options.extend([inside['value'] for inside in opt])
+        # [[opt1, opt2],[opt3, opt4, opt5]] turns into
+        # [opt1, opt2, opt3, opt4, opt5]
+
+    for inp in inputs:
+        #  Eliminate/replace chosen value with 'chose' for later
+        list_options = \
+            list(map(lambda item: item.replace(inp, 'chosen'),
+                     list_options))
+
+    for num, lst in enumerate(list_options):
+        if lst == 'chosen':
+            # style = None / CSS revert to initial; {display:initial}
+            list_options[num] = None
+        else:
+            # CSS for hiding div
+            list_options[num] = {'display': 'none'}
+
+    return list_options
+
+
 if __name__ == "__main__":
     app.run_server(debug=True, use_reloader=False)
