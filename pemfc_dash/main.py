@@ -1,4 +1,8 @@
+import base64
+import io
 import os
+from itertools import product
+
 import numpy as np
 import pandas as pd
 import pickle
@@ -59,7 +63,7 @@ app.layout = dbc.Container([
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
-    html.Div(id="dummy"),
+    html.Div(id="initial_dummy"),
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -173,16 +177,15 @@ app.layout = dbc.Container([
                                     className='settings_button',
                                     style={'display': 'flex'}
                                     ),
-                        html.Button('LoadResults', id='btn_loadres',
-                                    className='settings_button',
-                                    style={'display': 'flex'}
-                                    )
-                    ],
+                        dcc.Download(id="download-results"),
 
+                        dcc.Upload(id='loadres', children=html.Button('Load Results', id='btn_loadres',
+                                                                      className='settings_button',
+                                                                      style={'display': 'flex'}
+                                                                      ))
+                    ],
                         style={'display': 'flex',
                                'flex-wrap': 'wrap',
-                               # 'flex-direction': 'column',
-                               # 'margin': '5px',
                                'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')], style={'flex': '1'},
@@ -379,33 +382,54 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
-def variation_parameter(df_input: pd.DataFrame, keep_nominal=False) -> pd.DataFrame:
+def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single") -> pd.DataFrame:
     """
+    Function to create parameter sets.
+    - variation of single parameter - ok
+    - (single) variation of multiple parameters - ok
+    - combined variation of multiple parameters
+        - full factorial - ok
+
     Important: Change casting_func to int(),float(),... accordingly!
 
     """
 
-    # Define parameter sets
+    # Define parameter sets ( move to GUI)
     # -----------------------
     variation_parameter = {
-        "membrane-thickness": {"values": [0.25e-05,4e-05], "casting": float},
+        "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
         "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-        "anode-electrochemistry-thickness_gdl": {"values": [0.00005,  0.0008], "casting": float},
-        }
-    # var_par = "stack-cell_number"
-    # var_par_vals = [1, 2, 4]
-    # casting_func = int
+        "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+    }
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
     clms.extend(["variation_parameter"])
     data = pd.DataFrame(columns=clms)
 
-    for parname, attr in variation_parameter.items():
-        for val in attr["values"]:
+    if mode == "single":  #
+        # ... vary one variation_parameter, all other parameter nominal (from GUI)
+        for parname, attr in variation_parameter.items():
+            for val in attr["values"]:
+                inp = df_input.copy()
+                inp.loc["nominal", parname] = attr["casting"](val)
+                inp.loc["nominal", "variation_parameter"] = parname
+                data = pd.concat([data, inp], ignore_index=True)
+
+    elif mode == "full":
+        # see https://docs.python.org/3/library/itertools.html
+
+        parameter_names = [key for key, val in variation_parameter.items()]
+        parameter_names_string = ",".join(parameter_names)
+        parameter_values = [val["values"] for key, val in variation_parameter.items()]
+        parameter_casting = [val["casting"] for key, val in variation_parameter.items()]
+        parameter_combinations = list(product(*parameter_values))
+
+        for combination in parameter_combinations:
             inp = df_input.copy()
-            inp.loc["nominal", parname] = attr["casting"](val)
-            inp.loc["nominal", "variation_parameter"] = parname
+            inp.loc["nominal", "variation_parameter"] = parameter_names_string
+            for par, val, cast in zip(parameter_names, combination, parameter_casting):
+                inp.loc["nominal", par] = cast(val)
             data = pd.concat([data, inp], ignore_index=True)
 
     if keep_nominal:
@@ -508,7 +532,7 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.D
 
 @app.callback(
     Output("pemfc_settings_file", "data"),
-    Input("dummy", "children")
+    Input("initial_dummy", "children")
 )
 def read_pemfc_settings(*args):
     try:
@@ -523,6 +547,22 @@ def read_pemfc_settings(*args):
     print("saved settings.json")
 
     return results
+
+
+@app.callback(
+    Output('df_input_store', 'data'),
+    Input("initial_dummy", "children"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+)
+def read_input(dummy, inputs, inputs2, ids, ids2):
+    # Read data from input fields and save input in dict/dataframe (one row "nominal")
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    df_input_store = df.store_data(df_input)
+
+    return df_input_store
 
 
 # @app.callback(
@@ -715,24 +755,29 @@ def run_refinement_ui_calc(inp, state, state2, settings):
 
 
 @app.callback(
-    Output('dummy', 'children'),
+    Output("download-results", "data"),
     Input("btn_saveres", "n_clicks"),
     State('df_result_data_store', 'data'),
     prevent_initial_call=True)
-def debug_save_results(inp, state):
+def save_results(inp, state):
     # State-Store access returns None, I don't know why (FKL)
     data = ctx.states["df_result_data_store.data"]
-    with open('temp_results.pickle', 'wb') as handle:
+    with open('results.pickle', 'wb') as handle:
         pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return dcc.send_file("results.pickle")
 
 
 @app.callback(
     Output('df_result_data_store', 'data'),
-    Input("btn_loadres", "n_clicks"),
+    Input("loadres", "contents"),
     prevent_initial_call=True)
-def debug_load_results(inp):
-    with open('temp_results.pickle', 'rb') as handle:
-        b = pickle.load(handle)
+def load_results(content):
+    # https://dash.plotly.com/dash-core-components/upload
+    content_type, content_string = content.split(',')
+    decoded = base64.b64decode(content_string)
+    b = pickle.load(io.BytesIO(decoded))
+
     return b
 
 
@@ -754,6 +799,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     # Calculation of polarization curve for each dataset?
     ui_calculation = True
     n_refinements = 10
+    mode = "full"
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -768,7 +814,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     df_input_backup = df_input.copy()
 
     # Create multiple parameter sets
-    data = variation_parameter(df_input, keep_nominal=False)
+    data = variation_parameter(df_input, keep_nominal=False, mode=mode)
     varpars = list(data["variation_parameter"].unique())
 
     if not ui_calculation:
@@ -863,9 +909,14 @@ def update_ui_figure(inp1, inp2, dfinp):
 
         # Add traces
         if "variation_parameter" in group.columns:
+            # Variation parameter can be one parameter or multiple parameter separated by ",".
+            varpar = group["variation_parameter"][0]
             try:
-                varpar = group["variation_parameter"][0]
-                setname = f"{varpar}: {group[varpar][0]}"
+                if varpar.find(',') == -1:  # no parameter separator -> one parameter:
+                    setname = f"{varpar}: {group[varpar][0]}"
+                else:
+                    setname = f"{', '.join([f'par{n}: {group[vp][0]}' for n, vp in enumerate(varpar.split(','))])}"
+
             except:
                 setname = "tbd"
 
