@@ -400,7 +400,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     variation_parameter = {
         "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
         "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-        # "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+        "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
     }
 
     # Add informational column "variation_parameter"
@@ -540,10 +540,15 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.D
 )
 def read_pemfc_settings(*args):
     try:
+        # Initially get default simulation settings from settings.json file
+        # in pemfc core module
         pemfc_base_dir = os.path.dirname(pemfc.__file__)
         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
+        # Avoid local outputs from simulation
+        settings['output']['save_csv'] = False
+        settings['output']['save_plot'] = False
     except Exception as E:
         print(repr(E))
 
@@ -802,7 +807,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     """
     # Calculation of polarization curve for each dataset?
     ui_calculation = True
-    n_refinements = 10
+    n_refinements = 20
     mode = "full"
 
     # Progress bar init
