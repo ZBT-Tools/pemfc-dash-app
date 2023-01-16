@@ -1,4 +1,5 @@
 import base64
+import gc
 import io
 import os
 from itertools import product
@@ -32,12 +33,13 @@ from pemfc import main_app
 from pemfc_gui import data_transfer
 import pemfc_gui.input as gui_input
 
-# from pandarallel import pandarallel
+from pandarallel import pandarallel
 from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
 from tqdm import tqdm
 
 tqdm.pandas()
 # pandarallel.initialize()
+from multiprocesspandas import applyparallel
 
 server = app.server
 
@@ -391,7 +393,6 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
         - full factorial - ok
 
     Important: Change casting_func to int(),float(),... accordingly!
-
     """
 
     # Define parameter sets ( move to GUI)
@@ -399,7 +400,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     variation_parameter = {
         "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
         "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-        "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+        # "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
     }
 
     # Add informational column "variation_parameter"
@@ -517,6 +518,9 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.D
             return repr(E)
 
     result_table = input_table["settings"].progress_apply(func)
+    # result_table = input_table["settings"].map(func)
+    # result_table = input_table["settings"].parallel_apply(func)
+    # result_table = input_table["settings"].apply_parallel(func, num_processes=4)
 
     input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (isinstance(x, tuple)) else None)
     input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (isinstance(x, tuple)) else None)
@@ -691,7 +695,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     # Ensure DataFrame with double bracket
     # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
     df_input_single = df_input.loc[["nominal"], :]
-    max_i = find_max_current_density(df_input_single, settings)
+    max_i = find_max_current_density(df_input_single, df_input, settings)
 
     # Reset solver settings
     df_input = df_input_backup.copy()
@@ -826,32 +830,36 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
 
     else:  # ... calculate pol. curve for each parameter set
         result_data = pd.DataFrame(columns=data.columns)
-        grouped_data = data.groupby(varpars, sort=False)
 
-        for _, group in grouped_data:
+        # grouped_data = data.groupby(varpars, sort=False)
+        # for _, group in grouped_data:
+        for i in range(0, len(data)):
 
-            print(f"Group: {_},start")
+            print(f"Group: {i},start")
             # Ensure DataFrame with double bracket
             # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
             # df_input_single = df_input.loc[[:], :]
-            print(f"Group: {_}, Calc maxi")
-            max_i = find_max_current_density(group, df_input, settings)
+            print(f"Group: {i}, Calc maxi")
+            max_i = find_max_current_density(data.iloc[[i]], df_input, settings)
 
             # # Reset solver settings
             # df_input = df_input_backup.copy()
 
             success = False
-            while not success:
-                print(f"Group: {_}, prep init ui, max_i:{max_i}")
+            while (not success) and (max_i > 5000):
+                print(f"Group: {i}, prep init ui, max_i:{max_i}")
                 # Prepare & calculate initial points
-                df_results = uicalc_prepare_initcalc(input_df=group, i_limits=[1, max_i], settings=settings,
+                df_results = uicalc_prepare_initcalc(input_df=data.iloc[[i]], i_limits=[1, max_i], settings=settings,
                                                      input_cols=df_input.columns)
-                print(f"Group: {_}, Calc init ui")
+                print(f"Group: {i}, Calc init ui")
                 df_results, success = run_simulation(df_results)
                 max_i -= 2000
 
-            # First refinement steps
-            print(f"Group: {_}, prep refine")
+            if not success:
+                continue
+
+                # First refinement steps
+            print(f"Group: {i}, prep refine")
             for _ in range(n_refinements):
                 print(f"Refinement itenration {_}")
                 df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
@@ -859,7 +867,10 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
                 df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
             result_data = pd.concat([result_data, df_results], ignore_index=True)
-            print(f"Group: {_}, finish")
+            print(f"Group: {i}, finish")
+
+            gc.collect()
+
         results = df.store_data(result_data)
 
     df_input_store = df.store_data(df_input_backup)
