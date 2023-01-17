@@ -3,7 +3,8 @@ import gc
 import io
 import os
 from itertools import product
-
+import ast
+from dash import dash_table
 import numpy as np
 import pandas as pd
 import pickle
@@ -65,7 +66,9 @@ app.layout = dbc.Container([
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
-    html.Div(id="initial_dummy"),
+
+    html.Div(id="initial_dummy_0"),  # Level zero initialization (Read available input parameter)
+    html.Div(id="initial_dummy_1"),  # Level one initialization (e.g. creation of study table,...)
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -165,12 +168,27 @@ app.layout = dbc.Container([
                     className='neat-spacing')], style={'flex': '1'},
                 id='multiple_runs', className='pretty_container'),
             # Buttons 3 (Study)
-            html.Div([  # LEFT MIDDLE: Buttons
+            html.Div([
+
+                html.Div(id="study_table"),
                 html.Div([
                     html.Div([
                         html.Button('study', id='btn_study',
                                     className='settings_button',
                                     style={'display': 'flex'}),
+
+                    ],
+                        style={'display': 'flex',
+                               'flex-wrap': 'wrap',
+                               'justify-content': 'space-evenly'}
+                    )],
+                    className='neat-spacing')], style={'flex': '1'},
+                id='study', className='pretty_container'),
+
+            # Buttons 4 (Save Results, Load Results, Update Plot (debug))
+            html.Div([  # LEFT MIDDLE: Buttons
+                html.Div([
+                    html.Div([
                         html.Button('plot', id='btn_plot',
                                     className='settings_button',
                                     style={'display': 'flex'}
@@ -191,7 +209,7 @@ app.layout = dbc.Container([
                                'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')], style={'flex': '1'},
-                id='study', className='pretty_container'),
+                id='SaveLoad_Res', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
                 html.Div([
                     html.Div([dbc.Spinner(html.Div(id="spinner_run_single")),
@@ -224,7 +242,7 @@ app.layout = dbc.Container([
                 style={'overflow': 'auto'}),
 
             html.Div([
-                html.Div('Global Results', className='title'),
+                html.Div('Global Results (For Study only first dataset))', className='title'),
                 dt.DataTable(id='global_data_table',
                              editable=True,
                              column_selectable='multi')],
@@ -384,7 +402,8 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
-def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single") -> pd.DataFrame:
+def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single",
+                        table_input=None) -> pd.DataFrame:
     """
     Function to create parameter sets.
     - variation of single parameter - ok
@@ -397,11 +416,19 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
 
     # Define parameter sets ( move to GUI)
     # -----------------------
-    variation_parameter = {
-        "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
-        "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-        "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-    }
+    if not table_input:
+        var_parameter = {
+            "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
+            "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+            "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+        }
+    else:
+        var_par_names = [le["Parameter"] for le in table_input if le["Parameter"] is not None]
+        var_par_values = [ast.literal_eval(le["Value"]) for le in table_input if le["Parameter"] is not None]
+        var_par_cast = [type(ast.literal_eval(le["Value"])[0]) for le in table_input if le["Parameter"] is not None]
+
+        var_parameter = {name: {"values": val, "casting": cast} for name, val, cast in
+                         zip(var_par_names, var_par_values, var_par_cast)}
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
@@ -410,7 +437,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
 
     if mode == "single":  #
         # ... vary one variation_parameter, all other parameter nominal (from GUI)
-        for parname, attr in variation_parameter.items():
+        for parname, attr in var_parameter.items():
             for val in attr["values"]:
                 inp = df_input.copy()
                 inp.loc["nominal", parname] = attr["casting"](val)
@@ -420,10 +447,10 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     elif mode == "full":
         # see https://docs.python.org/3/library/itertools.html
 
-        parameter_names = [key for key, val in variation_parameter.items()]
+        parameter_names = [key for key, val in var_parameter.items()]
         parameter_names_string = ",".join(parameter_names)
-        parameter_values = [val["values"] for key, val in variation_parameter.items()]
-        parameter_casting = [val["casting"] for key, val in variation_parameter.items()]
+        parameter_values = [val["values"] for key, val in var_parameter.items()]
+        parameter_casting = [val["casting"] for key, val in var_parameter.items()]
         parameter_combinations = list(product(*parameter_values))
 
         for combination in parameter_combinations:
@@ -439,39 +466,11 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     return data
 
 
-@app.callback(
-    Output('pbar', 'value'),
-    Output('pbar', 'label'),
-    Output('pbar', 'color'),
-    Input('timer_progress', 'n_intervals'),
-    prevent_initial_call=True)
-def callback_progress(*args) -> (float, str):
-    """
-    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
-    """
-
-    try:
-        with open('progress.txt', 'r') as file:
-            str_raw = file.read()
-        last_line = list(filter(None, str_raw.split('\n')))[-1]
-        percent = float(last_line.split('%')[0])
-
-    except:
-        percent = 0
-
-    finally:
-        text = f'{percent:.0f}%'
-        if int(percent) == 100:
-            color = "success"
-        else:
-            color = "primary"
-        return percent, text, color
-
-
 def find_max_current_density(data: pd.DataFrame, df_input, settings):
     """
     Note: Expects one row DataFrame
 
+    @param data:
     @param df_input:
     @param settings:
     @return:
@@ -535,10 +534,50 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.D
 
 
 @app.callback(
+    Output('pbar', 'value'),
+    Output('pbar', 'label'),
+    Output('pbar', 'color'),
+    Input('timer_progress', 'n_intervals'),
+    prevent_initial_call=True)
+def cbf_progress_bar(*args) -> (float, str):
+    """
+    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+    """
+
+    try:
+        with open('progress.txt', 'r') as file:
+            str_raw = file.read()
+        last_line = list(filter(None, str_raw.split('\n')))[-1]
+        percent = float(last_line.split('%')[0])
+
+    except:
+        percent = 0
+
+    finally:
+        text = f'{percent:.0f}%'
+        if int(percent) == 100:
+            color = "success"
+        else:
+            color = "primary"
+        return percent, text, color
+
+
+@app.callback(
     Output("pemfc_settings_file", "data"),
-    Input("initial_dummy", "children")
+    Output('df_input_store', 'data'),
+    Output("study_table", "children"),
+    Input("initial_dummy_0", "children"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
 )
-def read_pemfc_settings(*args):
+def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
+    """
+    Initialization
+    """
+    # Read pemfc default settings.json file
+    # --------------------------------------
     try:
         # Initially get default simulation settings from settings.json file
         # in pemfc core module
@@ -552,67 +591,85 @@ def read_pemfc_settings(*args):
     except Exception as E:
         print(repr(E))
 
-    results = df.store_data(settings)
-    print("saved settings.json")
+    settings = df.store_data(settings)
 
-    return results
-
-
-@app.callback(
-    Output('df_input_store', 'data'),
-    Input("initial_dummy", "children"),
-    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-)
-def read_input(dummy, inputs, inputs2, ids, ids2):
+    # Read initial data input
+    # --------------------------------------
     # Read data from input fields and save input in dict/dataframe (one row "nominal")
     df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
     df_input_store = df.store_data(df_input)
 
-    return df_input_store
+    # Initialize study data table
+    # -------------------------------------
+    # Info: css stylesheet needed to be updated to show dropdown, see
+    # https://community.plotly.com/t/resolved-dropdown-options-in-datatable-not-showing/20366/4
+
+    # Dummy input
+    empty_study_table = pd.DataFrame(dict([
+        ('Parameter', ["membrane-thickness", None, None, None]),
+        ('Value', ["[1e-5, 2e-5]", None, None, None]),
+        # ('ValueType', ["float", None, None, None])
+    ]))
+
+    table = dash_table.DataTable(
+        id='table-dropdown',
+        data=empty_study_table.to_dict('records'),
+        columns=[
+            {'id': 'Parameter', 'name': 'Parameter', 'presentation': 'dropdown'},
+            {'id': 'Value', 'name': 'Values'},
+            # {'id': 'ValueType', 'name': 'Value Type', 'presentation': 'dropdown'},
+
+        ],
+
+        editable=True,
+        dropdown={
+            'Parameter': {
+                'options': [
+                    {'label': i, 'value': i}
+                    for i in list(df_input.columns)
+                ]},
+            # 'ValueType': {
+            #     'options': [
+            #         {'label': i, 'value': i}
+            #         for i in ["int", "float"]
+            #     ]}
+        }
+    )
+
+    print("init successful")
+    return settings, df_input_store, table
 
 
 # @app.callback(
-#     ServersideOutput("df_result_data_store", "data"),
-#     Output('modal-title', 'children'),
-#     Output('modal-body', 'children'),
-#     Output('modal', 'is_open'),
-#     Input("signal", "data"),
-#     State('df_input_data', 'data'),
-#     State('modal', 'is_open'),
-#     # interval=1e10,
-#     # running=[(Output("run_button", "disabled"), True, False)],
-#     prevent_initial_call=True
-# )
-# def obsolete_run_simulation(signal, input_data, modal_state):
-#     """
-#     ToDo: Documentation
-#     Description:
+#     Output("study_table", "children"),
+#     Input("initial_dummy_1", "children"),
+#     State('df_input_store', 'data'),
+#     prevent_initial_call=True)
+# def cbf_initial_study_table(inp, state):
+#     print("yo")
+#     df_nominal = df.read_data(ctx.states["df_input_store.data"])
+#     empty_study_table = pd.DataFrame(dict([
+#         ('Parameter', [None, None, None, None]),
+#         ('Value', [None, None, None, None])]))
 #
-#     @param signal:
-#     @param input_data:
-#     @param modal_state:
-#     @return:
-#     """
-#     # Read pickled / json from storage
-#     input_table = df.read_data(input_data)
+#     table = dash_table.DataTable(
+#         id='table-dropdown',
+#         data=empty_study_table.to_dict('records'),
+#         columns=[
+#             {'id': 'Parameter', 'name': 'Parameter', 'presentation': 'dropdown'},
+#             {'id': 'Value', 'name': 'Values'},
+#         ],
 #
-#     if signal is None:  # prevent_initial_call=True should be sufficient.
-#         raise PreventUpdate
-#     try:
-#         result_table = input_table["settings"].apply(main_app.main)
-#         input_table["global_data"] = result_table.apply(lambda x: x[0][0])
-#         input_table["local_data"] = result_table.apply(lambda x: x[1][0])
-#         df_result_store = df.store_data(input_table)
-#     except Exception as E:
-#         modal_title, modal_body = \
-#             dm.modal_process('input-error', error=repr(E))
-#         return None, modal_title, modal_body, not modal_state
+#         editable=True,
+#         dropdown={
+#             'Parameter': {
+#                 'options': [
+#                     {'label': i, 'value': i}
+#                     for i in df_nominal.columns
+#                 ]}}
+#     )
 #
-#     return [input_table.loc["nominal", "global_data"], input_table.loc["nominal", "local_data"]], \
-#         df_result_store, None, None, modal_state
+#     return table
 
 
 @app.callback(
@@ -627,7 +684,7 @@ def read_input(dummy, inputs, inputs2, ids, ids2):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
-def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
+def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
     """
     Changelog:
 
@@ -668,7 +725,7 @@ def run_single_calculation(n_click, inputs, inputs2, ids, ids2, settings):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State("pemfc_settings_file", "data")],
     prevent_initial_call=True)
-def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     """
 
     #ToDO: 
@@ -683,7 +740,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     @return: 
     """
 
-    n_refinements = 5
+    n_refinements = 10
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -733,8 +790,9 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     State('df_input_store', 'data'),
     State("pemfc_settings_file", "data"),
     prevent_initial_call=True)
-def run_refinement_ui_calc(inp, state, state2, settings):
-    n_refinements = 3
+def cbf_run_refine_ui(inp, state, state2, settings):
+    # Number of refinement steps
+    n_refinements = 5
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -750,7 +808,7 @@ def run_refinement_ui_calc(inp, state, state2, settings):
 
     # Refinement loop
     for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(input_df=df_nominal, data_df=df_results, settings=settings)
+        df_refine = uicalc_prepare_refinement(data_df=df_results, input_df=df_nominal, settings=settings)
         df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
         df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
@@ -764,33 +822,6 @@ def run_refinement_ui_calc(inp, state, state2, settings):
 
 
 @app.callback(
-    Output("download-results", "data"),
-    Input("btn_saveres", "n_clicks"),
-    State('df_result_data_store', 'data'),
-    prevent_initial_call=True)
-def save_results(inp, state):
-    # State-Store access returns None, I don't know why (FKL)
-    data = ctx.states["df_result_data_store.data"]
-    with open('results.pickle', 'wb') as handle:
-        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return dcc.send_file("results.pickle")
-
-
-@app.callback(
-    Output('df_result_data_store', 'data'),
-    Input("loadres", "contents"),
-    prevent_initial_call=True)
-def load_results(content):
-    # https://dash.plotly.com/dash-core-components/upload
-    content_type, content_string = content.split(',')
-    decoded = base64.b64decode(content_string)
-    b = pickle.load(io.BytesIO(decoded))
-
-    return b
-
-
-@app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
@@ -800,14 +831,15 @@ def load_results(content):
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     State("pemfc_settings_file", "data"),
+    State("table-dropdown", "data"),
     prevent_initial_call=True)
-def study(btn, inputs, inputs2, ids, ids2, settings):
+def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata):
     """
     #ToDO Documentation
     """
     # Calculation of polarization curve for each dataset?
     ui_calculation = True
-    n_refinements = 20
+    n_refinements = 10
     mode = "full"
 
     # Progress bar init
@@ -823,7 +855,7 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
     df_input_backup = df_input.copy()
 
     # Create multiple parameter sets
-    data = variation_parameter(df_input, keep_nominal=False, mode=mode)
+    data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=tabledata)
     varpars = list(data["variation_parameter"].unique())
 
     if not ui_calculation:
@@ -887,12 +919,39 @@ def study(btn, inputs, inputs2, ids, ids2, settings):
 
 
 @app.callback(
+    Output("download-results", "data"),
+    Input("btn_saveres", "n_clicks"),
+    State('df_result_data_store', 'data'),
+    prevent_initial_call=True)
+def cbf_save_results(inp, state):
+    # State-Store access returns None, I don't know why (FKL)
+    data = ctx.states["df_result_data_store.data"]
+    with open('results.pickle', 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return dcc.send_file("results.pickle")
+
+
+@app.callback(
+    Output('df_result_data_store', 'data'),
+    Input("loadres", "contents"),
+    prevent_initial_call=True)
+def cbf_load_results(content):
+    # https://dash.plotly.com/dash-core-components/upload
+    content_type, content_string = content.split(',')
+    decoded = base64.b64decode(content_string)
+    b = pickle.load(io.BytesIO(decoded))
+
+    return b
+
+
+@app.callback(
     Output('ui', 'figure'),
     Input('df_result_data_store', 'data'),
     Input('btn_plot', 'n_clicks'),
     State('df_input_store', 'data'),
     prevent_initial_call=True)
-def update_ui_figure(inp1, inp2, dfinp):
+def cbf_figure_ui(inp1, inp2, dfinp):
     """
     Prior to plot: identification of same parameter sets with different current density.
     Those points will be connected and have identical color
@@ -908,14 +967,14 @@ def update_ui_figure(inp1, inp2, dfinp):
     fig.data = []
 
     # Check for identical parameter, only different current density
-    gc = list(df_nominal.columns)
-    gc.remove('simulation-current_density')
+    group_columns = list(df_nominal.columns)
+    group_columns.remove('simulation-current_density')
     # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
     # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
     # results_red = results.loc[:, df_nominal.columns].copy()
     results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
-    grouped = results.groupby(gc, sort=False)
+    grouped = results.groupby(group_columns, sort=False)
 
     for _, group in grouped:
         group.sort_values("simulation-current_density", ignore_index=True, inplace=True)
@@ -930,13 +989,28 @@ def update_ui_figure(inp1, inp2, dfinp):
             try:
                 if varpar.find(',') == -1:  # no parameter separator -> one parameter:
                     setname = f"{varpar}: {group[varpar][0]}"
+                    # Add figure title
+                    fig.update_layout(
+                        title_text=f"U-i-Curve"
+                    )
                 else:
                     setname = f"{', '.join([f'par{n}: {group[vp][0]}' for n, vp in enumerate(varpar.split(','))])}"
+                    # Add figure title
+                    fig.update_layout(
+                        title_text=f"U-i-Curve, Variation parameter: {[par for par in varpar.split(',')]}"
+                    )
 
             except:
                 setname = "tbd"
+                # Add figure title
+                fig.update_layout(
+                    title_text=f"U-i-Curve")
 
         else:
+            # Add figure title
+            fig.update_layout(
+                title_text=f"U-i-Curve"
+            )
             setname = ""
 
         fig.add_trace(
@@ -950,11 +1024,6 @@ def update_ui_figure(inp1, inp2, dfinp):
                        mode='lines+markers'),
             secondary_y=True,
         )
-
-    # Add figure title
-    fig.update_layout(
-        title_text=f"U-i-Curve"
-    )
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
@@ -1592,6 +1661,103 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
 
         return dict(content=json.dumps(settings, indent=2),
                     filename='settings.json')
+
+
+@app.callback(
+    Output({'type': ALL, 'id': ALL, 'specifier': 'disable_basewidth'},
+           'disabled'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'dropdown_activate_basewidth'},
+          'value'))
+def tab1_callback_disabled(value):
+    for num, val in enumerate(value):
+        if val == "trapezoidal":
+            value[num] = False
+        else:
+            value[num] = True
+    return value
+
+
+@app.callback(
+    Output({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'},
+           'disabled'),
+    Input({'type': ALL, 'id': ALL,
+           'specifier': 'checklist_activate_calculation'}, 'value'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'}, 'value'),
+
+)
+def tab2_callback_activate_column(input1, input2):
+    len_state = len(input2)
+    list_state = [True for x in range(len_state)]  # disable=True for all inputs
+    for num, val in enumerate(input1):  # 3 inputs in input1 for 3 rows
+        if val == [1]:
+            list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
+                list_state[18 + num] = list_state[30 + num] = False
+            if input2[3 + num] == 'circular':
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                    False, True, True
+            else:
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                    True, False, False
+            if input2[18 + num] == 'circular':
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                    False, True, True
+            else:
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                    True, False, False
+    return list_state
+
+
+@app.callback(
+    Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+           'style'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'checklist_activate_cooling'}, 'value'),
+    State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+          'id'),
+    State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
+          'style')
+)
+def tab3_callback_disabled_cooling(input1, ids, styles):
+    len_val = len(ids)
+
+    new_styles = {'pointer-events': 'none', 'opacity': '0.4'}
+
+    if input1[0] == [1]:
+        list_state = [{}] * len_val
+    else:
+        list_state = [new_styles] * len_val
+    return list_state
+
+
+@app.callback(
+    Output({'type': 'container', 'id': ALL, 'specifier': 'visibility'},
+           'style'),
+    Input({'type': 'input', 'id': ALL, 'specifier': 'dropdown_activate'},
+          'value'),
+    State({'type': 'input', 'id': ALL, 'specifier': 'dropdown_activate'},
+          'options')
+)
+def tab5_callback_visibility(inputs, options):
+    list_options = []
+    for opt in options:
+        list_options.extend([inside['value'] for inside in opt])
+        # [[opt1, opt2],[opt3, opt4, opt5]] turns into
+        # [opt1, opt2, opt3, opt4, opt5]
+
+    for inp in inputs:
+        #  Eliminate/replace chosen value with 'chose' for later
+        list_options = \
+            list(map(lambda item: item.replace(inp, 'chosen'),
+                     list_options))
+
+    for num, lst in enumerate(list_options):
+        if lst == 'chosen':
+            # style = None / CSS revert to initial; {display:initial}
+            list_options[num] = None
+        else:
+            # CSS for hiding div
+            list_options[num] = {'display': 'none'}
+
+    return list_options
 
 
 if __name__ == "__main__":
