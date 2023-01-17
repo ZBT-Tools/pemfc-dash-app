@@ -1,10 +1,9 @@
-# import dash
-# from dash.dependencies import Input, Output, State
+"""
+See: https://dash-bootstrap-components.opensource.faculty.ai/docs/components/modal/
+"""
+
 from dash import html
 import dash_bootstrap_components as dbc
-# from dash.exceptions import PreventUpdate
-
-# from dash_app import app
 
 
 def create_modal(main_id='modal', title_id='modal-title', body_id='modal-body'):

@@ -1,13 +1,63 @@
 from functools import wraps
-from flask_caching import Cache
+from pemfc_gui import data_transfer
 import base64
 import io
 import json
-import copy
+import pickle
+import jsonpickle
 import collections
 from glom import glom
+import pandas as pd
 
 from . import dash_layout as dl
+
+
+def store_data(data):
+    """
+    # https://github.com/jsonpickle/jsonpickle, as json.dumps can only handle simple variables, no objects, DataFrames..
+    # Info: Eigentlich sollte jsonpickle reichen, um dict mit Klassenobjekten, in denen DataFrames sind, zu speichern,
+    #       Es gibt jedoch Fehlermeldungen. Daher wird Datenstruktur vorher in pickle (Binärformat)
+    #       gespeichert und dieser anschließend in json konvertiert.
+    #       (Konvertierung in json ist notwendig für lokalen dcc storage)
+    """
+    data = pickle.dumps(data)
+    data = jsonpickle.dumps(data)
+
+    return data
+
+
+def read_data(data):
+    # Read NH3 data from storage
+    data = jsonpickle.loads(data)
+    data = pickle.loads(data)
+
+    return data
+
+
+def create_settings(df_data: pd.DataFrame, settings, input_cols=None) -> pd.DataFrame:
+    # Create settings dictionary
+    # If "input_cols" are given, only those will be used from "df_data".
+    # Usecase: df_data can contain additional columns as study information that needs
+    # to be excluded from settings dict
+    # -----------------------------------------------------------------------
+    # Create object columns
+    df_temp = pd.DataFrame(columns=["input_data", "settings"])
+    df_temp['input_data'] = df_temp['input_data'].astype(object)
+    df_temp['settings'] = df_temp['input_data'].astype(object)
+
+    if input_cols is not None:
+        df_data_red = df_data.loc[:, input_cols]
+    else:
+        df_data_red = df_data
+
+    # Create input data dictionary (legacy)
+    df_temp['input_data'] = df_data_red.apply(
+        lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+
+    df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+    data = df_data.join(df_temp)
+
+    return data
 
 
 def unstringify(val):
@@ -97,8 +147,14 @@ def check_ifbool(val):
         return val
 
 
-def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs):
+def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs, returntype="dict"):
     """
+
+    Returns dict_data dictionary of format
+        dict_data = {'stack-cell_number':1, ...}
+    or pd.DataFrame with row "nominal", columns=['stack-cell_number',...]
+
+
     Used in matching key-value (id-value) in the order of the initialised
     Dash's IDs
     (multi inputs handle two value and has multiple IDs assigned to it)
@@ -117,12 +173,28 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs):
 
     new_ids = [id_l['id'] for id_l in id_inputs] + \
               [id_l['id'] for id_l in id_multiinputs]
-    # [print(x) for x in new_ids]
+
     dict_data = {}
     for id_l, v_l in zip(new_ids, new_inputs):
         dict_data.update({id_l: v_l})
     new_dict_data = multi_inputs(dict_data)
-    return new_dict_data
+
+    if returntype == "dict":
+        return new_dict_data
+    elif returntype == "DataFrame":
+        df_data = pd.DataFrame()
+        input_data = {}
+        for k, v in new_dict_data.items():
+            # input_data[k] = {'sim_name': k.split('-'), 'value': v}
+
+            # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
+            # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
+            # Column must be of type object to accept list-objects
+            # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
+            df_data.at["nominal", k] = None
+            df_data[k] = df_data[k].astype(object)
+            df_data.at["nominal", k] = v
+        return df_data
 
 
 def dict_inputs(value='', ids=''):
@@ -179,13 +251,16 @@ def dash_kwarg(inputs):
     retrieve multiple values from multiple inputs in creating id-value
     dictionary from given parameter
     """
+
     def accept_func(func):
         @wraps(func)
         def wrapper(*args):
             input_names = [item.component_id for item in inputs]
             kwargs_dict = dict(zip(input_names, args))
             return func(**kwargs_dict)
+
         return wrapper
+
     return accept_func
 
 
@@ -203,10 +278,6 @@ def compile_data(**kwargs):
         else:
             dash_dict[k]['value'] = c_v[0]
     return dict(dash_dict)
-
-
-
-
 
 # def parse_contents(contents):
 #     content_type, content_string = contents.split(',')
@@ -226,4 +297,4 @@ def compile_data(**kwargs):
 #         return js_out
 #     except Exception as e:
 #         return f'Error {e}'
-        # return f'{e}: There was an error processing this file.'
+# return f'{e}: There was an error processing this file.'
