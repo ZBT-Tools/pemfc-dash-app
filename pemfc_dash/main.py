@@ -171,6 +171,12 @@ app.layout = dbc.Container([
             html.Div([
 
                 html.Div(id="study_table"),
+                html.Div(dcc.Checklist(id="check_calcUI", options=[{'label': 'Calc. complete Polarization Curve',
+                                                                    'value': 'calcUI'}])),
+                html.Div(dcc.RadioItems(id="check_studyType", options=[{'label': 'Single Variation', 'value': 'single'},
+                                                                       {'label': 'Full Factorial', 'value': 'full'}],
+                                        value='single',
+                                        inline=True)),
                 html.Div([
                     html.Div([
                         html.Button('study', id='btn_study',
@@ -832,15 +838,21 @@ def cbf_run_refine_ui(inp, state, state2, settings):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     State("pemfc_settings_file", "data"),
     State("table-dropdown", "data"),
+    State("check_calcUI", "value"),
+    State("check_studyType", "value"),
     prevent_initial_call=True)
-def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata):
+def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCalcUI, checkStudyType):
     """
     #ToDO Documentation
     """
     # Calculation of polarization curve for each dataset?
-    ui_calculation = True
+    if isinstance(checkCalcUI,list):
+        ui_calculation = True
+    else:
+        ui_calculation = False
     n_refinements = 10
-    mode = "full"
+
+    mode = checkStudyType
 
     # Progress bar init
     std_err_backup = sys.stderr
