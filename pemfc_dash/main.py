@@ -53,7 +53,7 @@ app.title = 'PEMFC Model'
 # Process bar components
 pbar = dbc.Progress(id='pbar')
 timer_progress = dcc.Interval(id='timer_progress',
-                              interval=1000)
+                              interval=15000)
 
 app.layout = dbc.Container([
     dcc.Store(id="pemfc_settings_file"),
@@ -846,7 +846,7 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
     #ToDO Documentation
     """
     # Calculation of polarization curve for each dataset?
-    if isinstance(checkCalcUI,list):
+    if isinstance(checkCalcUI, list):
         ui_calculation = True
     else:
         ui_calculation = False
@@ -1009,7 +1009,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
                     setname = f"{', '.join([f'par{n}: {group[vp][0]}' for n, vp in enumerate(varpar.split(','))])}"
                     # Add figure title
                     fig.update_layout(
-                        title_text=f"U-i-Curve, Variation parameter: {[par for par in varpar.split(',')]}"
+                        title_text=f"U-i-Curve, Variation parameter: <br> {[par for par in varpar.split(',')]}"
                     )
 
             except:
@@ -1031,11 +1031,11 @@ def cbf_figure_ui(inp1, inp2, dfinp):
             secondary_y=False,
         )
 
-        fig.add_trace(
-            go.Scatter(x=group["simulation-current_density"], y=group["Power"], name=f"{setname}, Power",
-                       mode='lines+markers'),
-            secondary_y=True,
-        )
+        # fig.add_trace(
+        #    go.Scatter(x=group["simulation-current_density"], y=group["Power"], name=f"{setname}, Power",
+        #               mode='lines+markers'),
+        #    secondary_y=True,
+        # )
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
@@ -1043,6 +1043,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     # Set y-axes titles
     fig.update_yaxes(title_text="<b>Voltage</b> U [V]", secondary_y=False)
     fig.update_yaxes(title_text="<b>Power</b> P [W]", secondary_y=True)
+    fig.update_layout(hoverlabel=dict(namelength=-1))
 
     return fig
 
