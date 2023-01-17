@@ -21,7 +21,7 @@ import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import plotly.express as px
+# import plotly.express as px
 
 from pemfc_dash.dash_functions import create_settings
 from . import dash_functions as df, dash_layout as dl, \
@@ -34,13 +34,14 @@ from pemfc import main_app
 from pemfc_gui import data_transfer
 import pemfc_gui.input as gui_input
 
-from pandarallel import pandarallel
 from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
 from tqdm import tqdm
 
 tqdm.pandas()
+
+# from pandarallel import pandarallel
 # pandarallel.initialize()
-from multiprocesspandas import applyparallel
+# from multiprocesspandas import applyparallel
 
 server = app.server
 
@@ -228,8 +229,7 @@ app.layout = dbc.Container([
                              #       'flex-wrap': 'wrap',
                              #       'justify-content': 'space-evenly'}
                              )],
-                    className='neat-spacing')], style={'flex': '1'},
-                id='spinner_bar', className='pretty_container'),
+                    className='neat-spacing')], style={'flex': '1'}, id='spinner_bar', className='pretty_container'),
             # Progress Bar
             html.Div([
                 # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
@@ -360,8 +360,7 @@ app.layout = dbc.Container([
                             spinner_class_name='loading_spinner',
                             fullscreen_class_name='loading_spinner_bg')],
                 className="pretty_container",
-                style={'display': 'flex', 'flex-direction':
-                    'column', 'justify-content': 'space-evenly'}
+                style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'space-evenly'}
             )],
             id='right-column', className='col-12 col-lg-8 mb-2')],
         className="row",
@@ -612,8 +611,8 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
 
     # Dummy input
     empty_study_table = pd.DataFrame(dict([
-        ('Parameter', ["membrane-thickness", None, None, None]),
-        ('Value', ["[1e-5, 2e-5]", None, None, None]),
+        ('Parameter', ["membrane-thickness", "cathode-electrochemistry-thickness_gdl", None, None]),
+        ('Value', ["[1e-5, 2e-5]", "[0.0001,0.0002,0.0004]", None, None]),
         # ('ValueType', ["float", None, None, None])
     ]))
 
@@ -634,48 +633,140 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
                     {'label': i, 'value': i}
                     for i in list(df_input.columns)
                 ]},
-            # 'ValueType': {
-            #     'options': [
-            #         {'label': i, 'value': i}
-            #         for i in ["int", "float"]
-            #     ]}
         }
     )
 
-    print("init successful")
     return settings, df_input_store, table
 
 
-# @app.callback(
-#     Output("study_table", "children"),
-#     Input("initial_dummy_1", "children"),
-#     State('df_input_store', 'data'),
-#     prevent_initial_call=True)
-# def cbf_initial_study_table(inp, state):
-#     print("yo")
-#     df_nominal = df.read_data(ctx.states["df_input_store.data"])
-#     empty_study_table = pd.DataFrame(dict([
-#         ('Parameter', [None, None, None, None]),
-#         ('Value', [None, None, None, None])]))
-#
-#     table = dash_table.DataTable(
-#         id='table-dropdown',
-#         data=empty_study_table.to_dict('records'),
-#         columns=[
-#             {'id': 'Parameter', 'name': 'Parameter', 'presentation': 'dropdown'},
-#             {'id': 'Value', 'name': 'Values'},
-#         ],
-#
-#         editable=True,
-#         dropdown={
-#             'Parameter': {
-#                 'options': [
-#                     {'label': i, 'value': i}
-#                     for i in df_nominal.columns
-#                 ]}}
-#     )
-#
-#     return table
+@app.callback(
+    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     Output('upload-file', 'contents'),
+     Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
+    Input('upload-file', 'contents'),
+    [State('upload-file', 'filename'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
+     State('modal', 'is_open')]
+)
+def cbf_load_settings(contents, filename, value, multival, ids, ids2,
+                      modal_state):
+    if contents is None:
+        raise PreventUpdate
+    else:
+        if 'json' in filename:
+            try:
+                j_file, err_l = df.parse_contents(contents)
+
+                dict_ids = {id_l: val for id_l, val in
+                            zip([id_l['id'] for id_l in ids], value)}
+                dict_ids2 = {id_l: val for id_l, val in
+                             zip([id_l['id'] for id_l in ids2], multival)}
+
+                id_match = set.union(set(dict_ids),
+                                     set([item[:-2] for item in dict_ids2]))
+
+                for k, v in j_file.items():
+                    if k in id_match:
+                        if isinstance(v, list):
+                            for num, val in enumerate(v):
+                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
+                        else:
+                            dict_ids[k] = df.check_ifbool(v)
+                    else:
+                        continue
+
+                if not err_l:
+                    # All JSON settings match Dash IDs
+                    modal_title, modal_body = dm.modal_process('loaded')
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+                else:
+                    # Some JSON settings do not match Dash IDs; return values
+                    # that matched with Dash IDs
+                    modal_title, modal_body = \
+                        dm.modal_process('id-not-loaded', err_l)
+                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        None, modal_title, modal_body, not modal_state
+            except Exception as E:
+                # Error / JSON file cannot be processed; return old value
+                modal_title, modal_body = \
+                    dm.modal_process('error', error=repr(E))
+                return value, multival, None, modal_title, modal_body, \
+                    not modal_state
+        else:
+            # Not JSON file; return old value
+            modal_title, modal_body = dm.modal_process('wrong-file')
+            return value, multival, None, modal_title, modal_body, \
+                not modal_state
+
+
+@app.callback(
+    [Output("savefile-json", "data")],
+    Input('save-button', "n_clicks"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True,
+)
+def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
+    """
+
+    @param n_clicks:
+    @param val1:
+    @param val2:
+    @param ids:
+    @param ids2:
+    @return:
+    """
+    save_complete = True
+
+    dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
+
+    if not save_complete:  # ... save only GUI inputs
+        sep_id_list = [joined_id.split('-') for joined_id in
+                       dict_data.keys()]
+
+        val_list = dict_data.values()
+        new_dict = {}
+        for sep_id, vals in zip(sep_id_list, val_list):
+            current_level = new_dict
+            for id_l in sep_id:
+                if id_l not in current_level:
+                    if id_l != sep_id[-1]:
+                        current_level[id_l] = {}
+                    else:
+                        current_level[id_l] = vals
+                current_level = current_level[id_l]
+
+        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
+                    filename='settings.json')
+
+    else:  # ... save complete settings as passed to pemfc simulation
+
+        # code portion of generate_inputs()
+        # ------------------------
+        input_data = {}
+        for k, v in dict_data.items():
+            input_data[k] = {'sim_name': k.split('-'), 'value': v}
+
+        # code portion of run_simulation()
+        # ------------------------
+
+        pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+                as file:
+            settings = json.load(file)
+        settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
+
+        return dict(content=json.dumps(settings, indent=2),
+                    filename='settings.json')
 
 
 @app.callback(
@@ -883,12 +974,9 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
         # grouped_data = data.groupby(varpars, sort=False)
         # for _, group in grouped_data:
         for i in range(0, len(data)):
-
-            print(f"Group: {i},start")
             # Ensure DataFrame with double bracket
             # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
             # df_input_single = df_input.loc[[:], :]
-            print(f"Group: {i}, Calc maxi")
             max_i = find_max_current_density(data.iloc[[i]], df_input, settings)
 
             # # Reset solver settings
@@ -896,11 +984,9 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
 
             success = False
             while (not success) and (max_i > 5000):
-                print(f"Group: {i}, prep init ui, max_i:{max_i}")
                 # Prepare & calculate initial points
                 df_results = uicalc_prepare_initcalc(input_df=data.iloc[[i]], i_limits=[1, max_i], settings=settings,
                                                      input_cols=df_input.columns)
-                print(f"Group: {i}, Calc init ui")
                 df_results, success = run_simulation(df_results)
                 max_i -= 2000
 
@@ -908,17 +994,12 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
                 continue
 
                 # First refinement steps
-            print(f"Group: {i}, prep refine")
             for _ in range(n_refinements):
-                print(f"Refinement itenration {_}")
                 df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
                 df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
                 df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
             result_data = pd.concat([result_data, df_results], ignore_index=True)
-            print(f"Group: {i}, finish")
-
-            gc.collect()
 
         results = df.store_data(result_data)
 
@@ -1030,12 +1111,6 @@ def cbf_figure_ui(inp1, inp2, dfinp):
                        mode='lines+markers'),
             secondary_y=False,
         )
-
-        # fig.add_trace(
-        #    go.Scatter(x=group["simulation-current_density"], y=group["Power"], name=f"{setname}, Power",
-        #               mode='lines+markers'),
-        #    secondary_y=True,
-        # )
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
@@ -1229,13 +1304,6 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
         else:
             z_title = dropdown_key + ' / ' \
                       + local_data[dropdown_key][dropdown_key_2]['units']
-
-        # if n_y <= 20:
-        #     height = 300
-        # elif 20 < n_y <= 100:
-        #     height = 300 + n_y * 10.0
-        # else:
-        #     height = 1300
 
         height = 800
         # width = 500
@@ -1544,136 +1612,6 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
                 return table_columns, table_data, 'none', appended
             else:
                 return table_columns, table_data, 'csv', appended
-
-
-@app.callback(
-    [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     Output('upload-file', 'contents'),
-     Output('modal-title', 'children'),
-     Output('modal-body', 'children'),
-     Output('modal', 'is_open')],
-    Input('upload-file', 'contents'),
-    [State('upload-file', 'filename'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal', 'is_open')]
-)
-def load_settings(contents, filename, value, multival, ids, ids2,
-                  modal_state):
-    if contents is None:
-        raise PreventUpdate
-    else:
-        if 'json' in filename:
-            try:
-                j_file, err_l = df.parse_contents(contents)
-
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
-
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
-                    # All JSON settings match Dash IDs
-                    modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-                else:
-                    # Some JSON settings do not match Dash IDs; return values
-                    # that matched with Dash IDs
-                    modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
-                        None, modal_title, modal_body, not modal_state
-            except Exception as E:
-                # Error / JSON file cannot be processed; return old value
-                modal_title, modal_body = \
-                    dm.modal_process('error', error=repr(E))
-                return value, multival, None, modal_title, modal_body, \
-                    not modal_state
-        else:
-            # Not JSON file; return old value
-            modal_title, modal_body = dm.modal_process('wrong-file')
-            return value, multival, None, modal_title, modal_body, \
-                not modal_state
-
-
-@app.callback(
-    [Output("savefile-json", "data")],
-    Input('save-button', "n_clicks"),
-    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-    prevent_initial_call=True,
-)
-def save_settings(n_clicks, val1, val2, ids, ids2):
-    """
-
-    @param n_clicks:
-    @param val1:
-    @param val2:
-    @param ids:
-    @param ids2:
-    @return:
-    """
-    save_complete = True
-
-    dict_data = df.process_inputs(val1, val2, ids, ids2)  # values first
-
-    if not save_complete:  # ... save only GUI inputs
-        sep_id_list = [joined_id.split('-') for joined_id in
-                       dict_data.keys()]
-
-        val_list = dict_data.values()
-        new_dict = {}
-        for sep_id, vals in zip(sep_id_list, val_list):
-            current_level = new_dict
-            for id_l in sep_id:
-                if id_l not in current_level:
-                    if id_l != sep_id[-1]:
-                        current_level[id_l] = {}
-                    else:
-                        current_level[id_l] = vals
-                current_level = current_level[id_l]
-
-        return dict(content=json.dumps(new_dict, sort_keys=True, indent=2),
-                    filename='settings.json')
-
-    else:  # ... save complete settings as passed to pemfc simulation
-
-        # code portion of generate_inputs()
-        # ------------------------
-        input_data = {}
-        for k, v in dict_data.items():
-            input_data[k] = {'sim_name': k.split('-'), 'value': v}
-
-        # code portion of run_simulation()
-        # ------------------------
-
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
-                as file:
-            settings = json.load(file)
-        settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
-
-        return dict(content=json.dumps(settings, indent=2),
-                    filename='settings.json')
 
 
 @app.callback(
