@@ -1057,7 +1057,6 @@ def cbf_figure_ui(inp1, inp2, dfinp):
 
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.data = []
 
     # Check for identical parameter, only different current density
     group_columns = list(df_nominal.columns)
@@ -1106,11 +1105,17 @@ def cbf_figure_ui(inp1, inp2, dfinp):
             )
             setname = ""
 
-        fig.add_trace(
-            go.Scatter(x=group["simulation-current_density"], y=group["Voltage"], name=f"{setname},  U [V]",
-                       mode='lines+markers'),
-            secondary_y=False,
-        )
+        if len(group) > 1:
+            fig.add_trace(
+                go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
+                           name=f"{setname},  U [V]",
+                           mode='lines+markers'), secondary_y=False
+            )
+        else:
+            fig.add_trace(
+                go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
+                           name=f"{setname},  U [V]",
+                           mode='markers'), secondary_y=False)
 
     # Set x-axis title
     fig.update_xaxes(title_text="i [A/m²]")
