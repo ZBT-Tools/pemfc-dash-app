@@ -1,5 +1,5 @@
 import base64
-import gc
+# import gc
 import io
 import os
 from itertools import product
@@ -36,6 +36,7 @@ import pemfc_gui.input as gui_input
 
 from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
 from tqdm import tqdm
+from decimal import Decimal
 
 tqdm.pandas()
 
@@ -170,17 +171,44 @@ app.layout = dbc.Container([
                 id='multiple_runs', className='pretty_container'),
             # Buttons 3 (Study)
             html.Div([
-
+                dcc.Markdown('''
+                            ###### Parameter Study
+                            
+                            **Instruction**  The table below shows all parameter. For each parameter either percentual deviation
+                            or multiple values can be given. Separate multiple values by comma.
+                            Column "Example" shows example input and is not used for calculation.
+                            
+                            Only numeric parameter implemented yet.
+                            
+                            The table can be exported, modified in Excel & uploaded. Reload GUI to restore table
+                            functionality after upload. 
+                            
+                            Below table, define study options.
+                            
+                            '''),
                 html.Div(id="study_table"),
+                dcc.Upload(
+                    id='datatable-upload',
+                    children=html.Div([
+                        'Drag and Drop or ',
+                        html.A('Select Files')
+                    ]),
+                    style={
+                        'width': '90%', 'height': '40px', 'lineHeight': '40px',
+                        'borderWidth': '1px', 'borderStyle': 'dashed',
+                        'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'
+                    },
+                ),
                 html.Div(dcc.Checklist(id="check_calcUI", options=[{'label': 'Calc. complete Polarization Curve',
                                                                     'value': 'calcUI'}])),
                 html.Div(dcc.RadioItems(id="check_studyType", options=[{'label': 'Single Variation', 'value': 'single'},
                                                                        {'label': 'Full Factorial', 'value': 'full'}],
                                         value='single',
                                         inline=True)),
+
                 html.Div([
                     html.Div([
-                        html.Button('study', id='btn_study',
+                        html.Button('run study', id='btn_study',
                                     className='settings_button',
                                     style={'display': 'flex'}),
 
@@ -419,7 +447,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     Important: Change casting_func to int(),float(),... accordingly!
     """
 
-    # Define parameter sets ( move to GUI)
+    # Define parameter sets
     # -----------------------
     if not table_input:
         var_parameter = {
@@ -428,12 +456,45 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
             "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
         }
     else:
-        var_par_names = [le["Parameter"] for le in table_input if le["Parameter"] is not None]
-        var_par_values = [ast.literal_eval(le["Value"]) for le in table_input if le["Parameter"] is not None]
-        var_par_cast = [type(ast.literal_eval(le["Value"])[0]) for le in table_input if le["Parameter"] is not None]
+        var_par_names = [le["Parameter"] for le in table_input if le["Variation Type"] is not None]
+
+        # Comment on ast...:    ast converts string savely into int,float, list,...
+        #                       It is required as input in DataTable is unspecified and need to be casted appropriatly.
+        #                       On the otherhand after uploading table, values can be numeric, which can cause Error.
+        #                       Solution: Cast input alway to string (required for uploaded data) and then eval with ast
+        var_par_values = [ast.literal_eval(str(le["Values"])) for le in table_input if
+                          le["Variation Type"] is not None]
+        var_par_variationtype = [le["Variation Type"] for le in table_input if le["Variation Type"] is not None]
+        var_par_cast = []
+
+        # var_par_cast = [ast.literal_eval(str(le["Variation Type"])) for le in table_input if
+        #                  le["Variation Type"] is not None]
+
+        for le in var_par_values:
+            le_type = type(le)
+            if le_type == tuple:
+                le_type = type(le[0])
+            var_par_cast.append(le_type)
+
+        # Caluclation of values for percent definitions
+        processed_var_par_values = []
+        for name, cst, vls, vartype in zip(var_par_names,var_par_cast, var_par_values, var_par_variationtype):
+            nom = df_input.loc["nominal", name]
+            if vartype == "Percent (+/-)":
+                perc = vls
+                if isinstance(nom, list):
+                    # nomval = [cst(v) for v in nom]
+                    processed_var_par_values.append([[v * (1 - perc / 100) for v in nom],
+                                                     [v * (1 + perc / 100) for v in nom]])
+                else:
+                    # nomval = cst(nom)
+                    processed_var_par_values.append([nom * (1 - perc / 100), nom * (1 + perc / 100)])
+
+            else:
+                processed_var_par_values.append(list(vls))
 
         var_parameter = {name: {"values": val, "casting": cast} for name, val, cast in
-                         zip(var_par_names, var_par_values, var_par_cast)}
+                         zip(var_par_names, processed_var_par_values, var_par_cast)}
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
@@ -445,7 +506,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
         for parname, attr in var_parameter.items():
             for val in attr["values"]:
                 inp = df_input.copy()
-                inp.loc["nominal", parname] = attr["casting"](val)
+                inp.loc["nominal", parname] = val
                 inp.loc["nominal", "variation_parameter"] = parname
                 data = pd.concat([data, inp], ignore_index=True)
 
@@ -462,7 +523,7 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
             inp = df_input.copy()
             inp.loc["nominal", "variation_parameter"] = parameter_names_string
             for par, val, cast in zip(parameter_names, combination, parameter_casting):
-                inp.loc["nominal", par] = cast(val)
+                inp.at["nominal", par] = list(val)
             data = pd.concat([data, inp], ignore_index=True)
 
     if keep_nominal:
@@ -611,29 +672,43 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
 
     # Dummy input
     empty_study_table = pd.DataFrame(dict([
-        ('Parameter', ["membrane-thickness", "cathode-electrochemistry-thickness_gdl", None, None]),
-        ('Value', ["[1e-5, 2e-5]", "[0.0001,0.0002,0.0004]", None, None]),
+        ('Parameter', list(df_input.columns)),
+        ('Example', [str(x) for x in list(df_input.loc["nominal"])]),
+        ('Variation Type', len(df_input.columns) * [None]),
+        ('Values', len(df_input.columns) * [None])
+
         # ('ValueType', ["float", None, None, None])
     ]))
 
     table = dash_table.DataTable(
-        id='table-dropdown',
+        id='study_data_table',
+        style_data={
+            'whiteSpace': 'normal',
+            'height': 'auto',
+            'lineHeight': '15px'
+        },
         data=empty_study_table.to_dict('records'),
         columns=[
-            {'id': 'Parameter', 'name': 'Parameter', 'presentation': 'dropdown'},
-            {'id': 'Value', 'name': 'Values'},
-            # {'id': 'ValueType', 'name': 'Value Type', 'presentation': 'dropdown'},
-
+            {'id': 'Parameter', 'name': 'Parameter', 'editable': False},
+            {'id': 'Example', 'name': 'Example', 'editable': False},
+            {'id': 'Variation Type', 'name': 'Variation Type', 'presentation': 'dropdown'},
+            {'id': 'Values', 'name': 'Values'},
         ],
 
         editable=True,
         dropdown={
-            'Parameter': {
+            'Variation Type': {
                 'options': [
                     {'label': i, 'value': i}
-                    for i in list(df_input.columns)
+                    for i in ["Values", "Percent (+/-)"]
                 ]},
-        }
+        },
+        filter_action="native",
+        sort_action="native",
+        page_action='none',
+        export_format='xlsx',
+        export_headers='display',
+        style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
     return settings, df_input_store, table
@@ -918,6 +993,30 @@ def cbf_run_refine_ui(inp, state, state2, settings):
     return results, ""
 
 
+def parse_contents(contents, filename):
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+    if 'csv' in filename:
+        # Assume that the user uploaded a CSV file
+        return pd.read_csv(
+            io.StringIO(decoded.decode('utf-8')))
+    elif 'xls' in filename:
+        # Assume that the user uploaded an excel file
+        return pd.read_excel(io.BytesIO(decoded))
+
+
+@app.callback(Output('study_data_table', 'data'),
+              Output('study_data_table', 'columns'),
+              Input('datatable-upload', 'contents'),
+              State('datatable-upload', 'filename'),
+              prevent_initial_call=True)
+def cbf_update_studytable(contents, filename):
+    if contents is None:
+        return [{}], []
+    df = parse_contents(contents, filename)
+    return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns]
+
+
 @app.callback(
     Output('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
@@ -928,20 +1027,29 @@ def cbf_run_refine_ui(inp, state, state2, settings):
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     State("pemfc_settings_file", "data"),
-    State("table-dropdown", "data"),
+    State("study_data_table", "data"),
     State("check_calcUI", "value"),
     State("check_studyType", "value"),
     prevent_initial_call=True)
 def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCalcUI, checkStudyType):
     """
     #ToDO Documentation
+
+    Arguments
+    ----------
+    settings
+    tabledata
+    checkCalcUI:    Checkbox, if complete
+    checkStudyType:
     """
+    variation_mode = "dash_table"
+
     # Calculation of polarization curve for each dataset?
     if isinstance(checkCalcUI, list):
         ui_calculation = True
     else:
         ui_calculation = False
-    n_refinements = 10
+    n_refinements = 15
 
     mode = checkStudyType
 
@@ -958,7 +1066,10 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
     df_input_backup = df_input.copy()
 
     # Create multiple parameter sets
-    data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=tabledata)
+    if variation_mode == "dash_table":
+        data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=tabledata)
+    else:
+        data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=None)
     varpars = list(data["variation_parameter"].unique())
 
     if not ui_calculation:
@@ -1085,12 +1196,31 @@ def cbf_figure_ui(inp1, inp2, dfinp):
                     fig.update_layout(
                         title_text=f"U-i-Curve"
                     )
-                else:
-                    setname = f"{', '.join([f'par{n}: {group[vp][0]}' for n, vp in enumerate(varpar.split(','))])}"
-                    # Add figure title
-                    fig.update_layout(
-                        title_text=f"U-i-Curve, Variation parameter: <br> {[par for par in varpar.split(',')]}"
-                    )
+                else:  # parameter separator found, multiple parameter...
+                    list_varpar = [par for par in varpar.split(',')]
+                    if len(list_varpar) > 3:  # don't plot legend
+                        fig.update_layout(showlegend=False,
+                                          title_text="U-i-Curve")
+                        setname = ""
+                        for vp in list_varpar:
+                            if isinstance(group[vp][0], tuple):
+                                setname += f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
+                                setname += f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                            else:
+                                setname += f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
+
+                    else:
+                        fig.update_layout(
+                            title_text=f"U-i-Curve, Variation parameter: <br> {[par for par in varpar.split(',')]}")
+                        setname = ""
+                        for n, vp in enumerate(list_varpar):
+                            if isinstance(group[vp][0], tuple):
+                                setname += f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
+                                setname += f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                            else:
+                                setname += f'{Decimal(group[vp][0]):.3E} , <br>'
+
+                    setname = setname[:-6]
 
             except:
                 setname = "tbd"
@@ -1108,13 +1238,13 @@ def cbf_figure_ui(inp1, inp2, dfinp):
         if len(group) > 1:
             fig.add_trace(
                 go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
-                           name=f"{setname},  U [V]",
+                           name=f"{setname}",
                            mode='lines+markers'), secondary_y=False
             )
         else:
             fig.add_trace(
                 go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
-                           name=f"{setname},  U [V]",
+                           name=f"{setname}",
                            mode='markers'), secondary_y=False)
 
     # Set x-axis title
