@@ -17,6 +17,7 @@ dependencies:
     - pandarallel
     - tqdm
     - pip
+    - openpyxl
     - pip:
         - gunicorn
         - dash-extensions>=0.1.1
