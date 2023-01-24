@@ -1046,7 +1046,10 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
 
     # Calculation of polarization curve for each dataset?
     if isinstance(checkCalcUI, list):
-        ui_calculation = True
+        if "calcUI" in checkCalcUI:
+            ui_calculation = True
+        else:
+            ui_calculation = False
     else:
         ui_calculation = False
     n_refinements = 15
