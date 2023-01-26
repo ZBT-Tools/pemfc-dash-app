@@ -24,8 +24,7 @@ from plotly.subplots import make_subplots
 # import plotly.express as px
 
 from pemfc_dash.dash_functions import create_settings
-from . import dash_functions as df, dash_layout as dl, \
-    dash_modal as dm
+from . import dash_functions as df, dash_layout as dl, dash_modal as dm
 from pemfc_dash.dash_app import app
 
 import pemfc
@@ -34,7 +33,8 @@ from pemfc import main_app
 from pemfc_gui import data_transfer
 import pemfc_gui.input as gui_input
 
-from pemfc_dash.study_functions import uicalc_prepare_initcalc, uicalc_prepare_refinement
+from pemfc_dash.study_functions import uicalc_prepare_initcalc, \
+    uicalc_prepare_refinement
 from tqdm import tqdm
 from decimal import Decimal
 
@@ -153,10 +153,12 @@ app.layout = dbc.Container([
             html.Div([  # LEFT MIDDLE: Buttons
                 html.Div([
                     html.Div([
-                        html.Button('Calc. UI Curve', id='btn_init_ui',
+                        html.Button('Calc. Current-Voltage Curve', 
+                                    id='btn_init_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
-                        html.Button('refine ui', id='btn_refine_ui',
+                        html.Button('Refine Curve',
+                                    id='btn_refine_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
                     ],
@@ -171,21 +173,22 @@ app.layout = dbc.Container([
                 id='multiple_runs', className='pretty_container'),
             # Buttons 3 (Study)
             html.Div([
-                dcc.Markdown('''
-                            ###### Parameter Study
+                dcc.Markdown(
+                    '''
+                    ###### Parameter Study
                             
-                            **Instruction**  The table below shows all parameter. For each parameter either percentual deviation
-                            or multiple values can be given. Separate multiple values by comma.
-                            Column "Example" shows example input and is not used for calculation.
+                    **Instruction**  The table below shows all parameter. For 
+                    each parameter either percentual deviation
+                    or multiple values can be given. Separate multiple values by 
+                    comma. Column "Example" shows example input and is not used 
+                    for calculation. 
+                    Only numeric parameter implemented yet.
                             
-                            Only numeric parameter implemented yet.
+                    The table can be exported, modified in Excel & uploaded. 
+                    Reload GUI to restore table functionality after upload. 
                             
-                            The table can be exported, modified in Excel & uploaded. Reload GUI to restore table
-                            functionality after upload. 
-                            
-                            Below table, define study options.
-                            
-                            '''),
+                    Below table, define study options.  
+                    '''),
                 html.Div(id="study_table"),
                 dcc.Upload(
                     id='datatable-upload',
@@ -196,22 +199,29 @@ app.layout = dbc.Container([
                     style={
                         'width': '90%', 'height': '40px', 'lineHeight': '40px',
                         'borderWidth': '1px', 'borderStyle': 'dashed',
-                        'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'
+                        'borderRadius': '5px', 'textAlign': 'center',
+                        'margin': '10px'
                     },
                 ),
-                html.Div(dcc.Checklist(id="check_calcUI", options=[{'label': 'Calc. complete Polarization Curve',
-                                                                    'value': 'calcUI'}])),
-                html.Div(dcc.RadioItems(id="check_studyType", options=[{'label': 'Single Variation', 'value': 'single'},
-                                                                       {'label': 'Full Factorial', 'value': 'full'}],
-                                        value='single',
-                                        inline=True)),
-
+                html.Div(
+                    dbc.Checklist(
+                        id="check_calc_ui",
+                        options=[{'label': 'Calc. Current-Voltage Curve',
+                                  'value': 'calc_ui'}])),
+                html.Div(
+                    dbc.RadioItems(
+                        id="check_study_type",
+                        options=[{'label': 'Single Variation',
+                                  'value': 'single'},
+                                 {'label': 'Full Factorial',
+                                  'value': 'full'}],
+                        value='single',
+                        inline=True)),
                 html.Div([
                     html.Div([
-                        html.Button('run study', id='btn_study',
+                        html.Button('Run Study', id='btn_study',
                                     className='settings_button',
                                     style={'display': 'flex'}),
-
                     ],
                         style={'display': 'flex',
                                'flex-wrap': 'wrap',
@@ -223,41 +233,43 @@ app.layout = dbc.Container([
             # Buttons 4 (Save Results, Load Results, Update Plot (debug))
             html.Div([  # LEFT MIDDLE: Buttons
                 html.Div([
-                    html.Div([
-                        html.Button('plot', id='btn_plot',
-                                    className='settings_button',
-                                    style={'display': 'flex'}
-                                    ),
-                        html.Button('SaveResults', id='btn_saveres',
-                                    className='settings_button',
-                                    style={'display': 'flex'}
-                                    ),
-                        dcc.Download(id="download-results"),
+                    html.Div(
+                        [html.Button('Plot', id='btn_plot',
+                                     className='settings_button',
+                                     style={'display': 'flex'}),
+                         html.Button('Save Results', id='btn_save_res',
+                                     className='settings_button',
+                                     style={'display': 'flex'}),
+                         dcc.Download(id="download-results"),
 
-                        dcc.Upload(id='loadres', children=html.Button('Load Results', id='btn_loadres',
-                                                                      className='settings_button',
-                                                                      style={'display': 'flex'}
-                                                                      ))
-                    ],
+                         dcc.Upload(
+                             id='load_res',
+                             children=html.Button(
+                                 'Load Results', id='btn_load_res',
+                                 className='settings_button',
+                                 style={'display': 'flex'}))],
                         style={'display': 'flex',
                                'flex-wrap': 'wrap',
                                'justify-content': 'space-evenly'}
-                    )],
+                        )],
                     className='neat-spacing')], style={'flex': '1'},
-                id='SaveLoad_Res', className='pretty_container'),
+                id='save_load_res', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
-                html.Div([
-                    html.Div([dbc.Spinner(html.Div(id="spinner_run_single")),
-                              dbc.Spinner(html.Div(id="spinner_ui")),
-                              dbc.Spinner(html.Div(id="spinner_uirefine")),
-                              dbc.Spinner(html.Div(id="spinner_study")),
-                              ],
+                html.Div(
+                    [html.Div(
+                        [dbc.Spinner(html.Div(id="spinner_run_single")),
+                         dbc.Spinner(html.Div(id="spinner_ui")),
+                         dbc.Spinner(html.Div(id="spinner_uirefine")),
+                         dbc.Spinner(html.Div(id="spinner_study"))],
 
                              # style={'display': 'flex',
                              #       'flex-wrap': 'wrap',
                              #       'justify-content': 'space-evenly'}
-                             )],
-                    className='neat-spacing')], style={'flex': '1'}, id='spinner_bar', className='pretty_container'),
+                    )],
+                    className='neat-spacing')],
+                style={'flex': '1'},
+                id='spinner_bar',
+                className='pretty_container'),
             # Progress Bar
             html.Div([
                 # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
@@ -266,20 +278,19 @@ app.layout = dbc.Container([
                     className='neat-spacing')], style={'flex': '1'},
                 id='progress_bar', className='pretty_container')
         ], id="left-column", className='col-12 col-lg-4 mb-2'),
-
         html.Div([  # RIGHT MIDDLE  (Result Column)
             html.Div(
-                [html.Div('U-I-Curve', className='title'),
+                [html.Div('Current-Voltage Curve', className='title'),
                  dcc.Graph(id='ui')],
                 id='div_ui',
                 className='pretty_container',
                 style={'overflow': 'auto'}),
-
-            html.Div([
-                html.Div('Global Results (For Study only first dataset))', className='title'),
-                dt.DataTable(id='global_data_table',
-                             editable=True,
-                             column_selectable='multi')],
+            html.Div(
+                [html.Div('Global Results (for Study only first dataset shown)',
+                          className='title'),
+                 dt.DataTable(id='global_data_table',
+                              editable=True,
+                              column_selectable='multi')],
                 id='div_global_table',
                 className='pretty_container',
                 style={'overflow': 'auto'}),
@@ -298,22 +309,17 @@ app.layout = dbc.Container([
                             dcc.Dropdown(id='dropdown_heatmap_2',
                                          className='dropdown_input',
                                          style={'visibility': 'hidden'}),
-                            id='div_results_dropdown_2',
-                        )
-                    ],
+                            id='div_results_dropdown_2',)],
                     style={'display': 'flex',
                            'flex-direction': 'row',
                            'flex-wrap': 'wrap',
-                           'justify-content': 'left'},
-                ),
+                           'justify-content': 'left'}),
                 # RIGHT MIDDLE BOTTOM
                 dbc.Spinner(dcc.Graph(id="heatmap_graph"),
                             spinner_class_name='loading_spinner',
-                            fullscreen_class_name='loading_spinner_bg'),
-            ],
+                            fullscreen_class_name='loading_spinner_bg')],
                 id='heatmap_container',
                 className='graph pretty_container'),
-
             html.Div([
                 html.Div('Plots', className='title'),
                 html.Div(
@@ -338,47 +344,43 @@ app.layout = dbc.Container([
                 ),
                 html.Div([
                     html.Div(
-                        [
-                            dcc.Store(id='append_check'),
-                            html.Div(
-                                [html.Div(
-                                    children=dbc.DropdownMenu(
-                                        id='checklist_dropdown',
-                                        children=[
-                                            dbc.Checklist(
-                                                id='data_checklist',
-                                                # input_checked_class_name='checkbox',
-                                                style={
-                                                    'max-height': '400px',
-                                                    'overflow': 'auto'})],
-                                        toggle_style={
-                                            'textTransform': 'none',
-                                            'background': '#fff',
-                                            'border': '#ccc',
-                                            'letter-spacing': '0',
-                                            'font-size': '11px',
-                                        },
-                                        align_end=True,
-                                        toggle_class_name='dropdown_input',
-                                        label="Select Cells"), ),
-                                    html.Button('Clear All', id='clear_all_button',
-                                                className='local_data_buttons'),
-                                    html.Button('Select All',
-                                                id='select_all_button',
-                                                className='local_data_buttons'),
-                                    html.Button('Export to Table',
-                                                id='export_b',
-                                                className='local_data_buttons'),
-                                    html.Button('Append to Table',
-                                                id='append_b',
-                                                className='local_data_buttons'),
-                                    html.Button('Clear Table', id='clear_table_b',
-                                                className='local_data_buttons')],
-                                style={
-                                    'display': 'flex',
+                        [dcc.Store(id='append_check'),
+                         html.Div(
+                         [html.Div(
+                             children=dbc.DropdownMenu(
+                                 id='checklist_dropdown',
+                                 children=[
+                                     dbc.Checklist(
+                                         id='data_checklist',
+                                         # input_checked_class_name='checkbox',
+                                         style={'max-height': '400px',
+                                                'overflow': 'auto'})],
+                                         toggle_style={
+                                             'textTransform': 'none',
+                                             'background': '#fff',
+                                             'border': '#ccc',
+                                             'letter-spacing': '0',
+                                             'font-size': '11px'},
+                                         align_end=True,
+                                         toggle_class_name='dropdown_input',
+                                         label="Select Cells"), ),
+                             html.Button('Clear All', id='clear_all_button',
+                                         className='local_data_buttons'),
+                             html.Button('Select All',
+                                         id='select_all_button',
+                                         className='local_data_buttons'),
+                             html.Button('Export to Table',
+                                         id='export_b',
+                                         className='local_data_buttons'),
+                             html.Button('Append to Table',
+                                         id='append_b',
+                                         className='local_data_buttons'),
+                             html.Button('Clear Table',
+                                         id='clear_table_b',
+                                         className='local_data_buttons')],
+                             style={'display': 'flex',
                                     'flex-wrap': 'wrap',
-                                    'margin-bottom': '5px'}
-                            )],
+                                    'margin-bottom': '5px'})],
                         # style={'width': '200px'}
                     ),
                     dcc.Store(id='cells_data')],
@@ -388,7 +390,9 @@ app.layout = dbc.Container([
                             spinner_class_name='loading_spinner',
                             fullscreen_class_name='loading_spinner_bg')],
                 className="pretty_container",
-                style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'space-evenly'}
+                style={'display': 'flex',
+                       'flex-direction': 'column',
+                       'justify-content': 'space-evenly'}
             )],
             id='right-column', className='col-12 col-lg-8 mb-2')],
         className="row",
@@ -406,14 +410,14 @@ app.layout = dbc.Container([
 
     # Bottom row, links to GitHub,...
     html.Div(
-        html.Div([
-            html.A('Source code:'),
-            html.A('web interface',
-                   href='https://www.github.com/zbt-tools/pemfc-dash-app',
-                   target="_blank"),
-            html.A("fuel cell model",
-                   href='https://www.github.com/zbt-tools/pemfc-core',
-                   target="_blank")],
+        html.Div(
+            [html.A('Source code:'),
+             html.A('web interface',
+                    href='https://www.github.com/zbt-tools/pemfc-dash-app',
+                    target="_blank"),
+             html.A("fuel cell model",
+                    href='https://www.github.com/zbt-tools/pemfc-core',
+                    target="_blank")],
             id='github_links',
             style={'overflow': 'auto',
                    'position': 'relative',
@@ -435,7 +439,8 @@ app.layout = dbc.Container([
     style={'padding': '0px'})
 
 
-def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single",
+def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
+                        mode="single",
                         table_input=None) -> pd.DataFrame:
     """
     Function to create parameter sets.
@@ -451,24 +456,35 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     # -----------------------
     if not table_input:
         var_parameter = {
-            "membrane-thickness": {"values": [0.25e-05, 4e-05], "casting": float},
-            "cathode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
-            "anode-electrochemistry-thickness_gdl": {"values": [0.00005, 0.0008], "casting": float},
+            "membrane-thickness":
+                {"values": [0.25e-05, 4e-05], "casting": float},
+            "cathode-electrochemistry-thickness_gdl":
+                {"values": [0.00005, 0.0008], "casting": float},
+            "anode-electrochemistry-thickness_gdl":
+                {"values": [0.00005, 0.0008], "casting": float},
         }
     else:
-        var_par_names = [le["Parameter"] for le in table_input if le["Variation Type"] is not None]
+        var_par_names = \
+            [le["Parameter"] for le in table_input
+             if le["Variation Type"] is not None]
 
-        # Comment on ast...:    ast converts string savely into int,float, list,...
-        #                       It is required as input in DataTable is unspecified and need to be casted appropriatly.
-        #                       On the otherhand after uploading table, values can be numeric, which can cause Error.
-        #                       Solution: Cast input alway to string (required for uploaded data) and then eval with ast
-        var_par_values = [ast.literal_eval(str(le["Values"])) for le in table_input if
-                          le["Variation Type"] is not None]
-        var_par_variationtype = [le["Variation Type"] for le in table_input if le["Variation Type"] is not None]
+        # Comment on ast...: ast converts string savely into int,float, list,...
+        # It is required as input in DataTable is unspecified and need to be
+        # cast appropriately.
+        # On the other-hand after uploading table, values can be numeric,
+        # which can cause Error.
+        # Solution: Cast input always to string (required for uploaded data) and
+        # then eval with ast
+        var_par_values = \
+            [ast.literal_eval(str(le["Values"])) for le in table_input
+             if le["Variation Type"] is not None]
+        var_par_variationtype = \
+            [le["Variation Type"] for le in table_input
+             if le["Variation Type"] is not None]
         var_par_cast = []
 
-        # var_par_cast = [ast.literal_eval(str(le["Variation Type"])) for le in table_input if
-        #                  le["Variation Type"] is not None]
+        # var_par_cast = [ast.literal_eval(str(le["Variation Type"]))
+        # for le in table_input if le["Variation Type"] is not None]
 
         for le in var_par_values:
             le_type = type(le)
@@ -478,23 +494,28 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
 
         # Caluclation of values for percent definitions
         processed_var_par_values = []
-        for name, cst, vls, vartype in zip(var_par_names,var_par_cast, var_par_values, var_par_variationtype):
+        for name, cst, vls, vartype \
+                in zip(var_par_names, var_par_cast,
+                       var_par_values, var_par_variationtype):
             nom = df_input.loc["nominal", name]
             if vartype == "Percent (+/-)":
                 perc = vls
                 if isinstance(nom, list):
                     # nomval = [cst(v) for v in nom]
-                    processed_var_par_values.append([[v * (1 - perc / 100) for v in nom],
-                                                     [v * (1 + perc / 100) for v in nom]])
+                    processed_var_par_values.append(
+                        [[v * (1 - perc / 100) for v in nom],
+                         [v * (1 + perc / 100) for v in nom]])
                 else:
                     # nomval = cst(nom)
-                    processed_var_par_values.append([nom * (1 - perc / 100), nom * (1 + perc / 100)])
+                    processed_var_par_values.append([nom * (1 - perc / 100),
+                                                     nom * (1 + perc / 100)])
 
             else:
                 processed_var_par_values.append(list(vls))
 
-        var_parameter = {name: {"values": val, "casting": cast} for name, val, cast in
-                         zip(var_par_names, processed_var_par_values, var_par_cast)}
+        var_parameter = \
+            {name: {"values": val, "casting": cast} for name, val, cast in
+             zip(var_par_names, processed_var_par_values, var_par_cast)}
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
@@ -502,7 +523,8 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
     data = pd.DataFrame(columns=clms)
 
     if mode == "single":  #
-        # ... vary one variation_parameter, all other parameter nominal (from GUI)
+        # ... vary one variation_parameter, all other parameter nominal
+        # (from GUI)
         for parname, attr in var_parameter.items():
             for val in attr["values"]:
                 inp = df_input.copy()
@@ -516,13 +538,15 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False, mode="single
         parameter_names = [key for key, val in var_parameter.items()]
         parameter_names_string = ",".join(parameter_names)
         parameter_values = [val["values"] for key, val in var_parameter.items()]
-        parameter_casting = [val["casting"] for key, val in var_parameter.items()]
+        parameter_casting = \
+            [val["casting"] for key, val in var_parameter.items()]
         parameter_combinations = list(product(*parameter_values))
 
         for combination in parameter_combinations:
             inp = df_input.copy()
             inp.loc["nominal", "variation_parameter"] = parameter_names_string
-            for par, val, cast in zip(parameter_names, combination, parameter_casting):
+            for par, val, cast in zip(parameter_names,
+                                      combination, parameter_casting):
                 inp.at["nominal", par] = list(val)
             data = pd.concat([data, inp], ignore_index=True)
 
@@ -556,7 +580,8 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
         data.loc[:, "simulation-operation_control"] = "Voltage"
         data.loc[:, "simulation-average_cell_voltage"] = u_min
 
-        # Create complete setting dict, append it in additional column "settings" to df_input
+        # Create complete setting dict, append it in additional column
+        # settings" to df_input
         data = create_settings(data, settings, input_cols=df_input.columns)
 
         # Run simulation
@@ -567,7 +592,8 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
     return max_i
 
 
-def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.DataFrame, bool):
+def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
+        -> (pd.DataFrame, bool):
     """
 
     - Run input_table rows, catch exceptions of single calculations
@@ -587,9 +613,12 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) -> (pd.D
     # result_table = input_table["settings"].parallel_apply(func)
     # result_table = input_table["settings"].apply_parallel(func, num_processes=4)
 
-    input_table["global_data"] = result_table.apply(lambda x: x[0][0] if (isinstance(x, tuple)) else None)
-    input_table["local_data"] = result_table.apply(lambda x: x[1][0] if (isinstance(x, tuple)) else None)
-    input_table["successful_run"] = result_table.apply(lambda x: True if (isinstance(x[0], list)) else False)
+    input_table["global_data"] = result_table.apply(
+        lambda x: x[0][0] if (isinstance(x, tuple)) else None)
+    input_table["local_data"] = result_table.apply(
+        lambda x: x[1][0] if (isinstance(x, tuple)) else None)
+    input_table["successful_run"] = result_table.apply(
+        lambda x: True if (isinstance(x[0], list)) else False)
 
     all_successfull = True if input_table["successful_run"].all() else False
 
@@ -661,8 +690,10 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
 
     # Read initial data input
     # --------------------------------------
-    # Read data from input fields and save input in dict/dataframe (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    # Read data from input fields and save input in dict/dataframe
+    # (one row "nominal")
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+                                 returntype="DataFrame")
     df_input_store = df.store_data(df_input)
 
     # Initialize study data table
@@ -691,7 +722,8 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
         columns=[
             {'id': 'Parameter', 'name': 'Parameter', 'editable': False},
             {'id': 'Example', 'name': 'Example', 'editable': False},
-            {'id': 'Variation Type', 'name': 'Variation Type', 'presentation': 'dropdown'},
+            {'id': 'Variation Type', 'name': 'Variation Type',
+             'presentation': 'dropdown'},
             {'id': 'Values', 'name': 'Values'},
         ],
 
@@ -865,11 +897,14 @@ def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
         # Read pemfc settings.json from store
         settings = df.read_data(settings)
 
-        # Read data from input fields and save input in dict/dataframe (one row "nominal")
-        df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+        # Read data from input fields and save input in dict/dataframe
+        # (one row "nominal")
+        df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+                                     returntype="DataFrame")
         df_input_raw = df_input.copy()
 
-        # Create complete setting dict, append it in additional column "settings" to df_input
+        # Create complete setting dict, append it in additional column
+        # "settings" to df_input
         df_input = create_settings(df_input, settings)
 
         # Run simulation
@@ -922,8 +957,10 @@ def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     # Read pemfc settings.json from store
     settings = df.read_data(settings)
 
-    # Read data from input fields and save input in dict/dataframe (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    # Read data from input fields and save input in dict/dataframe
+    # (one row "nominal")
+    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+                                 returntype="DataFrame")
     df_input_backup = df_input.copy()
 
     # Ensure DataFrame with double bracket
@@ -935,13 +972,16 @@ def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     df_input = df_input_backup.copy()
 
     # Prepare & calculate initial points
-    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i], settings=settings)
+    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i],
+                                         settings=settings)
     df_results, success = run_simulation(df_results)
 
     # First refinement steps
     for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(data_df=df_results, input_df=df_input, settings=settings)
-        df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
+        df_refine = uicalc_prepare_refinement(
+            data_df=df_results, input_df=df_input, settings=settings)
+        df_refine, success = run_simulation(
+            df_refine, return_unsuccessful=False)
         df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
     # Save results
@@ -980,8 +1020,10 @@ def cbf_run_refine_ui(inp, state, state2, settings):
 
     # Refinement loop
     for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(data_df=df_results, input_df=df_nominal, settings=settings)
-        df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
+        df_refine = uicalc_prepare_refinement(
+            data_df=df_results, input_df=df_nominal, settings=settings)
+        df_refine, success = run_simulation(
+            df_refine, return_unsuccessful=False)
         df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
     # Save results
@@ -1028,10 +1070,11 @@ def cbf_update_studytable(contents, filename):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
     State("pemfc_settings_file", "data"),
     State("study_data_table", "data"),
-    State("check_calcUI", "value"),
-    State("check_studyType", "value"),
+    State("check_calc_ui", "value"),
+    State("check_study_type", "value"),
     prevent_initial_call=True)
-def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCalcUI, checkStudyType):
+def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
+                  check_calc_ui, check_study_type):
     """
     #ToDO Documentation
 
@@ -1039,14 +1082,14 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
     ----------
     settings
     tabledata
-    checkCalcUI:    Checkbox, if complete
-    checkStudyType:
+    check_calc_ui:    Checkbox, if complete
+    check_study_type:
     """
     variation_mode = "dash_table"
 
     # Calculation of polarization curve for each dataset?
-    if isinstance(checkCalcUI, list):
-        if "calcUI" in checkCalcUI:
+    if isinstance(check_calc_ui, list):
+        if "calc_ui" in check_calc_ui:
             ui_calculation = True
         else:
             ui_calculation = False
@@ -1054,7 +1097,7 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
         ui_calculation = False
     n_refinements = 15
 
-    mode = checkStudyType
+    mode = check_study_type
 
     # Progress bar init
     std_err_backup = sys.stderr
@@ -1064,19 +1107,24 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
     # Read pemfc settings.json from store
     settings = df.read_data(settings)
 
-    # Read data from input fields and save input in dict (legacy) / pd.DataDrame (one row with index "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2, returntype="DataFrame")
+    # Read data from input fields and save input in dict (legacy)
+    # / pd.DataDrame (one row with index "nominal")
+    df_input = df.process_inputs(
+        inputs, inputs2, ids, ids2, returntype="DataFrame")
     df_input_backup = df_input.copy()
 
     # Create multiple parameter sets
     if variation_mode == "dash_table":
-        data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=tabledata)
+        data = variation_parameter(
+            df_input, keep_nominal=False, mode=mode, table_input=tabledata)
     else:
-        data = variation_parameter(df_input, keep_nominal=False, mode=mode, table_input=None)
+        data = variation_parameter(
+            df_input, keep_nominal=False, mode=mode, table_input=None)
     varpars = list(data["variation_parameter"].unique())
 
     if not ui_calculation:
-        # Create complete setting dict & append it in additional column "settings" to df_input
+        # Create complete setting dict & append it in additional column
+        # "settings" to df_input
         data = create_settings(data, settings, input_cols=df_input.columns)
         # Run Simulation
         results, success = run_simulation(data)
@@ -1099,8 +1147,9 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
             success = False
             while (not success) and (max_i > 5000):
                 # Prepare & calculate initial points
-                df_results = uicalc_prepare_initcalc(input_df=data.iloc[[i]], i_limits=[1, max_i], settings=settings,
-                                                     input_cols=df_input.columns)
+                df_results = uicalc_prepare_initcalc(
+                    input_df=data.iloc[[i]], i_limits=[1, max_i],
+                    settings=settings, input_cols=df_input.columns)
                 df_results, success = run_simulation(df_results)
                 max_i -= 2000
 
@@ -1109,9 +1158,12 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
 
                 # First refinement steps
             for _ in range(n_refinements):
-                df_refine = uicalc_prepare_refinement(input_df=df_input, data_df=df_results, settings=settings)
-                df_refine, success = run_simulation(df_refine, return_unsuccessful=False)
-                df_results = pd.concat([df_results, df_refine], ignore_index=True)
+                df_refine = uicalc_prepare_refinement(
+                    input_df=df_input, data_df=df_results, settings=settings)
+                df_refine, success = run_simulation(
+                    df_refine, return_unsuccessful=False)
+                df_results = pd.concat(
+                    [df_results, df_refine], ignore_index=True)
 
             result_data = pd.concat([result_data, df_results], ignore_index=True)
 
@@ -1127,7 +1179,7 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata, checkCal
 
 @app.callback(
     Output("download-results", "data"),
-    Input("btn_saveres", "n_clicks"),
+    Input("btn_save_res", "n_clicks"),
     State('df_result_data_store', 'data'),
     prevent_initial_call=True)
 def cbf_save_results(inp, state):
@@ -1141,7 +1193,7 @@ def cbf_save_results(inp, state):
 
 @app.callback(
     Output('df_result_data_store', 'data'),
-    Input("loadres", "contents"),
+    Input("load_res", "contents"),
     prevent_initial_call=True)
 def cbf_load_results(content):
     # https://dash.plotly.com/dash-core-components/upload
@@ -1160,8 +1212,8 @@ def cbf_load_results(content):
     prevent_initial_call=True)
 def cbf_figure_ui(inp1, inp2, dfinp):
     """
-    Prior to plot: identification of same parameter sets with different current density.
-    Those points will be connected and have identical color
+    Prior to plot: identification of same parameter sets with different
+    current density. Those points will be connected and have identical color
     """
 
     # Read results
@@ -1183,43 +1235,51 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     grouped = results.groupby(group_columns, sort=False)
 
     for _, group in grouped:
-        group.sort_values("simulation-current_density", ignore_index=True, inplace=True)
+        group.sort_values(
+            "simulation-current_density", ignore_index=True, inplace=True)
         group["Voltage"] = group["global_data"].apply(
             lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
-        group["Power"] = group["global_data"].apply(lambda x: x["Stack Power"]["value"] if (x is not None) else None)
+        group["Power"] = group["global_data"].apply(
+            lambda x: x["Stack Power"]["value"] if (x is not None) else None)
 
         # Add traces
         if "variation_parameter" in group.columns:
-            # Variation parameter can be one parameter or multiple parameter separated by ",".
+            # Variation parameter can be one parameter or multiple parameter
+            # separated by ",".
             varpar = group["variation_parameter"][0]
             try:
-                if varpar.find(',') == -1:  # no parameter separator -> one parameter:
+                if varpar.find(',') == -1:  # no param separator -> one param
                     setname = f"{varpar}: {group[varpar][0]}"
                     # Add figure title
-                    fig.update_layout(
-                        title_text=f"U-i-Curve"
-                    )
+                    fig.update_layout(title_text=f"Current-Voltage Curve")
                 else:  # parameter separator found, multiple parameter...
                     list_varpar = [par for par in varpar.split(',')]
                     if len(list_varpar) > 3:  # don't plot legend
                         fig.update_layout(showlegend=False,
-                                          title_text="U-i-Curve")
+                                          title_text="Current-Voltage Curve")
                         setname = ""
                         for vp in list_varpar:
                             if isinstance(group[vp][0], tuple):
-                                setname += f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                                setname += \
+                                    f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
+                                setname += \
+                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
                             else:
-                                setname += f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
+                                setname += \
+                                    f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
 
                     else:
                         fig.update_layout(
-                            title_text=f"U-i-Curve, Variation parameter: <br> {[par for par in varpar.split(',')]}")
+                            title_text=f"Current-Voltage Curve, "
+                                       f"Variation parameter: <br> "
+                                       f"{[par for par in varpar.split(',')]}")
                         setname = ""
                         for n, vp in enumerate(list_varpar):
                             if isinstance(group[vp][0], tuple):
-                                setname += f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                                setname += \
+                                    f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
+                                setname += \
+                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
                             else:
                                 setname += f'{Decimal(group[vp][0]):.3E} , <br>'
 
@@ -1228,36 +1288,43 @@ def cbf_figure_ui(inp1, inp2, dfinp):
             except:
                 setname = "tbd"
                 # Add figure title
-                fig.update_layout(
-                    title_text=f"U-i-Curve")
+                fig.update_layout()
 
         else:
             # Add figure title
-            fig.update_layout(
-                title_text=f"U-i-Curve"
-            )
+            fig.update_layout()
             setname = ""
 
         if len(group) > 1:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
-                           name=f"{setname}",
-                           mode='lines+markers'), secondary_y=False
-            )
+                go.Scatter(x=list(group["simulation-current_density"]),
+                           y=list(group["Voltage"]), name=f"{setname}",
+                           mode='lines+markers'), secondary_y=False)
         else:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]), y=list(group["Voltage"]),
-                           name=f"{setname}",
+                go.Scatter(x=list(group["simulation-current_density"]),
+                           y=list(group["Voltage"]), name=f"{setname}",
                            mode='markers'), secondary_y=False)
 
-    # Set x-axis title
-    fig.update_xaxes(title_text="i [A/m²]")
+    # # Set x-axis title
+    # fig.update_xaxes(title_text="Current Density [A/m²]")
+    #
+    # # Set y-axes titles
+    # fig.update_yaxes(title_text="Voltage [V]", secondary_y=False)
+    # fig.update_yaxes(title_text="Power [W]", secondary_y=True)
 
-    # Set y-axes titles
-    fig.update_yaxes(title_text="<b>Voltage</b> U [V]", secondary_y=False)
-    fig.update_yaxes(title_text="<b>Power</b> P [W]", secondary_y=True)
-    fig.update_layout(hoverlabel=dict(namelength=-1))
-
+    x_title = 'Current Density / A/m²'
+    y_title = 'Voltage / V'
+    layout = go.Layout(
+        font={'color': 'black', 'family': 'Arial'},
+        # title='Local Results in Heat Map',
+        titlefont={'size': 11, 'color': 'black'},
+        xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+               'title': x_title},
+        yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+               'title': y_title},
+        margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
+    fig.update_layout(layout, hoverlabel=dict(namelength=-1))
     return fig
 
 
@@ -1782,16 +1849,20 @@ def tab2_callback_activate_column(input1, input2):
             list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
                 list_state[18 + num] = list_state[30 + num] = False
             if input2[3 + num] == 'circular':
-                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                list_state[6 + num], list_state[9 + num], \
+                    list_state[12 + num] = \
                     False, True, True
             else:
-                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                list_state[6 + num], list_state[9 + num], \
+                    list_state[12 + num] = \
                     True, False, False
             if input2[18 + num] == 'circular':
-                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                list_state[21 + num], list_state[24 + num], \
+                    list_state[27 + num] = \
                     False, True, True
             else:
-                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                list_state[21 + num], list_state[24 + num], \
+                    list_state[27 + num] = \
                     True, False, False
     return list_state
 
@@ -1799,7 +1870,8 @@ def tab2_callback_activate_column(input1, input2):
 @app.callback(
     Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
            'style'),
-    Input({'type': ALL, 'id': ALL, 'specifier': 'checklist_activate_cooling'}, 'value'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'checklist_activate_cooling'},
+          'value'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
           'id'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},

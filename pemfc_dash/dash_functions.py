@@ -14,11 +14,13 @@ from . import dash_layout as dl
 
 def store_data(data):
     """
-    # https://github.com/jsonpickle/jsonpickle, as json.dumps can only handle simple variables, no objects, DataFrames..
-    # Info: Eigentlich sollte jsonpickle reichen, um dict mit Klassenobjekten, in denen DataFrames sind, zu speichern,
-    #       Es gibt jedoch Fehlermeldungen. Daher wird Datenstruktur vorher in pickle (Binärformat)
-    #       gespeichert und dieser anschließend in json konvertiert.
-    #       (Konvertierung in json ist notwendig für lokalen dcc storage)
+    https://github.com/jsonpickle/jsonpickle, as json.dumps can only handle
+    simple variables, no objects, DataFrames..
+    Info: Eigentlich sollte jsonpickle reichen, um dict mit Klassenobjekten,
+    in denen DataFrames sind, zu speichern, es gibt jedoch Fehlermeldungen.
+    Daher wird Datenstruktur vorher in pickle (Binärformat)
+    gespeichert und dieser anschließend in json konvertiert.
+    (Konvertierung in json ist notwendig für lokalen dcc storage)
     """
     data = pickle.dumps(data)
     data = jsonpickle.dumps(data)
@@ -34,7 +36,8 @@ def read_data(data):
     return data
 
 
-def create_settings(df_data: pd.DataFrame, settings, input_cols=None) -> pd.DataFrame:
+def create_settings(df_data: pd.DataFrame, settings,
+                    input_cols=None) -> pd.DataFrame:
     # Create settings dictionary
     # If "input_cols" are given, only those will be used from "df_data".
     # Usecase: df_data can contain additional columns as study information that needs
@@ -52,9 +55,11 @@ def create_settings(df_data: pd.DataFrame, settings, input_cols=None) -> pd.Data
 
     # Create input data dictionary (legacy)
     df_temp['input_data'] = df_data_red.apply(
-        lambda row: {i: {'sim_name': i.split('-'), 'value': v} for i, v in zip(row.index, row.values)}, axis=1)
+        lambda row: {i: {'sim_name': i.split('-'), 'value': v}
+                     for i, v in zip(row.index, row.values)}, axis=1)
 
-    df_temp['settings'] = df_temp['input_data'].apply(lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+    df_temp['settings'] = df_temp['input_data'].apply(
+        lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
     data = df_data.join(df_temp)
 
     return data
@@ -147,7 +152,8 @@ def check_ifbool(val):
         return val
 
 
-def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs, returntype="dict"):
+def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs,
+                   returntype="dict"):
     """
 
     Returns dict_data dictionary of format
@@ -187,8 +193,10 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs, returntype="d
         for k, v in new_dict_data.items():
             # input_data[k] = {'sim_name': k.split('-'), 'value': v}
 
-            # Info: pd.DataFrame.at instead of .loc, as .at can put lists into df cell.
-            # .loc can be used for passing values to more than one cell, that's why passing lists is not possible.
+            # Info: pd.DataFrame.at instead of .loc, as .at can put lists into
+            # df cell.
+            # .loc can be used for passing values to more than one cell,
+            # that's why passing lists is not possible.
             # Column must be of type object to accept list-objects
             # https://stackoverflow.com/questions/26483254/python-pandas-insert-list-into-a-cell
             df_data.at["nominal", k] = None

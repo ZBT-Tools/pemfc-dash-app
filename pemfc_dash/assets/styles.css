@@ -242,12 +242,14 @@ body {
   /*border: 1px solid #ccc !important;*/
 }
 
+
 .form-check{
   display: flex;
   padding-left:0;
   justify-content: left;
   align-items: center;
 }
+
 
 .form-check-label{
   /*color: #333 !important;*/
