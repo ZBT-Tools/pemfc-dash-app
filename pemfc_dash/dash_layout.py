@@ -15,10 +15,9 @@ def make_list(lst) -> list:
     If passed object is no list, make list of it.
     """
     if not isinstance(lst, list):
-        out = [lst]
+        return [lst]
     else:
-        out = lst
-    return out
+        return lst
 
 
 def tab_container(tab_dicts: list) -> dcc.Tabs:
