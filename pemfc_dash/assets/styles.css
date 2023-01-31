@@ -1,3 +1,8 @@
+/* https://community.plotly.com/t/resolved-dropdown-options-in-datatable-not-showing/20366/4 */
+.Select-menu-outer {
+display : block !important;
+}
+
 .js-plotly-plot .plotly .modebar {
   padding-top: 0%;
   margin-right: 10%;
@@ -237,12 +242,14 @@ body {
   /*border: 1px solid #ccc !important;*/
 }
 
+
 .form-check{
   display: flex;
   padding-left:0;
   justify-content: left;
   align-items: center;
 }
+
 
 .form-check-label{
   /*color: #333 !important;*/
@@ -718,6 +725,8 @@ body {
     color: #0062af;
     visibility: visible;
 }
+
+
 
 /*
 .dash-bootstrap .Select-control {

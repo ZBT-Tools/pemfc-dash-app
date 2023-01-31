@@ -11,4 +11,5 @@ pemfc/build
 *.pyc
 # *.png
 *.jpg
+*.pickle
 *credentials.py

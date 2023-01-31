@@ -138,9 +138,10 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
             id_list = [i_d + f'_{num}' for i_d in id_list
                        for num in range(num_val)]
 
-        if number != num_val:  # Passed number of ids doesn't match number of passed values,
-            # example: IDs for BPP Thickness for Anode and Cathode, but only one default value
-            # for both
+        if number != num_val:
+            # Passed number of ids doesn't match number of passed values,
+            # example: IDs for BPP Thickness for Anode and Cathode, but only one
+            # default value for both
 
             if isinstance(val_list[0], list):
                 val_list = val_list  # multiinput
@@ -183,8 +184,10 @@ def label_gui_to_dash(widget_dicts_list: list) -> list:
     Processing label from list of widget to Dash
     ToDo Documentation
     Description:
-        Modifies widget_dicts_list. Consecutive 'label-widgets' (no entry set, e.g. "anode" and "cathode" labels), will
-         be merged into one widget. Label of merged widget contains merged labels in list.
+        Modifies widget_dicts_list. Consecutive 'label-widgets' (no entry set,
+        e.g. "anode" and "cathode" labels), will
+         be merged into one widget. Label of merged widget contains merged
+         labels in list.
     Returns "updated widget_dicts_list"
 
     """
@@ -362,7 +365,7 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
 
     bold = 'bolded' if 'bold' in kwargs.pop('font', '') else ''
 
-    if type == 'EntrySet':  # ...create list of input fields (dbc.Input components)
+    if type == 'EntrySet':  # create list of input fields (dbc.Input components)
         children = \
             [dbc.Input(
                 id={'type': types, 'id': input_id, 'specifier':
@@ -382,11 +385,16 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
                 className='input-style-dropdown')) for input_id in id_list]
     elif type == 'CheckButtonSet':  # checklist
         value = [value] if not isinstance(value, list) else value
-        children = [dbc.Col(dbc.Checklist(
-            options=[{"label": "", "value": 1}], value=checklist(val),
-            id={"type": types, "id": input_id, 'specifier': specifier},
-            inline=True, persistence=True, persistence_type="memory",
-            className='checklist')) for input_id, val in zip(id_list, value)]
+        children = \
+            [
+             dbc.Col(
+                dbc.Checklist(
+                    options=[{"label": "", "value": 1}], value=checklist(val),
+                    id={"type": types, "id": input_id, 'specifier': specifier},
+                    inline=True, persistence=True, persistence_type="memory",
+                    className='checklist')
+                )
+             for input_id, val in zip(id_list, value)]
     elif type == 'Label':
         new_label = make_list(label)
         children = [dbc.Col(html.Div(lbl), className='sm-label') for lbl in

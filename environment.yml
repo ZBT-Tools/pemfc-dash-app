@@ -3,6 +3,7 @@ channels:
     - conda-forge
 dependencies:
     - python>=3.9.7
+    - pandas
     - numpy
     - scipy
     - matplotlib
@@ -13,11 +14,15 @@ dependencies:
     - diskcache
     - celery
     - redis
+    - pandarallel
+    - tqdm
     - pip
+    - openpyxl
     - pip:
         - gunicorn
         - dash-extensions>=0.1.1
         - flask-caching>=1.10.1
+        - jsonpickle
         - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
         - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
 
