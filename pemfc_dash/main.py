@@ -1669,7 +1669,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         else:
             raise PreventUpdate
 
-        n_y = np.asarray(yvalues).shape[0]
+        n_y = np.asarray(yvalues).shape[-1]
         if x_key in local_data:
             xvalues = np.asarray(local_data[x_key]['value'])
             if len(xvalues) == n_y + 1:
