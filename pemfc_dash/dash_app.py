@@ -49,7 +49,7 @@ except ImportError:
 
 dbc_css = ("https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css")
 bs_4_css = ('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css'
-              '/bootstrap.min.css')
+              '/010_bootstrap.min.css')
 bs_5_css = ('https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css')
 
 external_stylesheets = [bs_5_css]
