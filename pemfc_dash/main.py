@@ -1227,6 +1227,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     # Check for identical parameter, only different current density
     group_columns = list(df_nominal.columns)
     group_columns.remove('simulation-current_density')
+    group_columns.remove('simulation-average_cell_voltage')
     # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
     # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
@@ -1237,6 +1238,8 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     for _, group in grouped:
         group.sort_values(
             "simulation-current_density", ignore_index=True, inplace=True)
+        group["Current Density"] = group["global_data"].apply(
+            lambda x: x["Average Current Density"]["value"] if (x is not None) else None)
         group["Voltage"] = group["global_data"].apply(
             lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
         group["Power"] = group["global_data"].apply(
@@ -1297,12 +1300,12 @@ def cbf_figure_ui(inp1, inp2, dfinp):
 
         if len(group) > 1:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]),
+                go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
                            mode='lines+markers'), secondary_y=False)
         else:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]),
+                go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
                            mode='markers'), secondary_y=False)
 
