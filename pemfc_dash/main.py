@@ -494,8 +494,8 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
 
         # Caluclation of values for percent definitions
         processed_var_par_values = []
-        for name, cst, vls, vartype \
-                in zip(var_par_names, var_par_cast,
+        for name, vls, vartype \
+                in zip(var_par_names,
                        var_par_values, var_par_variationtype):
             nom = df_input.loc["nominal", name]
             if vartype == "Percent (+/-)":
@@ -514,8 +514,8 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
                 processed_var_par_values.append(list(vls))
 
         var_parameter = \
-            {name: {"values": val, "casting": cast} for name, val, cast in
-             zip(var_par_names, processed_var_par_values, var_par_cast)}
+            {name: {"values": val} for name, val in
+             zip(var_par_names, processed_var_par_values)}
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
@@ -538,16 +538,14 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
         parameter_names = [key for key, val in var_parameter.items()]
         parameter_names_string = ",".join(parameter_names)
         parameter_values = [val["values"] for key, val in var_parameter.items()]
-        parameter_casting = \
-            [val["casting"] for key, val in var_parameter.items()]
         parameter_combinations = list(product(*parameter_values))
 
         for combination in parameter_combinations:
             inp = df_input.copy()
             inp.loc["nominal", "variation_parameter"] = parameter_names_string
-            for par, val, cast in zip(parameter_names,
-                                      combination, parameter_casting):
-                inp.at["nominal", par] = list(val)
+            for par, val in zip(parameter_names,
+                                combination):
+                inp.at["nominal", par] = val
             data = pd.concat([data, inp], ignore_index=True)
 
     if keep_nominal:
