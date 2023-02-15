@@ -494,8 +494,8 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
 
         # Caluclation of values for percent definitions
         processed_var_par_values = []
-        for name, cst, vls, vartype \
-                in zip(var_par_names, var_par_cast,
+        for name, vls, vartype \
+                in zip(var_par_names,
                        var_par_values, var_par_variationtype):
             nom = df_input.loc["nominal", name]
             if vartype == "Percent (+/-)":
@@ -514,8 +514,8 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
                 processed_var_par_values.append(list(vls))
 
         var_parameter = \
-            {name: {"values": val, "casting": cast} for name, val, cast in
-             zip(var_par_names, processed_var_par_values, var_par_cast)}
+            {name: {"values": val} for name, val in
+             zip(var_par_names, processed_var_par_values)}
 
     # Add informational column "variation_parameter"
     clms = list(df_input.columns)
@@ -538,16 +538,14 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
         parameter_names = [key for key, val in var_parameter.items()]
         parameter_names_string = ",".join(parameter_names)
         parameter_values = [val["values"] for key, val in var_parameter.items()]
-        parameter_casting = \
-            [val["casting"] for key, val in var_parameter.items()]
         parameter_combinations = list(product(*parameter_values))
 
         for combination in parameter_combinations:
             inp = df_input.copy()
             inp.loc["nominal", "variation_parameter"] = parameter_names_string
-            for par, val, cast in zip(parameter_names,
-                                      combination, parameter_casting):
-                inp.at["nominal", par] = list(val)
+            for par, val in zip(parameter_names,
+                                combination):
+                inp.at["nominal", par] = val
             data = pd.concat([data, inp], ignore_index=True)
 
     if keep_nominal:
@@ -1227,6 +1225,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     # Check for identical parameter, only different current density
     group_columns = list(df_nominal.columns)
     group_columns.remove('simulation-current_density')
+    group_columns.remove('simulation-average_cell_voltage')
     # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
     # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
@@ -1237,6 +1236,8 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     for _, group in grouped:
         group.sort_values(
             "simulation-current_density", ignore_index=True, inplace=True)
+        group["Current Density"] = group["global_data"].apply(
+            lambda x: x["Average Current Density"]["value"] if (x is not None) else None)
         group["Voltage"] = group["global_data"].apply(
             lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
         group["Power"] = group["global_data"].apply(
@@ -1297,12 +1298,12 @@ def cbf_figure_ui(inp1, inp2, dfinp):
 
         if len(group) > 1:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]),
+                go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
                            mode='lines+markers'), secondary_y=False)
         else:
             fig.add_trace(
-                go.Scatter(x=list(group["simulation-current_density"]),
+                go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
                            mode='markers'), secondary_y=False)
 
@@ -1349,7 +1350,7 @@ def global_outputs_table(*args):
 
     global_result_dict = result_set["global_data"]
     names = list(global_result_dict.keys())
-    values = [v['value'] for k, v in global_result_dict.items()]
+    values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
 
     column_names = ['Quantity', 'Value', 'Units']
@@ -1746,12 +1747,14 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 )
 def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
                   table_columns, table_data, append_check):
-    ctx = dash.callback_context.triggered[0]['prop_id']
+    ctx = dash.callback_context
+    ctx_triggered = dash.callback_context.triggered[0]['prop_id']
+
     if data_checklist is None or results is None:
         raise PreventUpdate
     else:
         # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+        results = df.read_data(ctx.states["df_result_data_store.data"])
 
         result_set = results.iloc[0]
 
@@ -1780,13 +1783,13 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
         else:
             appended = append_check
 
-        if 'export_b.n_clicks' in ctx:
+        if 'export_b.n_clicks' in ctx_triggered:
             return index + columns, data, 'csv', appended
-        elif 'clear_table_b.n_clicks' in ctx:
+        elif 'clear_table_b.n_clicks' in ctx_triggered:
             return [], [], 'none', appended
-        elif 'append_b.n_clicks' in ctx:
+        elif 'append_b.n_clicks' in ctx_triggered:
             if n1 is None or table_data == [] or table_columns == [] or \
-                    ctx == 'clear_table_b.n_clicks':
+                    ctx_triggered == 'clear_table_b.n_clicks':
                 raise PreventUpdate
             else:
                 appended += 1
