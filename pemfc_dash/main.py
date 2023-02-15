@@ -1352,7 +1352,7 @@ def global_outputs_table(*args):
 
     global_result_dict = result_set["global_data"]
     names = list(global_result_dict.keys())
-    values = [v['value'] for k, v in global_result_dict.items()]
+    values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
 
     column_names = ['Quantity', 'Value', 'Units']
@@ -1749,12 +1749,14 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 )
 def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
                   table_columns, table_data, append_check):
-    ctx = dash.callback_context.triggered[0]['prop_id']
+    ctx = dash.callback_context
+    ctx_triggered = dash.callback_context.triggered[0]['prop_id']
+
     if data_checklist is None or results is None:
         raise PreventUpdate
     else:
         # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+        results = df.read_data(ctx.states["df_result_data_store.data"])
 
         result_set = results.iloc[0]
 
@@ -1783,13 +1785,13 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
         else:
             appended = append_check
 
-        if 'export_b.n_clicks' in ctx:
+        if 'export_b.n_clicks' in ctx_triggered:
             return index + columns, data, 'csv', appended
-        elif 'clear_table_b.n_clicks' in ctx:
+        elif 'clear_table_b.n_clicks' in ctx_triggered:
             return [], [], 'none', appended
-        elif 'append_b.n_clicks' in ctx:
+        elif 'append_b.n_clicks' in ctx_triggered:
             if n1 is None or table_data == [] or table_columns == [] or \
-                    ctx == 'clear_table_b.n_clicks':
+                    ctx_triggered == 'clear_table_b.n_clicks':
                 raise PreventUpdate
             else:
                 appended += 1
