@@ -2,6 +2,9 @@
 Web-interface for the PEMFC-Model core module
 ([github.com/zbt-tools/pemfc-core](https://github.com/zbt-tools/pemfc-core))
 
+![127 0 0 1_8050_ (3)](https://user-images.githubusercontent.com/94350939/222960749-90e7bfba-92a6-46de-80dd-64a1801340f2.png)
+
+
 ### Local installation using Anaconda
 
 Prerequisites: git, Anaconda ([anaconda.org](https://www.anaconda.org))
