@@ -276,8 +276,8 @@ app.layout = dbc.Container([
                 html.Div([
                     html.Div([pbar, timer_progress])],
                     className='neat-spacing')], style={'flex': '1'},
-                id='progress_bar', className='pretty_container')
-        ], id="left-column", className='col-12 col-lg-4 mb-2'),
+                id='progress_bar', className='pretty_container')],
+            id="left-column", className='col-12 col-lg-4 mb-2'),
         html.Div([  # RIGHT MIDDLE  (Result Column)
             html.Div(
                 [html.Div('Current-Voltage Curve', className='title'),
