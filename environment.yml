@@ -2,7 +2,7 @@ name: dash_app
 channels:
     - conda-forge
 dependencies:
-    - python>=3.9.7
+    - python>=3.11
     - pandas
     - numpy
     - scipy
