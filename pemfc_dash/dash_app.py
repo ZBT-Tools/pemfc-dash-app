@@ -25,13 +25,15 @@ try:
     try:
         caching_backend.delete('test')
     except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
-        caching_backend = FileSystemStore(cache_dir='/temp/file_system_store')
+        store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
+        clear_cache(store_dir)
+        caching_backend = FileSystemStore(cache_dir=store_dir)
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
 except ImportError:
-    tmpdir = os.path.join(os.getcwd(), '/temp/file_system_store')
-    clear_cache(tmpdir)
-    caching_backend = FileSystemStore(cache_dir=tmpdir)
+    store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
+    clear_cache(store_dir)
+    caching_backend = FileSystemStore(cache_dir=store_dir)
 
 
 # from celery import Celery
