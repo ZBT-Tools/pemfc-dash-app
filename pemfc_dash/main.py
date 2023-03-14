@@ -606,7 +606,8 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         except Exception as E:
             return repr(E)
 
-    result_table = input_table["settings"].progress_apply(func)
+    settings = input_table["settings"]
+    result_table = settings.progress_apply(func)
     # result_table = input_table["settings"].map(func)
     # result_table = input_table["settings"].parallel_apply(func)
     # result_table = input_table["settings"].apply_parallel(func, num_processes=4)
