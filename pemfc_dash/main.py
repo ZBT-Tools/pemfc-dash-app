@@ -69,8 +69,9 @@ app.layout = dbc.Container([
     dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
 
-    html.Div(id="initial_dummy_0"),  # Level zero initialization (Read available input parameter)
-    html.Div(id="initial_dummy_1"),  # Level one initialization (e.g. creation of study table,...)
+    # Dummy div for initialization
+    # (Read available input parameters, create study table)
+    html.Div(id="initial_dummy"),
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -593,9 +594,8 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         -> (pd.DataFrame, bool):
     """
-
     - Run input_table rows, catch exceptions of single calculations
-            https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
+      https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
     - Append result columns to input_table
     - Return DataFrame
     """
@@ -642,10 +642,8 @@ def cbf_progress_bar(*args) -> (float, str):
             str_raw = file.read()
         last_line = list(filter(None, str_raw.split('\n')))[-1]
         percent = float(last_line.split('%')[0])
-
     except:
         percent = 0
-
     finally:
         text = f'{percent:.0f}%'
         if int(percent) == 100:
@@ -656,19 +654,21 @@ def cbf_progress_bar(*args) -> (float, str):
 
 
 @app.callback(
-    Output("pemfc_settings_file", "data"),
     Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    Output("initial_dummy_1", "children"),
-    Input("initial_dummy_0", "children"),
+    Output("pemfc_settings_file", "data"),
+    Output('df_input_store', 'data'),
+    Output("study_table", "children"),
+    Input("initial_dummy", "children"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
 )
-def cbf_initialization(dummy, value, multival, ids, ids2):
+def cbf_initialization(dummy, value_list: list, multivalue_list: list,
+                       id_list: list, multivalue_id_list: list):
     """
-    Initialization 1
+    Initialization
     """
     # Read pemfc default settings.json file
     # --------------------------------------
@@ -686,6 +686,7 @@ def cbf_initialization(dummy, value, multival, ids, ids2):
         print(repr(E))
 
     settings_dict = settings
+    gui_label_value_dict, _ = df.settings_to_dash_gui(settings_dict)
     settings = df.store_data(settings)
 
     # Update initial data input with "settings"
@@ -693,70 +694,19 @@ def cbf_initialization(dummy, value, multival, ids, ids2):
     # ToDO: This is a quick fix.
     # Solution should be: At GUI initialization, default values should be taken from
     # settings.json, NOT GUI-describing dictionaries.
-    # Code below copied from dash_functions.parse_contents
 
-
-    ### sub function 1  start ###
-    ### inputs: dl.ID_LIST, j_file/settings_dict ###
-    ### outputs: j_file, error_list
-    j_file = settings_dict
-
-    name_lists = [ids['id'].split('-') if ids['id'][-1:].isnumeric() is False
-                  else ids['id'][:-2].split('-') for ids in dl.ID_LIST]
-    error_list = []
-    js_out = {}
-    for n in name_lists:
-        js_out.update({'-'.join(n): glom(j_file, '.'.join(n))})
-
-    j_file = js_out
-    ###  sub function 1 end ###
-
-
-    ### sub function 2 start ###
-    ### inputs: val, multival, ids, ids2, j_file ###
-    ### outputs: list(dict_ids.values()), list(dict_ids2.values()) ###
-    dict_ids = {id_l: val for id_l, val in
-                zip([id_l['id'] for id_l in ids], value)}
-    dict_ids2 = {id_l: val for id_l, val in
-                 zip([id_l['id'] for id_l in ids2], multival)}
-
-    id_match = set.union(set(dict_ids),
-                         set([item[:-2] for item in dict_ids2]))
-
-    for k, v in j_file.items():
-        if k in id_match:
-            if isinstance(v, list):
-                for num, val in enumerate(v):
-                    dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
-            else:
-                dict_ids[k] = df.check_ifbool(v)
-        else:
-            continue
-    ### sub function 2 end ###
-
-    return settings, list(dict_ids.values()), list(dict_ids2.values()), " "
-
-
-@app.callback(
-    Output('df_input_store', 'data'),
-    Output("study_table", "children"),
-    Input("initial_dummy_1", "children"),
-    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
-    prevent_initial_call=True,
-)
-def cbf_initialization_2(dummy, inputs, inputs2, ids, ids2):
-    """
-    Initialization 2
-    """
+    new_value_list, new_multivalue_list = \
+        df.update_gui_lists(gui_label_value_dict,
+                            value_list, multivalue_list,
+                            id_list, multivalue_id_list)
 
     # Read initial data input
     # --------------------------------------
     # Read data from input fields and save input in dict/dataframe
     # (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+    
+    df_input = df.process_inputs(new_value_list, new_multivalue_list,
+                                 id_list, multivalue_id_list,
                                  returntype="DataFrame")
     df_input_store = df.store_data(df_input)
 
@@ -807,7 +757,7 @@ def cbf_initialization_2(dummy, inputs, inputs2, ids, ids2):
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
-    return df_input_store, table
+    return new_value_list, new_multivalue_list, settings, df_input_store, table
 
 
 @app.callback(
@@ -825,44 +775,32 @@ def cbf_initialization_2(dummy, inputs, inputs2, ids, ids2):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State('modal', 'is_open')]
 )
-def cbf_load_settings(contents, filename, value, multival, ids, ids2,
+def cbf_load_settings(contents, filename, value, multival, ids, ids_multival,
                       modal_state):
     if contents is None:
         raise PreventUpdate
     else:
         if 'json' in filename:
             try:
-                j_file, err_l = df.parse_contents(contents)
+                settings_dict = df.parse_contents(contents)
+                gui_label_value_dict, error_list = \
+                    df.settings_to_dash_gui(settings_dict) 
 
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
+                new_value_list, new_multivalue_list = \
+                    df.update_gui_lists(gui_label_value_dict,
+                                        value, multival, ids, ids_multival)
 
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
+                if not error_list:
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        dm.modal_process('id-not-loaded', error_list)
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
             except Exception as E:
                 # Error / JSON file cannot be processed; return old value

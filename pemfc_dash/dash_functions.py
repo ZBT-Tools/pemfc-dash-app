@@ -114,7 +114,7 @@ def multi_inputs(dicts):
     return dict_list
 
 
-def parse_contents(contents):
+def parse_contents(contents) -> dict:
     """
     #ToDo: rework
 
@@ -128,21 +128,56 @@ def parse_contents(contents):
      [https://dash.plotly.com/dash-core-components/upload]
     """
     content_type, content_string = contents.split(',')
-
     decoded = base64.b64decode(content_string)
-    j_file = json.load(io.StringIO(decoded.decode('utf-8')))
+    return json.load(io.StringIO(decoded.decode('utf-8')))
 
+
+def settings_to_dash_gui(settings: dict) -> (dict, list):
+    """
+    Convert settings from the hierarchical simulation input dictionary to
+    a dictionary for the gui input combining all hierarchical keys to a single
+    id key string and the entry value.
+    Example:
+    input: settings_dict = {'stack': {'cathode': {'channel': {'length': 0.5}}}}
+    return: gui_dict = {'stack-cathode-channel-length': 0.5}
+    """
     name_lists = [ids['id'].split('-') if ids['id'][-1:].isnumeric() is False
                   else ids['id'][:-2].split('-') for ids in dl.ID_LIST]
     error_list = []
-    js_out = {}
+    gui_dict = {}
     for n in name_lists:
+        name_id = '-'.join(n)
         try:
-            js_out.update({'-'.join(n): glom(j_file, '.'.join(n))})
+            gui_dict.update({name_id: glom(settings, '.'.join(n))})
         except Exception as e:
             # print(e)
-            error_list.append('-'.join(n))
-    return js_out, error_list
+            error_list.append(name_id)
+    return gui_dict, error_list
+
+
+def update_gui_lists(id_value_dict: dict,
+                     old_vals: list, old_multivals: list,
+                     ids: list, ids_multival: list) -> (list, list):
+    dict_ids = \
+        {id_l: val for id_l, val
+         in zip([id_l['id'] for id_l in ids], old_vals)}
+    dict_ids_multival = \
+        {id_l: val for id_l, val
+         in zip([id_l['id'] for id_l in ids_multival], old_multivals)}
+
+    id_match = set.union(set(dict_ids),
+                         set([item[:-2] for item in dict_ids_multival]))
+
+    for k, v in id_value_dict.items():
+        if k in id_match:
+            if isinstance(v, list):
+                for num, val in enumerate(v):
+                    dict_ids_multival[k + f'_{num}'] = check_ifbool(val)
+            else:
+                dict_ids[k] = check_ifbool(v)
+        else:
+            continue
+    return list(dict_ids.values()), list(dict_ids_multival.values())
 
 
 def check_ifbool(val):
