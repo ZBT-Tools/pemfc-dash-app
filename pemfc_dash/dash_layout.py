@@ -406,9 +406,14 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
     # Now, that input fields are defined in 'children'...
     if children:
         # ...add given IDs to ID_LIST
-        ID_LIST.extend(
-            [{'type': types, 'id': input_id, 'specifier': specifier}
-             for input_id in dict_ids.keys()])
+        if types == 'multiinput':
+            ID_LIST.extend(
+                [{'type': types, 'id': input_id, 'specifier': specifier}
+                 for input_id in dict_ids.keys()])
+        else:
+            ID_LIST.extend(
+                [{'type': types, 'id': input_id, 'specifier': specifier}
+                 for input_id in id_list])
 
         if specifier in ['visibility', 'disabled_cooling']:
             # ID container has to make sure that there's only 1 id and number
