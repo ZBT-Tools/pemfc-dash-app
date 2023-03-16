@@ -1227,16 +1227,23 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Check for identical parameter, only different current density
+    # Check for identical parameters, varying current density and voltage only
     group_columns = list(df_nominal.columns)
     group_columns.remove('simulation-current_density')
     group_columns.remove('simulation-average_cell_voltage')
+
+    # Filter columns from results with NA or None values
+    na_columns = results.isna().any()
+    na_columns = na_columns[na_columns == True]
+    drop_labels = list(na_columns.index)
+    group_columns = [item for item in group_columns if item not in drop_labels]
+
     # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
     # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
     # results_red = results.loc[:, df_nominal.columns].copy()
     results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
-    grouped = results.groupby(group_columns, sort=False, dropna=False)
+    grouped = results.groupby(group_columns, sort=False)
 
     for _, group in grouped:
         group.sort_values(
