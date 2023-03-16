@@ -154,7 +154,7 @@ app.layout = dbc.Container([
             html.Div([  # LEFT MIDDLE: Buttons
                 html.Div([
                     html.Div([
-                        html.Button('Calc. Current-Voltage Curve', 
+                        html.Button('Calc. Current-Voltage Curve',
                                     id='btn_init_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
@@ -252,7 +252,7 @@ app.layout = dbc.Container([
                         style={'display': 'flex',
                                'flex-wrap': 'wrap',
                                'justify-content': 'space-evenly'}
-                        )],
+                    )],
                     className='neat-spacing')], style={'flex': '1'},
                 id='save_load_res', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
@@ -263,9 +263,9 @@ app.layout = dbc.Container([
                          dbc.Spinner(html.Div(id="spinner_uirefine")),
                          dbc.Spinner(html.Div(id="spinner_study"))],
 
-                             # style={'display': 'flex',
-                             #       'flex-wrap': 'wrap',
-                             #       'justify-content': 'space-evenly'}
+                        # style={'display': 'flex',
+                        #       'flex-wrap': 'wrap',
+                        #       'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')],
                 style={'flex': '1'},
@@ -310,7 +310,7 @@ app.layout = dbc.Container([
                             dcc.Dropdown(id='dropdown_heatmap_2',
                                          className='dropdown_input',
                                          style={'visibility': 'hidden'}),
-                            id='div_results_dropdown_2',)],
+                            id='div_results_dropdown_2', )],
                     style={'display': 'flex',
                            'flex-direction': 'row',
                            'flex-wrap': 'wrap',
@@ -347,38 +347,38 @@ app.layout = dbc.Container([
                     html.Div(
                         [dcc.Store(id='append_check'),
                          html.Div(
-                         [html.Div(
-                             children=dbc.DropdownMenu(
-                                 id='checklist_dropdown',
-                                 children=[
-                                     dbc.Checklist(
-                                         id='data_checklist',
-                                         # input_checked_class_name='checkbox',
-                                         style={'max-height': '400px',
-                                                'overflow': 'auto'})],
-                                         toggle_style={
-                                             'textTransform': 'none',
-                                             'background': '#fff',
-                                             'border': '#ccc',
-                                             'letter-spacing': '0',
-                                             'font-size': '11px'},
-                                         align_end=True,
-                                         toggle_class_name='dropdown_input',
-                                         label="Select Cells"), ),
-                             html.Button('Clear All', id='clear_all_button',
-                                         className='local_data_buttons'),
-                             html.Button('Select All',
-                                         id='select_all_button',
-                                         className='local_data_buttons'),
-                             html.Button('Export to Table',
-                                         id='export_b',
-                                         className='local_data_buttons'),
-                             html.Button('Append to Table',
-                                         id='append_b',
-                                         className='local_data_buttons'),
-                             html.Button('Clear Table',
-                                         id='clear_table_b',
-                                         className='local_data_buttons')],
+                             [html.Div(
+                                 children=dbc.DropdownMenu(
+                                     id='checklist_dropdown',
+                                     children=[
+                                         dbc.Checklist(
+                                             id='data_checklist',
+                                             # input_checked_class_name='checkbox',
+                                             style={'max-height': '400px',
+                                                    'overflow': 'auto'})],
+                                     toggle_style={
+                                         'textTransform': 'none',
+                                         'background': '#fff',
+                                         'border': '#ccc',
+                                         'letter-spacing': '0',
+                                         'font-size': '11px'},
+                                     align_end=True,
+                                     toggle_class_name='dropdown_input',
+                                     label="Select Cells"), ),
+                                 html.Button('Clear All', id='clear_all_button',
+                                             className='local_data_buttons'),
+                                 html.Button('Select All',
+                                             id='select_all_button',
+                                             className='local_data_buttons'),
+                                 html.Button('Export to Table',
+                                             id='export_b',
+                                             className='local_data_buttons'),
+                                 html.Button('Append to Table',
+                                             id='append_b',
+                                             className='local_data_buttons'),
+                                 html.Button('Clear Table',
+                                             id='clear_table_b',
+                                             className='local_data_buttons')],
                              style={'display': 'flex',
                                     'flex-wrap': 'wrap',
                                     'margin-bottom': '5px'})],
@@ -704,7 +704,7 @@ def cbf_initialization(dummy, value_list: list, multivalue_list: list,
     # --------------------------------------
     # Read data from input fields and save input in dict/dataframe
     # (one row "nominal")
-    
+
     df_input = df.process_inputs(new_value_list, new_multivalue_list,
                                  id_list, multivalue_id_list,
                                  returntype="DataFrame")
@@ -784,7 +784,7 @@ def cbf_load_settings(contents, filename, value, multival, ids, ids_multival,
             try:
                 settings_dict = df.parse_contents(contents)
                 gui_label_value_dict, error_list = \
-                    df.settings_to_dash_gui(settings_dict) 
+                    df.settings_to_dash_gui(settings_dict)
 
                 new_value_list, new_multivalue_list = \
                     df.update_gui_lists(gui_label_value_dict,
@@ -1222,6 +1222,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     df_nominal = df.read_data(ctx.states["df_input_store.data"])
     results = results.loc[results["successful_run"] == True, :]
+    results = results.drop(columns=['local_data'])
 
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -1235,7 +1236,7 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
     # results_red = results.loc[:, df_nominal.columns].copy()
     results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
-    grouped = results.groupby(group_columns, sort=False)
+    grouped = results.groupby(group_columns, sort=False, dropna=False)
 
     for _, group in grouped:
         group.sort_values(
@@ -1855,17 +1856,17 @@ def activate_column(input1, input2):
         if val == [1]:
             list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
                 list_state[18 + num] = list_state[30 + num] = False
-            if input2[3+num] == 'circular':
-                list_state[6+num], list_state[9+num], list_state[12+num] = \
-                 False, True, True
+            if input2[3 + num] == 'circular':
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                    False, True, True
             else:
-                list_state[6+num], list_state[9+num], list_state[12+num] = \
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
                     True, False, False
-            if input2[18+num] == 'circular':
-                list_state[21+num], list_state[24+num], list_state[27+num] = \
-                 False, True, True
+            if input2[18 + num] == 'circular':
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                    False, True, True
             else:
-                list_state[21+num], list_state[24+num], list_state[27+num] = \
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
                     True, False, False
     return list_state
 
@@ -1874,7 +1875,7 @@ def activate_column(input1, input2):
     Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
            'style'),
     Input({'type': ALL, 'id': ALL, 'specifier':
-           'checklist_activate_cooling'}, 'value'),
+        'checklist_activate_cooling'}, 'value'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
           'id'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
