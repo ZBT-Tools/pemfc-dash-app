@@ -695,6 +695,10 @@ def cbf_initialization(dummy, value, multival, ids, ids2):
     # settings.json, NOT GUI-describing dictionaries.
     # Code below copied from dash_functions.parse_contents
 
+
+    ### sub function 1  start ###
+    ### inputs: dl.ID_LIST, j_file/settings_dict ###
+    ### outputs: j_file, error_list
     j_file = settings_dict
 
     name_lists = [ids['id'].split('-') if ids['id'][-1:].isnumeric() is False
@@ -705,7 +709,12 @@ def cbf_initialization(dummy, value, multival, ids, ids2):
         js_out.update({'-'.join(n): glom(j_file, '.'.join(n))})
 
     j_file = js_out
+    ###  sub function 1 end ###
 
+
+    ### sub function 2 start ###
+    ### inputs: val, multival, ids, ids2, j_file ###
+    ### outputs: list(dict_ids.values()), list(dict_ids2.values()) ###
     dict_ids = {id_l: val for id_l, val in
                 zip([id_l['id'] for id_l in ids], value)}
     dict_ids2 = {id_l: val for id_l, val in
@@ -723,6 +732,7 @@ def cbf_initialization(dummy, value, multival, ids, ids2):
                 dict_ids[k] = df.check_ifbool(v)
         else:
             continue
+    ### sub function 2 end ###
 
     return settings, list(dict_ids.values()), list(dict_ids2.values()), " "
 
