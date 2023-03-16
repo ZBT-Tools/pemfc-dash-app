@@ -123,7 +123,9 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
     else:
         id_list = []
     dict_ids = {}
-    if (type == 'EntrySet') or (type == "CheckButtonSet"):
+
+    if type == 'EntrySet':
+    # if (type == 'EntrySet') or (type == "CheckButtonSet"): # Previous quick fix
         val_list = [vals] if not isinstance(vals, list) else vals
         num_id = len(id_list)
         num_val = len(val_list)
@@ -406,9 +408,15 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
     # Now, that input fields are defined in 'children'...
     if children:
         # ...add given IDs to ID_LIST
-        ID_LIST.extend(
-            [{'type': types, 'id': input_id, 'specifier': specifier}
-             for input_id in dict_ids.keys()])
+        if types == 'multiinput':
+            ID_LIST.extend(
+                [{'type': types, 'id': input_id, 'specifier': specifier}
+                 for input_id in dict_ids.keys()])
+        # re-added to include Boolean value changes in GUI, not fully understood
+        else:
+            ID_LIST.extend(
+                [{'type': types, 'id': input_id, 'specifier': specifier}
+                 for input_id in id_list])
 
         if specifier in ['visibility', 'disabled_cooling']:
             # ID container has to make sure that there's only 1 id and number
