@@ -123,7 +123,7 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
     else:
         id_list = []
     dict_ids = {}
-    if type == 'EntrySet':
+    if (type == 'EntrySet') or (type == "CheckButtonSet"):
         val_list = [vals] if not isinstance(vals, list) else vals
         num_id = len(id_list)
         num_val = len(val_list)

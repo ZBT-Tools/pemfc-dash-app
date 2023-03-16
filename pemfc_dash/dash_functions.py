@@ -116,9 +116,16 @@ def multi_inputs(dicts):
 
 def parse_contents(contents):
     """
+    #ToDo: rework
+
     Used in parsing contents from JSON file and process parsed data
     for each components
-    (parsed data has to be in the order of initialised Dash IDs)
+    (parsed data has to be in the order of initialised Dash IDs) #ToDo: check & rework
+
+    contents:
+    contents is a base64 encoded string that contains the files contents, no matter what type of file:
+     text files, images, .zip files, Excel spreadsheets, etc.
+     [https://dash.plotly.com/dash-core-components/upload]
     """
     content_type, content_string = contents.split(',')
 

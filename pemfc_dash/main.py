@@ -12,7 +12,7 @@ import re
 import copy
 import sys
 import json
-
+from glom import glom
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
     ServersideOutput, ctx
@@ -657,17 +657,18 @@ def cbf_progress_bar(*args) -> (float, str):
 
 @app.callback(
     Output("pemfc_settings_file", "data"),
-    Output('df_input_store', 'data'),
-    Output("study_table", "children"),
+    Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+    Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+    Output("initial_dummy_1", "children"),
     Input("initial_dummy_0", "children"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
 )
-def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
+def cbf_initialization(dummy, value, multival, ids, ids2):
     """
-    Initialization
+    Initialization 1
     """
     # Read pemfc default settings.json file
     # --------------------------------------
@@ -684,7 +685,62 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
     except Exception as E:
         print(repr(E))
 
+    settings_dict = settings
     settings = df.store_data(settings)
+
+    # Update initial data input with "settings"
+    # --------------------------------------
+    # ToDO: This is a quick fix.
+    # Solution should be: At GUI initialization, default values should be taken from
+    # settings.json, NOT GUI-describing dictionaries.
+    # Code below copied from dash_functions.parse_contents
+
+    j_file = settings_dict
+
+    name_lists = [ids['id'].split('-') if ids['id'][-1:].isnumeric() is False
+                  else ids['id'][:-2].split('-') for ids in dl.ID_LIST]
+    error_list = []
+    js_out = {}
+    for n in name_lists:
+        js_out.update({'-'.join(n): glom(j_file, '.'.join(n))})
+
+    j_file = js_out
+
+    dict_ids = {id_l: val for id_l, val in
+                zip([id_l['id'] for id_l in ids], value)}
+    dict_ids2 = {id_l: val for id_l, val in
+                 zip([id_l['id'] for id_l in ids2], multival)}
+
+    id_match = set.union(set(dict_ids),
+                         set([item[:-2] for item in dict_ids2]))
+
+    for k, v in j_file.items():
+        if k in id_match:
+            if isinstance(v, list):
+                for num, val in enumerate(v):
+                    dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
+            else:
+                dict_ids[k] = df.check_ifbool(v)
+        else:
+            continue
+
+    return settings, list(dict_ids.values()), list(dict_ids2.values()), " "
+
+
+@app.callback(
+    Output('df_input_store', 'data'),
+    Output("study_table", "children"),
+    Input("initial_dummy_1", "children"),
+    [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
+     State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+    prevent_initial_call=True,
+)
+def cbf_initialization_2(dummy, inputs, inputs2, ids, ids2):
+    """
+    Initialization 2
+    """
 
     # Read initial data input
     # --------------------------------------
@@ -741,7 +797,7 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
-    return settings, df_input_store, table
+    return df_input_store, table
 
 
 @app.callback(
