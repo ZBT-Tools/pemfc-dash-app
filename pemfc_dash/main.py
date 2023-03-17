@@ -673,23 +673,33 @@ def cbf_initialization(dummy, value_list: list, multivalue_list: list,
     # Read pemfc default settings.json file
     # --------------------------------------
     try:
-        # Initially get default simulation settings from settings.json file
-        # in pemfc core module
+        # Initially get default simulation settings structure from
+        # settings.json file in pemfc core module
         pemfc_base_dir = os.path.dirname(pemfc.__file__)
         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
                 as file:
-            settings = json.load(file)
+            base_settings = json.load(file)
         # Avoid local outputs from simulation
-        settings['output']['save_csv'] = False
-        settings['output']['save_plot'] = False
+        base_settings['output']['save_csv'] = False
+        base_settings['output']['save_plot'] = False
     except Exception as E:
         print(repr(E))
+    base_settings = df.store_data(base_settings)
 
-    settings_dict = settings
-    gui_label_value_dict, _ = df.settings_to_dash_gui(settings_dict)
-    settings = df.store_data(settings)
+    try:
+        # Initially get default simulation input values from local
+        # settings.json file
+        with open(os.path.join('settings', 'settings.json')) \
+                as file:
+            input_settings = json.load(file)
+        # Avoid local outputs from simulation
+        input_settings['output']['save_csv'] = False
+        input_settings['output']['save_plot'] = False
+    except Exception as E:
+        print(repr(E))
+    gui_label_value_dict, _ = df.settings_to_dash_gui(input_settings)
 
-    # Update initial data input with "settings"
+    # Update initial data input with "input_settings"
     # --------------------------------------
     # ToDO: This is a quick fix.
     # Solution should be: At GUI initialization, default values should be taken from
@@ -757,7 +767,8 @@ def cbf_initialization(dummy, value_list: list, multivalue_list: list,
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
-    return new_value_list, new_multivalue_list, settings, df_input_store, table
+    return new_value_list, new_multivalue_list, \
+           base_settings, df_input_store, table
 
 
 @app.callback(
@@ -868,8 +879,7 @@ def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
         # code portion of run_simulation()
         # ------------------------
 
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+        with open(os.path.join('settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
         settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
