@@ -6,7 +6,6 @@ import copy
 ID_LIST = []  # Keep track with generated IDs
 CONTAINER_LIST = []
 
-
 # Keep track with generated container IDs (generated at  frame level)
 
 

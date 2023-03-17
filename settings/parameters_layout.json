@@ -1,0 +1,2540 @@
+[
+  {
+    "title": "Cells",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Cell Settings",
+        "show_title": false,
+        "font": "Arial 10 bold",
+        "sticky": "WEN",
+        "sub_frame_dicts": [
+          {
+            "title": "Cell Lengths",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "widget_dicts": [
+              {
+                "label": "Cell Number:",
+                "number": 1,
+                "value": 10,
+                "sim_name": [
+                  "stack",
+                  "cell_number"
+                ],
+                "dtype": "int",
+                "size_label": "xl",
+                "size_unit": "s",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Cell Length:",
+                "dimensions": "m",
+                "value": 0.1,
+                "sim_name": [
+                  "cell",
+                  "length"
+                ],
+                "dtype": "float",
+                "size_label": "xl",
+                "size_unit": "s",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Cell Width:",
+                "number": 1,
+                "value": 0.1,
+                "sim_name": [
+                  "cell",
+                  "width"
+                ],
+                "size_label": "xl",
+                "size_unit": "s",
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Anode",
+                "row": 5,
+                "column": 1,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Cathode",
+                "row": 5,
+                "column": 2,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "BPP Thickness:",
+                "number": 2,
+                "value": 0.002,
+                "sim_name": [
+                  [
+                    "anode",
+                    "bpp",
+                    "thickness"
+                  ],
+                  [
+                    "cathode",
+                    "bpp",
+                    "thickness"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "GDL Thickness:",
+                "number": 2,
+                "value": 0.0002,
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "thickness_gdl"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "thickness_gdl"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Catalyst Thickness:",
+                "number": 2,
+                "value": 1e-05,
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "thickness_cl"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "thickness_cl"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Membrane Thickness:",
+                "value": 1.5e-05,
+                "width": 21,
+                "sim_name": [
+                  "membrane",
+                  "thickness"
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet"
+              }
+            ],
+            "size_label": "l",
+            "size_unit": "s",
+            "sticky": "WESN"
+          },
+          {
+            "title": "Flow Field Settings",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "widget_dicts": [
+              {
+                "label": "Anode",
+                "row": 1,
+                "column": 1,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Cathode",
+                "row": 1,
+                "column": 2,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Channel Number:",
+                "number": 2,
+                "value": [
+                  10,
+                  10
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel_number"
+                  ],
+                  [
+                    "cathode",
+                    "channel_number"
+                  ]
+                ],
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ],
+                "dtype": "int",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Shape of Cross-Section:",
+                "number": 2,
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "cross_sectional_shape"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "cross_sectional_shape"
+                  ]
+                ],
+                "value": [
+                  "rectangular",
+                  "trapezoidal",
+                  "triangular"
+                ],
+                "specifier": "dropdown_activate_basewidth",
+                "type": "ComboboxSet",
+                "sticky": "WN"
+              },
+              {
+                "label": "Channel Width:",
+                "number": 2,
+                "value": [
+                  0.001,
+                  0.001
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "width"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "width"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Rib Width:",
+                "number": 2,
+                "value": [
+                  0.001,
+                  0.001
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "rib_width"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "rib_width"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Height:",
+                "number": 2,
+                "value": [
+                  0.001,
+                  0.001
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "height"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "height"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Base Width:",
+                "number": 2,
+                "value": [
+                  0.001,
+                  0.001
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "base_width"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "base_width"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet",
+                "specifier": "disable_basewidth",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Channel Length:",
+                "number": 2,
+                "value": [
+                  0.1,
+                  0.1
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "length"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "length"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Number of Channel Bends:",
+                "value": [
+                  48,
+                  48
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "bend_number"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "bend_number"
+                  ]
+                ],
+                "dtype": "int",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Channel Bend Loss Coefficient:",
+                "value": [
+                  0.5,
+                  0.5
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "bend_friction_factor"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "bend_friction_factor"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "-",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              },
+              {
+                "label": "Channel Flow Direction (1 or -1):",
+                "value": [
+                  -1,
+                  1
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "flow_direction"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "flow_direction"
+                  ]
+                ],
+                "dtype": "int",
+                "type": "EntrySet",
+                "sticky": [
+                  "NW",
+                  "NWE"
+                ]
+              }
+            ],
+            "size_label": "l",
+            "size_unit": "s",
+            "sticky": "WENS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Manifolds",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Manifold Settings",
+        "show_title": false,
+        "font": "Arial 10 bold",
+        "sticky": "WEN",
+        "widget_dicts": [
+          {
+            "label": "Anode",
+            "row": 1,
+            "column": 1,
+            "type": "Label",
+            "sticky": "WENS"
+          },
+          {
+            "label": "Cathode",
+            "row": 1,
+            "column": 2,
+            "type": "Label",
+            "sticky": "WENS"
+          },
+          {
+            "label": "Cooling",
+            "row": 1,
+            "column": 3,
+            "type": "Label",
+            "sticky": "WENS"
+          },
+          {
+            "label": "Activate Calculation:",
+            "number": 3,
+            "value": [
+              false,
+              false,
+              false
+            ],
+            "specifier": "checklist_activate_calculation",
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "calc_distribution"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "calc_distribution"
+              ],
+              [
+                "coolant_flow_circuit",
+                "calc_distribution"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "type": "CheckButtonSet"
+          },
+          {
+            "label": "Flow Configuration:",
+            "number": 3,
+            "specifier": "disabled_manifolds",
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "shape"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "shape"
+              ],
+              [
+                "coolant_flow_circuit",
+                "shape"
+              ]
+            ],
+            "value": [
+              "U",
+              "Z"
+            ],
+            "type": "ComboboxSet"
+          },
+          {
+            "label": " ",
+            "font": "Arial 1",
+            "type": "Label",
+            "sticky": "WENS"
+          },
+          {
+            "label": "Inlet Manifold",
+            "font": "Arial 10 bold",
+            "type": "Label",
+            "sticky": "WNS"
+          },
+          {
+            "label": "Cross-Section:",
+            "number": 3,
+            "specifier": "disabled_manifolds",
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "inlet_manifold",
+                "cross_sectional_shape"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "inlet_manifold",
+                "cross_sectional_shape"
+              ],
+              [
+                "coolant_flow_circuit",
+                "inlet_manifold",
+                "cross_sectional_shape"
+              ]
+            ],
+            "value": [
+              "circular",
+              "rectangular"
+            ],
+            "type": "ComboboxSet"
+          },
+          {
+            "label": "Diameter:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "inlet_manifold",
+                "diameter"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "inlet_manifold",
+                "diameter"
+              ],
+              [
+                "coolant_flow_circuit",
+                "inlet_manifold",
+                "diameter"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Width:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "inlet_manifold",
+                "width"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "inlet_manifold",
+                "width"
+              ],
+              [
+                "coolant_flow_circuit",
+                "inlet_manifold",
+                "width"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Height:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "inlet_manifold",
+                "height"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "inlet_manifold",
+                "height"
+              ],
+              [
+                "coolant_flow_circuit",
+                "inlet_manifold",
+                "height"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "T-Junction Loss Coefficient:",
+            "value": [
+              0.4,
+              0.4,
+              0.4
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "inlet_manifold",
+                "constant_friction_factor"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "inlet_manifold",
+                "constant_friction_factor"
+              ],
+              [
+                "coolant_flow_circuit",
+                "inlet_manifold",
+                "constant_friction_factor"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "-",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": " ",
+            "font": "Arial 1",
+            "type": "Label",
+            "sticky": "WENS"
+          },
+          {
+            "label": "Outlet Manifold",
+            "font": "Arial 10 bold",
+            "type": "Label",
+            "sticky": "WNS"
+          },
+          {
+            "label": "Cross-Section:",
+            "number": 3,
+            "specifier": "disabled_manifolds",
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "outlet_manifold",
+                "cross_sectional_shape"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "outlet_manifold",
+                "cross_sectional_shape"
+              ],
+              [
+                "coolant_flow_circuit",
+                "outlet_manifold",
+                "cross_sectional_shape"
+              ]
+            ],
+            "value": [
+              "circular",
+              "rectangular"
+            ],
+            "type": "ComboboxSet"
+          },
+          {
+            "label": "Diameter:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "outlet_manifold",
+                "diameter"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "outlet_manifold",
+                "diameter"
+              ],
+              [
+                "coolant_flow_circuit",
+                "outlet_manifold",
+                "diameter"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Width:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "outlet_manifold",
+                "width"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "outlet_manifold",
+                "width"
+              ],
+              [
+                "coolant_flow_circuit",
+                "outlet_manifold",
+                "width"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Height:",
+            "value": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "outlet_manifold",
+                "height"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "outlet_manifold",
+                "height"
+              ],
+              [
+                "coolant_flow_circuit",
+                "outlet_manifold",
+                "height"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "m",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          },
+          {
+            "label": "T-Junction Loss Coefficient:",
+            "value": [
+              0.4,
+              0.4,
+              0.4
+            ],
+            "sim_name": [
+              [
+                "anode",
+                "flow_circuit",
+                "outlet_manifold",
+                "constant_friction_factor"
+              ],
+              [
+                "cathode",
+                "flow_circuit",
+                "outlet_manifold",
+                "constant_friction_factor"
+              ],
+              [
+                "coolant_flow_circuit",
+                "outlet_manifold",
+                "constant_friction_factor"
+              ]
+            ],
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "dtype": "float",
+            "dimensions": "-",
+            "specifier": "disabled_manifolds",
+            "type": "EntrySet"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Cooling",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Cooling Settings",
+        "show_title": false,
+        "font": "Arial 10 bold",
+        "sticky": "WEN",
+        "size_label": "xl",
+        "size_unit": "s",
+        "widget_dicts": [
+          {
+            "label": "Activate Cooling:",
+            "value": true,
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "sim_name": [
+              "stack",
+              "cool_flow"
+            ],
+            "type": "CheckButtonSet",
+            "specifier": "checklist_activate_cooling"
+          },
+          {
+            "label": "Coolant Channel Number:",
+            "value": 2,
+            "sim_name": [
+              "temperature_system",
+              "cool_ch_numb"
+            ],
+            "specifier": "disabled_cooling",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Coolant Channel Length:",
+            "value": 0.4,
+            "sim_name": [
+              "coolant_channel",
+              "length"
+            ],
+            "specifier": "disabled_cooling",
+            "dtype": "float",
+            "dimensions": "m",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Coolant Channel Height:",
+            "value": 0.001,
+            "sim_name": [
+              "coolant_channel",
+              "height"
+            ],
+            "specifier": "disabled_cooling",
+            "dtype": "float",
+            "dimensions": "m",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Coolant Channel Width:",
+            "value": 0.001,
+            "sim_name": [
+              "coolant_channel",
+              "width"
+            ],
+            "specifier": "disabled_cooling",
+            "dtype": "float",
+            "dimensions": "m",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Number of Coolant Channel Bends:",
+            "value": 0,
+            "sim_name": [
+              "coolant_channel",
+              "bend_number"
+            ],
+            "specifier": "disabled_cooling",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Pressure Loss Coefficient for Coolant Channel Bend:",
+            "sim_name": [
+              "coolant_channel",
+              "bend_friction_factor"
+            ],
+            "specifier": "disabled_cooling",
+            "value": 0.5,
+            "dimensions": "-",
+            "type": "EntrySet"
+          },
+          {
+            "label": "Channel Flow Direction (1 or -1):",
+            "value": 1,
+            "sim_name": [
+              "coolant_channel",
+              "flow_direction"
+            ],
+            "specifier": "disabled_cooling",
+            "dtype": "int",
+            "type": "EntrySet",
+            "sticky": [
+              "NW",
+              "NWE"
+            ]
+          },
+          {
+            "label": "Activate Cooling Flow at End Plates:",
+            "value": false,
+            "sim_name": [
+              "temperature_system",
+              "cool_ch_bc"
+            ],
+            "specifier": "disabled_cooling",
+            "sticky": [
+              "NW",
+              "NWE"
+            ],
+            "type": "CheckButtonSet"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Physical Properties",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Physical Properties",
+        "show_title": false,
+        "font": "Arial 10 bold",
+        "sticky": "WEN",
+        "sub_frame_dicts": [
+          {
+            "title": "Porous Layers",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sticky": "WEN",
+            "size_label": "s",
+            "size_unit": "l",
+            "widget_dicts": [
+              {
+                "label": "Anode",
+                "row": 1,
+                "column": 1,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Cathode",
+                "row": 1,
+                "column": 3,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "ip",
+                "row": 2,
+                "column": 1,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "tp",
+                "row": 2,
+                "column": 2,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "ip",
+                "row": 2,
+                "column": 3,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "tp",
+                "row": 2,
+                "column": 4,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "BPP Electrical Conductivity:",
+                "number": 4,
+                "value": 60000.0,
+                "width": 5,
+                "sim_name": [
+                  [
+                    "anode",
+                    "bpp",
+                    "electrical_conductivity",
+                    [
+                      0,
+                      1
+                    ]
+                  ],
+                  [
+                    "cathode",
+                    "bpp",
+                    "electrical_conductivity",
+                    [
+                      2,
+                      3
+                    ]
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "S/m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "GDE Electrical Conductivity:",
+                "number": 4,
+                "value": 500.0,
+                "width": 5,
+                "sim_name": [
+                  [
+                    "anode",
+                    "gde",
+                    "electrical_conductivity",
+                    [
+                      0,
+                      1
+                    ]
+                  ],
+                  [
+                    "cathode",
+                    "gde",
+                    "electrical_conductivity",
+                    [
+                      2,
+                      3
+                    ]
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "S/m",
+                "type": "EntrySet"
+              },
+              {
+                "label": "BPP Thermal Conductivity:",
+                "value": [
+                  [
+                    100.0,
+                    100.0
+                  ],
+                  [
+                    100.0,
+                    100.0
+                  ]
+                ],
+                "width": 5,
+                "sim_name": [
+                  [
+                    "anode",
+                    "bpp",
+                    "thermal_conductivity",
+                    [
+                      0,
+                      1
+                    ]
+                  ],
+                  [
+                    "cathode",
+                    "bpp",
+                    "thermal_conductivity",
+                    [
+                      2,
+                      3
+                    ]
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "W/(m K)",
+                "type": "EntrySet"
+              },
+              {
+                "label": "GDE Thermal Conductivity:",
+                "value": [
+                  [
+                    1.0,
+                    1.0
+                  ],
+                  [
+                    1.0,
+                    1.0
+                  ]
+                ],
+                "width": 5,
+                "sim_name": [
+                  [
+                    "anode",
+                    "gde",
+                    "thermal_conductivity",
+                    [
+                      0,
+                      1
+                    ]
+                  ],
+                  [
+                    "cathode",
+                    "gde",
+                    "thermal_conductivity",
+                    [
+                      2,
+                      3
+                    ]
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "W/(m K)",
+                "type": "EntrySet"
+              },
+              {
+                "label": "GDL & CL Porosity:",
+                "number": 2,
+                "value": 0.8,
+                "width": 11,
+                "sim_name": [
+                  [
+                    "anode",
+                    "gde",
+                    "porosity"
+                  ],
+                  [
+                    "cathode",
+                    "gde",
+                    "porosity"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "-",
+                "type": "EntrySet"
+              }
+            ]
+          },
+          {
+            "title": "Membrane Settings",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sticky": "WEN",
+            "sub_frame_dicts": [
+              {
+                "title": "Membrane Model Settings",
+                "show_title": false,
+                "font": "Arial 10 bold",
+                "sticky": "WEN",
+                "padx": 0,
+                "pady": 0,
+                "size_label": "l",
+                "size_unit": "l",
+                "widget_dicts": [
+                  {
+                    "label": "Membrane Model:",
+                    "number": 1,
+                    "sim_name": [
+                      "membrane",
+                      "type"
+                    ],
+                    "value": [
+                      "Constant",
+                      "Springer",
+                      "Linear"
+                    ],
+                    "type": "ComboboxSet",
+                    "specifier": "dropdown_activate"
+                  },
+                  {
+                    "title": "Constant Ionic Conductivity",
+                    "specifier": "visibility",
+                    "widget_dicts": [
+                      {
+                        "label": "Ionic Conductivity:",
+                        "value": 5.0,
+                        "sim_name": [
+                          "membrane",
+                          "ionic_conductivity"
+                        ],
+                        "dtype": "float",
+                        "dimensions": "S/m",
+                        "type": "EntrySet"
+                      },
+                      {
+                        "label": " ",
+                        "type": "Label",
+                        "sticky": "WENS"
+                      }
+                    ],
+                    "sticky": "WEN",
+                    "padx": 0,
+                    "pady": 0
+                  },
+                  {
+                    "title": "Springer Ionic Conductivity",
+                    "specifier": "visibility",
+                    "widget_dicts": [
+                      {
+                        "label": " ",
+                        "type": "Label",
+                        "sticky": "WENS"
+                      },
+                      {
+                        "label": " ",
+                        "type": "Label",
+                        "sticky": "WENS"
+                      }
+                    ],
+                    "padx": 0,
+                    "pady": 0,
+                    "sticky": "WEN"
+                  },
+                  {
+                    "title": "Linear Ionic Conductivity",
+                    "specifier": "visibility",
+                    "widget_dicts": [
+                      {
+                        "label": "Constant Resistance Coefficient:",
+                        "value": 4.3e-05,
+                        "sim_name": [
+                          "membrane",
+                          "basic_resistance"
+                        ],
+                        "dtype": "float",
+                        "dimensions": "Ohm-m\u00b2",
+                        "type": "EntrySet"
+                      },
+                      {
+                        "label": "Linear Temperature Coefficient:",
+                        "value": 7e-08,
+                        "sim_name": [
+                          "membrane",
+                          "temperature_coefficient"
+                        ],
+                        "dtype": "float",
+                        "dimensions": "Ohm-m\u00b2/K",
+                        "type": "EntrySet"
+                      }
+                    ],
+                    "sticky": "WEN",
+                    "padx": 0,
+                    "pady": 0
+                  }
+                ]
+              },
+              {
+                "title": "Membrane Thermal Properties",
+                "show_title": false,
+                "font": "Arial 10 bold",
+                "sticky": "WEN",
+                "size_label": "l",
+                "size_unit": "l",
+                "widget_dicts": [
+                  {
+                    "label": "ip",
+                    "row": 2,
+                    "column": 1,
+                    "pady": 0,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "tp",
+                    "row": 2,
+                    "column": 2,
+                    "pady": 0,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Membrane Thermal Conductivity:",
+                    "value": [
+                      [
+                        0.26,
+                        0.26
+                      ]
+                    ],
+                    "sim_name": [
+                      [
+                        "membrane",
+                        "thermal_conductivity",
+                        [
+                          0,
+                          1
+                        ]
+                      ]
+                    ],
+                    "dtype": "float",
+                    "dimensions": "W/(m K)",
+                    "type": "EntrySet"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Electrochemistry Model",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sticky": "WEN",
+            "size_label": "l",
+            "size_unit": "xl",
+            "widget_dicts": [
+              {
+                "label": "Anode",
+                "row": 1,
+                "column": 1,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Cathode",
+                "row": 1,
+                "column": 2,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Exchange Current Density:",
+                "value": [
+                  500000000.0,
+                  800000.0
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "vol_ex_cd"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "vol_ex_cd"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "A/m\u00b3",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Effective GDL Diffusion Coefficient:",
+                "value": [
+                  1e-05,
+                  6e-06
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "diff_coeff_gdl"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "diff_coeff_gdl"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m\u00b2/s",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Effective Catalyst Diffusion Coefficient:",
+                "value": [
+                  1e-07,
+                  1e-07
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "diff_coeff_cl"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "diff_coeff_cl"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "m\u00b2/s",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Effective Catalyst Proton Conductivity:",
+                "value": [
+                  1.5,
+                  1.5
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "prot_con_cl"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "prot_con_cl"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "1/(Ohm-m)",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Tafel Slope:",
+                "value": [
+                  0.035,
+                  0.035
+                ],
+                "sim_name": [
+                  [
+                    "anode",
+                    "electrochemistry",
+                    "tafel_slope"
+                  ],
+                  [
+                    "cathode",
+                    "electrochemistry",
+                    "tafel_slope"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "V",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Open Circuit Voltage:",
+                "value": 1.0,
+                "width": 21,
+                "sim_name": [
+                  "cell",
+                  "open_circuit_voltage"
+                ],
+                "dtype": "float",
+                "dimensions": "V",
+                "type": "EntrySet"
+              }
+            ]
+          },
+          {
+            "title": "Coolant Properties",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sticky": "WEN",
+            "size_label": "xl",
+            "size_unit": "l",
+            "widget_dicts": [
+              {
+                "label": "Density:",
+                "value": 981.0,
+                "sim_name": [
+                  "coolant_channel",
+                  "fluid",
+                  "density"
+                ],
+                "dtype": "float",
+                "dimensions": "kg/m\u00b3",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Viscosity:",
+                "value": 0.00981,
+                "sim_name": [
+                  "coolant_channel",
+                  "fluid",
+                  "viscosity"
+                ],
+                "dtype": "float",
+                "dimensions": "Pa-s",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Specific Heat Capacity:",
+                "value": 2010.0,
+                "sim_name": [
+                  "coolant_channel",
+                  "fluid",
+                  "specific_heat"
+                ],
+                "dtype": "float",
+                "dimensions": "J/(kg-K)",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Thermal Conductivity:",
+                "value": 0.159,
+                "sim_name": [
+                  "coolant_channel",
+                  "fluid",
+                  "thermal_conductivity"
+                ],
+                "dtype": "float",
+                "dimensions": "W/(m-K)",
+                "type": "EntrySet"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Operating Conditions",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Operating Conditions",
+        "show_title": false,
+        "font": "Arial 10 bold",
+        "sticky": "WEN",
+        "widget_dicts": [
+          {
+            "title": "Electrochemistry Settings",
+            "show_title": false,
+            "sticky": "NWE",
+            "widget_dicts": [
+              {
+                "label": "Operation Control:",
+                "number": 1,
+                "sim_name": [
+                  "simulation",
+                  "operation_control"
+                ],
+                "value": [
+                  "Current",
+                  "Voltage"
+                ],
+                "type": "ComboboxSet",
+                "specifier": "dropdown_activate"
+              },
+              {
+                "label": "Current Density:",
+                "value": 1000.0,
+                "sim_name": [
+                  "simulation",
+                  "current_density"
+                ],
+                "specifier": "visibility",
+                "dtype": "float",
+                "dimensions": "A/m\u00b2",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Cell Voltage:",
+                "value": 0.5,
+                "sim_name": [
+                  "simulation",
+                  "average_cell_voltage"
+                ],
+                "specifier": "visibility",
+                "dtype": "float",
+                "dimensions": "V",
+                "type": "EntrySet"
+              }
+            ],
+            "size_label": "l",
+            "size_unit": "m"
+          },
+          {
+            "title": "Gas Supply Settings",
+            "show_title": false,
+            "sticky": "NWE",
+            "widget_dicts": [
+              {
+                "label": "Anode",
+                "row": 1,
+                "column": 1,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Cathode",
+                "row": 1,
+                "column": 3,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "H2",
+                "row": 2,
+                "column": 1,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "N2",
+                "row": 2,
+                "column": 2,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "O2",
+                "row": 2,
+                "column": 3,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "N2",
+                "row": 2,
+                "column": 4,
+                "pady": 0,
+                "type": "Label",
+                "sticky": "WENS"
+              },
+              {
+                "label": "Dry Molar Gas Fractions:",
+                "number": 4,
+                "value": [
+                  1.0,
+                  0.0,
+                  0.21,
+                  0.79
+                ],
+                "width": 5,
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "fluid",
+                    "components",
+                    "H2",
+                    "molar_fraction"
+                  ],
+                  [
+                    "anode",
+                    "channel",
+                    "fluid",
+                    "components",
+                    "N2",
+                    "molar_fraction"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "fluid",
+                    "components",
+                    "O2",
+                    "molar_fraction"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "fluid",
+                    "components",
+                    "N2",
+                    "molar_fraction"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "-",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Relative Humidity:",
+                "number": 2,
+                "value": 0.5,
+                "width": 11,
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "fluid",
+                    "humidity"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "fluid",
+                    "humidity"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "-",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Stoichiometry:",
+                "number": 2,
+                "value": 2,
+                "width": 11,
+                "sim_name": [
+                  [
+                    "anode",
+                    "stoichiometry"
+                  ],
+                  [
+                    "cathode",
+                    "stoichiometry"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "-",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Gas Inlet Temperature:",
+                "number": 2,
+                "value": 343.15,
+                "width": 11,
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "temp_in"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "temp_in"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "K",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Gas Outlet Pressure:",
+                "number": 2,
+                "value": 101325.0,
+                "width": 11,
+                "sim_name": [
+                  [
+                    "anode",
+                    "channel",
+                    "p_out"
+                  ],
+                  [
+                    "cathode",
+                    "channel",
+                    "p_out"
+                  ]
+                ],
+                "dtype": "float",
+                "dimensions": "Pa",
+                "type": "EntrySet"
+              }
+            ],
+            "size_label": "l",
+            "size_unit": "s"
+          },
+          {
+            "title": "Thermal Settings",
+            "show_title": false,
+            "sticky": "NWE",
+            "size_label": "xl",
+            "size_unit": "l",
+            "widget_dicts": [
+              {
+                "title": "Coolant Control Settings",
+                "show_title": false,
+                "sticky": "NWE",
+                "size_label": "l",
+                "size_unit": "s",
+                "widget_dicts": [
+                  {
+                    "label": "Coolant Control:",
+                    "number": 1,
+                    "width": 25,
+                    "sim_name": [
+                      "temperature_system",
+                      "coolant_control"
+                    ],
+                    "value": [
+                      "Temperature Difference",
+                      "Mass Flow"
+                    ],
+                    "type": "ComboboxSet",
+                    "specifier": "dropdown_activate"
+                  },
+                  {
+                    "title": "Coolant Temperature Difference:",
+                    "show_title": false,
+                    "sticky": "NWE",
+                    "specifier": "visibility",
+                    "widget_dicts": [
+                      {
+                        "label": "Coolant Temperature Difference:",
+                        "value": 10.0,
+                        "sim_name": [
+                          "temperature_system",
+                          "cool_temp_diff"
+                        ],
+                        "dtype": "float",
+                        "dimensions": "K",
+                        "type": "EntrySet"
+                      }
+                    ],
+                    "padx": 0,
+                    "pady": 0
+                  },
+                  {
+                    "title": "Coolant Mass Flow:",
+                    "show_title": false,
+                    "sticky": "NWE",
+                    "widget_dicts": [
+                      {
+                        "label": "Coolant Mass Flow:",
+                        "value": 0.001,
+                        "sim_name": [
+                          "temperature_system",
+                          "cool_mass_flow"
+                        ],
+                        "dtype": "float",
+                        "dimensions": "kg/s",
+                        "type": "EntrySet"
+                      }
+                    ],
+                    "specifier": "visibility",
+                    "padx": 0,
+                    "pady": 0
+                  }
+                ]
+              },
+              {
+                "label": "Coolant Inlet Temperature:",
+                "number": 1,
+                "value": 343.15,
+                "width": 11,
+                "sim_name": [
+                  "coolant_flow_circuit",
+                  "inlet_manifold",
+                  "temp_in"
+                ],
+                "dtype": "float",
+                "dimensions": "K",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Coolant Outlet Pressure:",
+                "number": 1,
+                "value": 101325.0,
+                "width": 11,
+                "sim_name": [
+                  "coolant_channel",
+                  "p_out"
+                ],
+                "dtype": "float",
+                "dimensions": "Pa",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Heat Flux at End Plates:",
+                "number": 1,
+                "value": 0.0,
+                "sim_name": [
+                  "temperature_system",
+                  "heat_flux"
+                ],
+                "width": 11,
+                "dtype": "float",
+                "dimensions": "W/m\u00b2",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Convection Coefficient to Environment:",
+                "number": 1,
+                "value": 0.0,
+                "width": 11,
+                "sim_name": [
+                  "temperature_system",
+                  "alpha_amb"
+                ],
+                "dtype": "float",
+                "dimensions": "W/(m\u00b2-K)",
+                "type": "EntrySet"
+              },
+              {
+                "label": "Ambient Temperature:",
+                "number": 1,
+                "value": 293.15,
+                "width": 11,
+                "sim_name": [
+                  "temperature_system",
+                  "temp_amb"
+                ],
+                "dtype": "float",
+                "dimensions": "K",
+                "type": "EntrySet"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Simulation",
+    "show_title": false,
+    "sub_frame_dicts": [
+      {
+        "title": "Simulation Settings",
+        "show_title": false,
+        "sub_frame_dicts": [
+          {
+            "title": "Numerical Settings",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sub_frame_dicts": [
+              {
+                "title": "Main Numerical Settings",
+                "show_title": false,
+                "widget_dicts": [
+                  {
+                    "label": "Main Numerical Settings",
+                    "font": "Arial 10 bold",
+                    "type": "Label",
+                    "sticky": "WNS"
+                  },
+                  {
+                    "label": "Channel Discretization:",
+                    "value": 10,
+                    "sim_name": [
+                      "simulation",
+                      "elements"
+                    ],
+                    "dtype": "int",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Convergence Tolerance:",
+                    "value": 1e-06,
+                    "sim_name": [
+                      "simulation",
+                      "convergence_criteria"
+                    ],
+                    "dtype": "float",
+                    "dimensions": "-",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Minimum Number of Iterations:",
+                    "value": 3,
+                    "sim_name": [
+                      "simulation",
+                      "minimum_iteration"
+                    ],
+                    "dtype": "int",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Maximum Number of Iterations:",
+                    "value": 50,
+                    "sim_name": [
+                      "simulation",
+                      "maximum_iteration"
+                    ],
+                    "dtype": "int",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Under-relaxation Factor:",
+                    "value": 0.5,
+                    "sim_name": [
+                      "simulation",
+                      "underrelaxation_factor"
+                    ],
+                    "dtype": "float",
+                    "dimensions": "-",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": " ",
+                    "font": "Arial 1",
+                    "type": "Label",
+                    "sticky": "WENS"
+                  }
+                ],
+                "size_label": "xl",
+                "size_unit": "s",
+                "font": "Arial 10",
+                "sticky": "WEN"
+              },
+              {
+                "title": "Flow Circuit Algorithm",
+                "show_title": false,
+                "font": "Arial 10",
+                "size_label": "m",
+                "size_unit": "s",
+                "widget_dicts": [
+                  {
+                    "label": "Flow Circuit Algorithm",
+                    "font": "Arial 10 bold",
+                    "type": "Label",
+                    "sticky": "WNS"
+                  },
+                  {
+                    "label": "Anode",
+                    "row": 1,
+                    "column": 1,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Cathode",
+                    "row": 1,
+                    "column": 2,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Cooling",
+                    "row": 1,
+                    "column": 3,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Convergence Tolerance:",
+                    "value": [
+                      1e-06,
+                      1e-06,
+                      1e-06
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "flow_circuit",
+                        "tolerance"
+                      ],
+                      [
+                        "cathode",
+                        "flow_circuit",
+                        "tolerance"
+                      ],
+                      [
+                        "coolant_flow_circuit",
+                        "tolerance"
+                      ]
+                    ],
+                    "sticky": [
+                      "NW",
+                      "NWE"
+                    ],
+                    "dimensions": "-",
+                    "dtype": "float",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Minimum Iteration Number:",
+                    "value": [
+                      3,
+                      3,
+                      3
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "flow_circuit",
+                        "min_iter"
+                      ],
+                      [
+                        "cathode",
+                        "flow_circuit",
+                        "min_iter"
+                      ],
+                      [
+                        "coolant_flow_circuit",
+                        "min_iter"
+                      ]
+                    ],
+                    "sticky": [
+                      "NW",
+                      "NWE"
+                    ],
+                    "dtype": "int",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Maximum Iteration Number:",
+                    "value": [
+                      20,
+                      20,
+                      20
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "flow_circuit",
+                        "max_iter"
+                      ],
+                      [
+                        "cathode",
+                        "flow_circuit",
+                        "max_iter"
+                      ],
+                      [
+                        "coolant_flow_circuit",
+                        "max_iter"
+                      ]
+                    ],
+                    "sticky": [
+                      "NW",
+                      "NWE"
+                    ],
+                    "dtype": "int",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Under-relaxation Factor:",
+                    "value": [
+                      0.5,
+                      0.5,
+                      0.5
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "flow_circuit",
+                        "underrelaxation_factor"
+                      ],
+                      [
+                        "cathode",
+                        "flow_circuit",
+                        "underrelaxation_factor"
+                      ],
+                      [
+                        "coolant_flow_circuit",
+                        "underrelaxation_factor"
+                      ]
+                    ],
+                    "sticky": [
+                      "NW",
+                      "NWE"
+                    ],
+                    "dimensions": "-",
+                    "dtype": "float",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": " ",
+                    "font": "Arial 1",
+                    "type": "Label",
+                    "sticky": "WENS"
+                  }
+                ],
+                "sticky": "WEN"
+              },
+              {
+                "title": "Limiting Current Linearization",
+                "show_title": false,
+                "font": "Arial 10",
+                "size_label": "l",
+                "size_unit": "m",
+                "widget_dicts": [
+                  {
+                    "label": "Limiting Current Linearization",
+                    "font": "Arial 10 bold",
+                    "type": "Label",
+                    "sticky": "WNS"
+                  },
+                  {
+                    "label": "Anode",
+                    "row": 1,
+                    "column": 1,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Cathode",
+                    "row": 1,
+                    "column": 2,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Critical Concentration Value:",
+                    "value": [
+                      0.02,
+                      0.02
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "electrochemistry",
+                        "c_eps"
+                      ],
+                      [
+                        "cathode",
+                        "electrochemistry",
+                        "c_eps"
+                      ]
+                    ],
+                    "dtype": "float",
+                    "dimensions": "mol/m\u00b3",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": "Numerical Current Density Difference:",
+                    "value": [
+                      5.0,
+                      5.0
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "electrochemistry",
+                        "delta_i"
+                      ],
+                      [
+                        "cathode",
+                        "electrochemistry",
+                        "delta_i"
+                      ]
+                    ],
+                    "dtype": "float",
+                    "dimensions": "A/m\u00b2",
+                    "type": "EntrySet"
+                  },
+                  {
+                    "label": " ",
+                    "font": "Arial 1",
+                    "type": "Label",
+                    "sticky": "WENS"
+                  }
+                ],
+                "sticky": "WEN"
+              }
+            ]
+          },
+          {
+            "title": "Physics Model Switches",
+            "show_title": true,
+            "font": "Arial 10 bold",
+            "sub_frame_dicts": [
+              {
+                "title": "Main Physics Model Switches",
+                "show_title": false,
+                "font": "Arial 10 bold",
+                "size_label": "xl",
+                "size_unit": "null",
+                "widget_dicts": [
+                  {
+                    "label": "Calculate Temperature Distribution:",
+                    "value": true,
+                    "sim_name": [
+                      "stack",
+                      "calc_temperature"
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  },
+                  {
+                    "label": "Calculate Current Density Distribution:",
+                    "value": true,
+                    "sim_name": [
+                      "stack",
+                      "calc_current_density"
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  },
+                  {
+                    "label": "Calculate Membrane Loss:",
+                    "value": true,
+                    "sim_name": [
+                      "membrane",
+                      "calc_loss"
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  }
+                ],
+                "sticky": "WEN"
+              },
+              {
+                "title": "Physics Model Switches",
+                "show_title": false,
+                "font": "Arial 10 bold",
+                "size_label": "l",
+                "size_unit": "null",
+                "widget_dicts": [
+                  {
+                    "label": "Anode",
+                    "row": 1,
+                    "column": 1,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Cathode",
+                    "row": 1,
+                    "column": 2,
+                    "type": "Label",
+                    "sticky": "WENS"
+                  },
+                  {
+                    "label": "Calculate Activation Loss:",
+                    "value": [
+                      true,
+                      true
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "electrochemistry",
+                        "calc_act_loss"
+                      ],
+                      [
+                        "cathode",
+                        "electrochemistry",
+                        "calc_act_loss"
+                      ]
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  },
+                  {
+                    "label": "Calculate Catalyst Diffusion Loss:",
+                    "value": [
+                      true,
+                      true
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "electrochemistry",
+                        "calc_cl_diff_loss"
+                      ],
+                      [
+                        "cathode",
+                        "electrochemistry",
+                        "calc_cl_diff_loss"
+                      ]
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  },
+                  {
+                    "label": "Calculate Catalyst Diffusion Loss:",
+                    "value": [
+                      true,
+                      true
+                    ],
+                    "sim_name": [
+                      [
+                        "anode",
+                        "electrochemistry",
+                        "calc_gdl_diff_loss"
+                      ],
+                      [
+                        "cathode",
+                        "electrochemistry",
+                        "calc_gdl_diff_loss"
+                      ]
+                    ],
+                    "dtype": "bool",
+                    "type": "CheckButtonSet"
+                  }
+                ],
+                "sticky": "WEN"
+              }
+            ]
+          },
+          {
+            "title": "Output Results",
+            "show_title": false,
+            "font": "Arial 10 bold",
+            "widget_dicts": [
+              {
+                "label": "Output Directory:",
+                "button_dict": {
+                  "label": "Open",
+                  "type": "OpenDirectoryButton",
+                  "width": 10
+                },
+                "value": "output",
+                "sim_name": [
+                  "output",
+                  "directory"
+                ],
+                "width": 40,
+                "dtype": "string",
+                "type": "EntryButtonSet"
+              }
+            ],
+            "sticky": "WENS"
+          },
+          {
+            "title": "Settings IO",
+            "show_title": false,
+            "font": "Arial 10 bold",
+            "widget_dicts": [
+              {
+                "label": "Load Settings",
+                "takefocus": 0,
+                "row": 0,
+                "column": 0,
+                "sticky": "",
+                "width": 20,
+                "weights": [
+                  1,
+                  1
+                ],
+                "type": "OpenFileButton"
+              },
+              {
+                "label": "Save Settings",
+                "takefocus": 0,
+                "row": 0,
+                "column": 1,
+                "sticky": "",
+                "width": 20,
+                "weights": [
+                  1,
+                  1
+                ],
+                "type": "SaveFileButton"
+              }
+            ],
+            "sticky": "WEN"
+          },
+          {
+            "title": "Run Simulation",
+            "show_title": false,
+            "widget_dicts": [
+              {
+                "label": "Run Simulation",
+                "type": "RunButton",
+                "width": 20,
+                "sticky": "WNE"
+              }
+            ],
+            "sticky": ""
+          }
+        ],
+        "sticky": "WEN"
+      }
+    ]
+  }
+]

@@ -52,6 +52,11 @@ app.title = 'PEMFC Model'
 # Component Initialization & App layout
 # ----------------------------------------
 
+# Read layout settings from json file
+with open(os.path.join('settings', 'parameters_layout.json')) as file:
+    parameters_layout = json.load(file)
+
+
 # Process bar components
 pbar = dbc.Progress(id='pbar')
 timer_progress = dcc.Interval(id='timer_progress',
@@ -121,7 +126,7 @@ app.layout = dbc.Container([
         html.Div([  # LEFT MIDDLE / (Menu Column)
             # Menu Tabs
             html.Div([
-                dl.tab_container(gui_input.main_frame_dicts)],
+                dl.tab_container(parameters_layout)],
                 id='setting_container'),  # style={'flex': '1'}
             # Buttons 1 (Load/Save Settings, Run
             html.Div([  # LEFT MIDDLE: Buttons
@@ -1892,7 +1897,7 @@ def activate_column(input1, input2):
     Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
            'style'),
     Input({'type': ALL, 'id': ALL, 'specifier':
-        'checklist_activate_cooling'}, 'value'),
+           'checklist_activate_cooling'}, 'value'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
           'id'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
