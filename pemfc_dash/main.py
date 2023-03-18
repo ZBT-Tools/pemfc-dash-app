@@ -12,7 +12,7 @@ import re
 import copy
 import sys
 import json
-
+from glom import glom
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
     ServersideOutput, ctx
@@ -69,8 +69,9 @@ app.layout = dbc.Container([
     dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
 
-    html.Div(id="initial_dummy_0"),  # Level zero initialization (Read available input parameter)
-    html.Div(id="initial_dummy_1"),  # Level one initialization (e.g. creation of study table,...)
+    # Dummy div for initialization
+    # (Read available input parameters, create study table)
+    html.Div(id="initial_dummy"),
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -153,7 +154,7 @@ app.layout = dbc.Container([
             html.Div([  # LEFT MIDDLE: Buttons
                 html.Div([
                     html.Div([
-                        html.Button('Calc. Current-Voltage Curve', 
+                        html.Button('Calc. Current-Voltage Curve',
                                     id='btn_init_ui',
                                     className='settings_button',
                                     style={'display': 'flex'}),
@@ -251,7 +252,7 @@ app.layout = dbc.Container([
                         style={'display': 'flex',
                                'flex-wrap': 'wrap',
                                'justify-content': 'space-evenly'}
-                        )],
+                    )],
                     className='neat-spacing')], style={'flex': '1'},
                 id='save_load_res', className='pretty_container'),
             html.Div([  # LEFT MIDDLE: Spinner
@@ -262,9 +263,9 @@ app.layout = dbc.Container([
                          dbc.Spinner(html.Div(id="spinner_uirefine")),
                          dbc.Spinner(html.Div(id="spinner_study"))],
 
-                             # style={'display': 'flex',
-                             #       'flex-wrap': 'wrap',
-                             #       'justify-content': 'space-evenly'}
+                        # style={'display': 'flex',
+                        #       'flex-wrap': 'wrap',
+                        #       'justify-content': 'space-evenly'}
                     )],
                     className='neat-spacing')],
                 style={'flex': '1'},
@@ -309,7 +310,7 @@ app.layout = dbc.Container([
                             dcc.Dropdown(id='dropdown_heatmap_2',
                                          className='dropdown_input',
                                          style={'visibility': 'hidden'}),
-                            id='div_results_dropdown_2',)],
+                            id='div_results_dropdown_2', )],
                     style={'display': 'flex',
                            'flex-direction': 'row',
                            'flex-wrap': 'wrap',
@@ -346,38 +347,38 @@ app.layout = dbc.Container([
                     html.Div(
                         [dcc.Store(id='append_check'),
                          html.Div(
-                         [html.Div(
-                             children=dbc.DropdownMenu(
-                                 id='checklist_dropdown',
-                                 children=[
-                                     dbc.Checklist(
-                                         id='data_checklist',
-                                         # input_checked_class_name='checkbox',
-                                         style={'max-height': '400px',
-                                                'overflow': 'auto'})],
-                                         toggle_style={
-                                             'textTransform': 'none',
-                                             'background': '#fff',
-                                             'border': '#ccc',
-                                             'letter-spacing': '0',
-                                             'font-size': '11px'},
-                                         align_end=True,
-                                         toggle_class_name='dropdown_input',
-                                         label="Select Cells"), ),
-                             html.Button('Clear All', id='clear_all_button',
-                                         className='local_data_buttons'),
-                             html.Button('Select All',
-                                         id='select_all_button',
-                                         className='local_data_buttons'),
-                             html.Button('Export to Table',
-                                         id='export_b',
-                                         className='local_data_buttons'),
-                             html.Button('Append to Table',
-                                         id='append_b',
-                                         className='local_data_buttons'),
-                             html.Button('Clear Table',
-                                         id='clear_table_b',
-                                         className='local_data_buttons')],
+                             [html.Div(
+                                 children=dbc.DropdownMenu(
+                                     id='checklist_dropdown',
+                                     children=[
+                                         dbc.Checklist(
+                                             id='data_checklist',
+                                             # input_checked_class_name='checkbox',
+                                             style={'max-height': '400px',
+                                                    'overflow': 'auto'})],
+                                     toggle_style={
+                                         'textTransform': 'none',
+                                         'background': '#fff',
+                                         'border': '#ccc',
+                                         'letter-spacing': '0',
+                                         'font-size': '11px'},
+                                     align_end=True,
+                                     toggle_class_name='dropdown_input',
+                                     label="Select Cells"), ),
+                                 html.Button('Clear All', id='clear_all_button',
+                                             className='local_data_buttons'),
+                                 html.Button('Select All',
+                                             id='select_all_button',
+                                             className='local_data_buttons'),
+                                 html.Button('Export to Table',
+                                             id='export_b',
+                                             className='local_data_buttons'),
+                                 html.Button('Append to Table',
+                                             id='append_b',
+                                             className='local_data_buttons'),
+                                 html.Button('Clear Table',
+                                             id='clear_table_b',
+                                             className='local_data_buttons')],
                              style={'display': 'flex',
                                     'flex-wrap': 'wrap',
                                     'margin-bottom': '5px'})],
@@ -593,9 +594,8 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         -> (pd.DataFrame, bool):
     """
-
     - Run input_table rows, catch exceptions of single calculations
-            https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
+      https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
     - Append result columns to input_table
     - Return DataFrame
     """
@@ -642,10 +642,8 @@ def cbf_progress_bar(*args) -> (float, str):
             str_raw = file.read()
         last_line = list(filter(None, str_raw.split('\n')))[-1]
         percent = float(last_line.split('%')[0])
-
     except:
         percent = 0
-
     finally:
         text = f'{percent:.0f}%'
         if int(percent) == 100:
@@ -656,41 +654,69 @@ def cbf_progress_bar(*args) -> (float, str):
 
 
 @app.callback(
+    Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+    Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     Output("pemfc_settings_file", "data"),
     Output('df_input_store', 'data'),
     Output("study_table", "children"),
-    Input("initial_dummy_0", "children"),
+    Input("initial_dummy", "children"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
 )
-def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
+def cbf_initialization(dummy, value_list: list, multivalue_list: list,
+                       id_list: list, multivalue_id_list: list):
     """
     Initialization
     """
     # Read pemfc default settings.json file
     # --------------------------------------
     try:
-        # Initially get default simulation settings from settings.json file
-        # in pemfc core module
+        # Initially get default simulation settings structure from
+        # settings.json file in pemfc core module
         pemfc_base_dir = os.path.dirname(pemfc.__file__)
         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
                 as file:
-            settings = json.load(file)
+            base_settings = json.load(file)
         # Avoid local outputs from simulation
-        settings['output']['save_csv'] = False
-        settings['output']['save_plot'] = False
+        base_settings['output']['save_csv'] = False
+        base_settings['output']['save_plot'] = False
     except Exception as E:
         print(repr(E))
+    base_settings = df.store_data(base_settings)
 
-    settings = df.store_data(settings)
+    try:
+        # Initially get default simulation input values from local
+        # settings.json file
+        with open(os.path.join('settings', 'settings.json')) \
+                as file:
+            input_settings = json.load(file)
+        # Avoid local outputs from simulation
+        input_settings['output']['save_csv'] = False
+        input_settings['output']['save_plot'] = False
+    except Exception as E:
+        print(repr(E))
+    gui_label_value_dict, _ = df.settings_to_dash_gui(input_settings)
+
+    # Update initial data input with "input_settings"
+    # --------------------------------------
+    # ToDO: This is a quick fix.
+    # Solution should be: At GUI initialization, default values should be taken from
+    # settings.json, NOT GUI-describing dictionaries.
+
+    new_value_list, new_multivalue_list = \
+        df.update_gui_lists(gui_label_value_dict,
+                            value_list, multivalue_list,
+                            id_list, multivalue_id_list)
 
     # Read initial data input
     # --------------------------------------
     # Read data from input fields and save input in dict/dataframe
     # (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+
+    df_input = df.process_inputs(new_value_list, new_multivalue_list,
+                                 id_list, multivalue_id_list,
                                  returntype="DataFrame")
     df_input_store = df.store_data(df_input)
 
@@ -741,7 +767,8 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
-    return settings, df_input_store, table
+    return new_value_list, new_multivalue_list, \
+           base_settings, df_input_store, table
 
 
 @app.callback(
@@ -759,44 +786,32 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State('modal', 'is_open')]
 )
-def cbf_load_settings(contents, filename, value, multival, ids, ids2,
+def cbf_load_settings(contents, filename, value, multival, ids, ids_multival,
                       modal_state):
     if contents is None:
         raise PreventUpdate
     else:
         if 'json' in filename:
             try:
-                j_file, err_l = df.parse_contents(contents)
+                settings_dict = df.parse_contents(contents)
+                gui_label_value_dict, error_list = \
+                    df.settings_to_dash_gui(settings_dict)
 
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
+                new_value_list, new_multivalue_list = \
+                    df.update_gui_lists(gui_label_value_dict,
+                                        value, multival, ids, ids_multival)
 
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
+                if not error_list:
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        dm.modal_process('id-not-loaded', error_list)
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
             except Exception as E:
                 # Error / JSON file cannot be processed; return old value
@@ -864,8 +879,7 @@ def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
         # code portion of run_simulation()
         # ------------------------
 
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+        with open(os.path.join('settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
         settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
@@ -1218,14 +1232,22 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
     df_nominal = df.read_data(ctx.states["df_input_store.data"])
     results = results.loc[results["successful_run"] == True, :]
+    results = results.drop(columns=['local_data'])
 
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Check for identical parameter, only different current density
+    # Check for identical parameters, varying current density and voltage only
     group_columns = list(df_nominal.columns)
     group_columns.remove('simulation-current_density')
     group_columns.remove('simulation-average_cell_voltage')
+
+    # Filter columns from results with NA or None values
+    na_columns = results.isna().any()
+    na_columns = na_columns[na_columns == True]
+    drop_labels = list(na_columns.index)
+    group_columns = [item for item in group_columns if item not in drop_labels]
+
     # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
     # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
     # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
@@ -1851,17 +1873,17 @@ def activate_column(input1, input2):
         if val == [1]:
             list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
                 list_state[18 + num] = list_state[30 + num] = False
-            if input2[3+num] == 'circular':
-                list_state[6+num], list_state[9+num], list_state[12+num] = \
-                 False, True, True
+            if input2[3 + num] == 'circular':
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
+                    False, True, True
             else:
-                list_state[6+num], list_state[9+num], list_state[12+num] = \
+                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
                     True, False, False
-            if input2[18+num] == 'circular':
-                list_state[21+num], list_state[24+num], list_state[27+num] = \
-                 False, True, True
+            if input2[18 + num] == 'circular':
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
+                    False, True, True
             else:
-                list_state[21+num], list_state[24+num], list_state[27+num] = \
+                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
                     True, False, False
     return list_state
 
@@ -1870,7 +1892,7 @@ def activate_column(input1, input2):
     Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
            'style'),
     Input({'type': ALL, 'id': ALL, 'specifier':
-           'checklist_activate_cooling'}, 'value'),
+        'checklist_activate_cooling'}, 'value'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
           'id'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
