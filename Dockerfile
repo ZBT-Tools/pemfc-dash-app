@@ -1,4 +1,4 @@
-FROM python:3.10 AS build
+FROM python:3.11 AS build
 RUN python3 -m venv /venv
 
 # example of a development library package that needs to be installed
@@ -24,7 +24,7 @@ RUN /venv/bin/pip install /project
 
 
 # the second, production stage can be much more lightweight:
-FROM python:3.10-slim AS production
+FROM python:3.11-slim AS production
 COPY --from=build /venv /venv
 
 ENV PATH="/venv/bin:$PATH"
@@ -39,7 +39,7 @@ COPY . ./
 #     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # remember to run python from the virtualenv
-CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:server
+# CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:server
 
 # specifically for docker-compose
-# CMD exec gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 0 app:server
+CMD exec gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 0 app:server
