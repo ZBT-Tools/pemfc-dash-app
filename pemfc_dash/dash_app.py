@@ -7,6 +7,7 @@ import redis
 import shutil
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
     ServersideOutputTransform, RedisStore, FileSystemStore
+import pandas as pd
 
 
 def clear_cache(path):
