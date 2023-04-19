@@ -1580,8 +1580,8 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
 @app.callback(
     Output("heatmap_graph", "figure"),
     [Input('dropdown_heatmap', 'value'),
-     Input('dropdown_heatmap_2', 'value')],
-    Input('df_result_data_store', 'data'),
+     Input('dropdown_heatmap_2', 'value'),
+     Input('df_result_data_store', 'data')],
     prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
