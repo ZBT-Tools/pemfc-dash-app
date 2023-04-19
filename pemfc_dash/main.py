@@ -12,7 +12,7 @@ import re
 import copy
 import sys
 import json
-
+from glom import glom
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
     ServersideOutput, ctx
@@ -68,8 +68,9 @@ app.layout = dbc.Container([
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
 
-    html.Div(id="initial_dummy_0"),  # Level zero initialization (Read available input parameter)
-    html.Div(id="initial_dummy_1"),  # Level one initialization (e.g. creation of study table,...)
+    # Dummy div for initialization
+    # (Read available input parameters, create study table)
+    html.Div(id="initial_dummy"),
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
@@ -275,8 +276,8 @@ app.layout = dbc.Container([
                 html.Div([
                     html.Div([pbar, timer_progress])],
                     className='neat-spacing')], style={'flex': '1'},
-                id='progress_bar', className='pretty_container')
-        ], id="left-column", className='col-12 col-lg-4 mb-2'),
+                id='progress_bar', className='pretty_container')],
+            id="left-column", className='col-12 col-lg-4 mb-2'),
         html.Div([  # RIGHT MIDDLE  (Result Column)
             html.Div(
                 [html.Div('Current-Voltage Curve', className='title'),
@@ -308,7 +309,7 @@ app.layout = dbc.Container([
                             dcc.Dropdown(id='dropdown_heatmap_2',
                                          className='dropdown_input',
                                          style={'visibility': 'hidden'}),
-                            id='div_results_dropdown_2', )],
+                            id='div_results_dropdown_2',)],
                     style={'display': 'flex',
                            'flex-direction': 'row',
                            'flex-wrap': 'wrap',
@@ -594,9 +595,8 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         -> (pd.DataFrame, bool, str, str):
     """
-
     - Run input_table rows, catch exceptions of single calculations
-            https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
+      https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
     - Append result columns to input_table
     - Return DataFrame
     """
@@ -607,7 +607,8 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         except Exception as E:
             return repr(E)
 
-    result_table = input_table["settings"].progress_apply(func)
+    settings = input_table["settings"]
+    result_table = settings.progress_apply(func)
     # result_table = input_table["settings"].map(func)
     # result_table = input_table["settings"].parallel_apply(func)
     # result_table = input_table["settings"].apply_parallel(func, num_processes=4)
@@ -658,10 +659,8 @@ def cbf_progress_bar(*args) -> (float, str):
             str_raw = file.read()
         last_line = list(filter(None, str_raw.split('\n')))[-1]
         percent = float(last_line.split('%')[0])
-
     except:
         percent = 0
-
     finally:
         text = f'{percent:.0f}%'
         if int(percent) == 100:
@@ -672,41 +671,69 @@ def cbf_progress_bar(*args) -> (float, str):
 
 
 @app.callback(
+    Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
+    Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
     Output("pemfc_settings_file", "data"),
     Output('df_input_store', 'data'),
     Output("study_table", "children"),
-    Input("initial_dummy_0", "children"),
+    Input("initial_dummy", "children"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
-     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')],
+     State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
 )
-def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
+def cbf_initialization(dummy, value_list: list, multivalue_list: list,
+                       id_list: list, multivalue_id_list: list):
     """
     Initialization
     """
     # Read pemfc default settings.json file
     # --------------------------------------
     try:
-        # Initially get default simulation settings from settings.json file
-        # in pemfc core module
+        # Initially get default simulation settings structure from
+        # settings.json file in pemfc core module
         pemfc_base_dir = os.path.dirname(pemfc.__file__)
         with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
                 as file:
-            settings = json.load(file)
+            base_settings = json.load(file)
         # Avoid local outputs from simulation
-        settings['output']['save_csv'] = False
-        settings['output']['save_plot'] = False
+        base_settings['output']['save_csv'] = False
+        base_settings['output']['save_plot'] = False
     except Exception as E:
         print(repr(E))
+    base_settings = df.store_data(base_settings)
 
-    settings = df.store_data(settings)
+    try:
+        # Initially get default simulation input values from local
+        # settings.json file
+        with open(os.path.join('settings', 'settings.json')) \
+                as file:
+            input_settings = json.load(file)
+        # Avoid local outputs from simulation
+        input_settings['output']['save_csv'] = False
+        input_settings['output']['save_plot'] = False
+    except Exception as E:
+        print(repr(E))
+    gui_label_value_dict, _ = df.settings_to_dash_gui(input_settings)
+
+    # Update initial data input with "input_settings"
+    # --------------------------------------
+    # ToDO: This is a quick fix.
+    # Solution should be: At GUI initialization, default values should be taken from
+    # settings.json, NOT GUI-describing dictionaries.
+
+    new_value_list, new_multivalue_list = \
+        df.update_gui_lists(gui_label_value_dict,
+                            value_list, multivalue_list,
+                            id_list, multivalue_id_list)
 
     # Read initial data input
     # --------------------------------------
     # Read data from input fields and save input in dict/dataframe
     # (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+
+    df_input = df.process_inputs(new_value_list, new_multivalue_list,
+                                 id_list, multivalue_id_list,
                                  returntype="DataFrame")
     df_input_store = df.store_data(df_input)
 
@@ -757,7 +784,8 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
 
-    return settings, df_input_store, table
+    return new_value_list, new_multivalue_list, \
+           base_settings, df_input_store, table
 
 
 @app.callback(
@@ -775,44 +803,32 @@ def cbf_initialization(dummy, inputs, inputs2, ids, ids2):
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
      State('modal', 'is_open')]
 )
-def cbf_load_settings(contents, filename, value, multival, ids, ids2,
+def cbf_load_settings(contents, filename, value, multival, ids, ids_multival,
                       modal_state):
     if contents is None:
         raise PreventUpdate
     else:
         if 'json' in filename:
             try:
-                j_file, err_l = df.parse_contents(contents)
+                settings_dict = df.parse_contents(contents)
+                gui_label_value_dict, error_list = \
+                    df.settings_to_dash_gui(settings_dict)
 
-                dict_ids = {id_l: val for id_l, val in
-                            zip([id_l['id'] for id_l in ids], value)}
-                dict_ids2 = {id_l: val for id_l, val in
-                             zip([id_l['id'] for id_l in ids2], multival)}
+                new_value_list, new_multivalue_list = \
+                    df.update_gui_lists(gui_label_value_dict,
+                                        value, multival, ids, ids_multival)
 
-                id_match = set.union(set(dict_ids),
-                                     set([item[:-2] for item in dict_ids2]))
-
-                for k, v in j_file.items():
-                    if k in id_match:
-                        if isinstance(v, list):
-                            for num, val in enumerate(v):
-                                dict_ids2[k + f'_{num}'] = df.check_ifbool(val)
-                        else:
-                            dict_ids[k] = df.check_ifbool(v)
-                    else:
-                        continue
-
-                if not err_l:
+                if not error_list:
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = dm.modal_process('loaded')
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
-                        dm.modal_process('id-not-loaded', err_l)
-                    return list(dict_ids.values()), list(dict_ids2.values()), \
+                        dm.modal_process('id-not-loaded', error_list)
+                    return new_value_list, new_multivalue_list, \
                         None, modal_title, modal_body, not modal_state
             except Exception as E:
                 # Error / JSON file cannot be processed; return old value
@@ -880,8 +896,7 @@ def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
         # code portion of run_simulation()
         # ------------------------
 
-        pemfc_base_dir = os.path.dirname(pemfc.__file__)
-        with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+        with open(os.path.join('settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
         settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
@@ -891,7 +906,7 @@ def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
 
 
 @app.callback(
-    Output('df_result_data_store', 'data'),
+    ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output("spinner_run_single", 'children'),
     Output('modal-title', 'children'),
@@ -950,7 +965,7 @@ def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_stat
 
 
 @app.callback(
-    Output('df_result_data_store', 'data'),
+    ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
     Output('modal-title', 'children'),
@@ -1029,7 +1044,7 @@ def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings, mo
 
 
 @app.callback(
-    Output('df_result_data_store', 'data'),
+    ServersideOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
     Output('modal-title', 'children'),
     Output('modal-body', 'children'),
@@ -1113,7 +1128,7 @@ def cbf_update_studytable(contents, filename, modal_state):
 
 
 @app.callback(
-    Output('df_result_data_store', 'data'),
+    ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
     Output('modal-title', 'children'),
@@ -1267,7 +1282,7 @@ def cbf_save_results(inp, state):
 
 
 @app.callback(
-    Output('df_result_data_store', 'data'),
+    ServersideOutput('df_result_data_store', 'data'),
     Input("load_res", "contents"),
     prevent_initial_call=True)
 def cbf_load_results(content):
@@ -1291,19 +1306,28 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     current density. Those points will be connected and have identical color
     """
 
+    # Read results
     try:
         # Read results
         results = df.read_data(ctx.inputs["df_result_data_store.data"])
         df_nominal = df.read_data(ctx.states["df_input_store.data"])
         results = results.loc[results["successful_run"] == True, :]
+        results = results.drop(columns=['local_data'])
 
         # Create figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-        # Check for identical parameter, only different current density
+        # Check for identical parameters, varying current density and voltage only
         group_columns = list(df_nominal.columns)
         group_columns.remove('simulation-current_density')
         group_columns.remove('simulation-average_cell_voltage')
+
+        # Filter columns from results with NA or None values
+        na_columns = results.isna().any()
+        na_columns = na_columns[na_columns == True]
+        drop_labels = list(na_columns.index)
+        group_columns = [item for item in group_columns if item not in drop_labels]
+
         # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
         # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
         # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
@@ -1553,131 +1577,132 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
     prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
-    if dropdown_key is None or results is None:
-        raise PreventUpdate
+    # if dropdown_key is None or results is None:
+    #     raise PreventUpdate
+    # else:
+
+    # Read results
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    local_data = result_set["local_data"]
+
+    if 'value' in local_data[dropdown_key]:
+        zvalues = local_data[dropdown_key]['value']
+    elif dropdown_key_2 is not None:
+        zvalues = local_data[dropdown_key][dropdown_key_2]['value']
     else:
-        # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+        raise PreventUpdate
 
-        result_set = results.iloc[0]
+    x_key = local_data[dropdown_key]['xkey']
+    y_key = 'Cells'
+    xvalues = np.asarray(local_data[x_key]['value'])
+    if xvalues.ndim > 1:
+        xvalues = xvalues[0]
+    yvalues = np.asarray(local_data[y_key]['value'])
+    if yvalues.ndim > 1:
+        yvalues = yvalues[0]
 
-        local_data = result_set["local_data"]
+    n_y = len(yvalues)
+    n_x = xvalues.shape[-1]
+    n_z = yvalues.shape[-1]
 
-        if 'value' in local_data[dropdown_key]:
-            zvalues = local_data[dropdown_key]['value']
-        elif dropdown_key_2 is not None:
-            zvalues = local_data[dropdown_key][dropdown_key_2]['value']
+    if n_x == n_z + 1:
+        xvalues = ip.interpolate_1d(xvalues)
+
+    if dropdown_key_2 is None:
+        z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
+    else:
+        z_title = dropdown_key + ' / ' \
+                  + local_data[dropdown_key][dropdown_key_2]['units']
+
+    height = 800
+    # width = 500
+
+    font_props = dl.graph_font_props
+
+    base_axis_dict = \
+        {'tickfont': font_props['medium'],
+         'titlefont': font_props['large'],
+         'title': x_key + ' / ' + local_data[x_key]['units'],
+         'tickmode': 'array', 'showgrid': True}
+
+    tick_division_dict = \
+        {'fine': {'upper_limit': 10, 'value': 1},
+         'medium': {'upper_limit': 20, 'value': 2},
+         'medium_coarse': {'upper_limit': 50, 'value': 5},
+         'coarse': {'value': 10}}
+
+    def filter_tick_text(data, spacing=1):
+        return [str(data[i]) if i % spacing == 0 else ' '
+                for i in range(len(data))]
+
+    def granular_tick_division(data, division=None):
+        n = len(data)
+        if division is None:
+            division = tick_division_dict
+        if n <= division['fine']['upper_limit']:
+            result = filter_tick_text(data, division['fine']['value'])
+        elif division['fine']['upper_limit'] < n \
+                <= division['medium']['upper_limit']:
+            result = \
+                filter_tick_text(data, division['medium']['value'])
+        elif division['medium']['upper_limit'] < n \
+                <= division['medium_coarse']['upper_limit']:
+            result = filter_tick_text(
+                data, division['medium_coarse']['value'])
         else:
-            raise PreventUpdate
+            result = \
+                filter_tick_text(data, division['coarse']['value'])
+        return result
 
-        x_key = local_data[dropdown_key]['xkey']
-        y_key = 'Cells'
-        xvalues = np.asarray(local_data[x_key]['value'])
-        if xvalues.ndim > 1:
-            xvalues = xvalues[0]
-        yvalues = np.asarray(local_data[y_key]['value'])
-        if yvalues.ndim > 1:
-            yvalues = yvalues[0]
+    # y_tick_labels[-1] = str(n_y - 1)
 
-        n_y = len(yvalues)
-        n_x = xvalues.shape[-1]
-        n_z = yvalues.shape[-1]
+    x_axis_dict = copy.deepcopy(base_axis_dict)
+    x_axis_dict['title'] = x_key + ' / ' + local_data[x_key]['units']
+    x_axis_dict['tickvals'] = local_data[x_key]['value']
+    x_axis_dict['ticktext'] = \
+        granular_tick_division(local_data[x_key]['value'])
 
-        if n_x == n_z + 1:
-            xvalues = ip.interpolate_1d(xvalues)
+    y_axis_dict = copy.deepcopy(base_axis_dict)
+    y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
+    y_axis_dict['tickvals'] = yvalues
+    y_axis_dict['ticktext'] = granular_tick_division(range(n_y))
 
-        if dropdown_key_2 is None:
-            z_title = dropdown_key + ' / ' + local_data[dropdown_key]['units']
-        else:
-            z_title = dropdown_key + ' / ' \
-                      + local_data[dropdown_key][dropdown_key_2]['units']
+    z_axis_dict = copy.deepcopy(base_axis_dict)
+    z_axis_dict['title'] = z_title
+    # z_axis_dict['tickvals'] = zvalues
 
-        height = 800
-        # width = 500
+    layout = go.Layout(
+        font=font_props['large'],
+        # title='Local Results in Heat Map',
+        titlefont=font_props['large'],
+        xaxis=x_axis_dict,
+        yaxis=y_axis_dict,
+        margin={'l': 75, 'r': 20, 't': 10, 'b': 20},
+        height=height
+    )
+    scene = dict(
+        xaxis=x_axis_dict,
+        yaxis=y_axis_dict,
+        zaxis=z_axis_dict)
 
-        font_props = dl.graph_font_props
+    heatmap = \
+        go.Surface(z=zvalues, x=xvalues, y=yvalues,  # xgap=1, ygap=1,
+                   colorbar={
+                       'tickfont': font_props['large'],
+                       'title': {
+                           'text': z_title,
+                           'font': {'size': font_props['large']['size']},
+                           'side': 'right'},
+                       # 'height': height - 300
+                       'lenmode': 'fraction',
+                       'len': 0.75
+                   })
 
-        base_axis_dict = \
-            {'tickfont': font_props['medium'],
-             'titlefont': font_props['large'],
-             'title': x_key + ' / ' + local_data[x_key]['units'],
-             'tickmode': 'array', 'showgrid': True}
-
-        tick_division_dict = \
-            {'fine': {'upper_limit': 10, 'value': 1},
-             'medium': {'upper_limit': 20, 'value': 2},
-             'medium_coarse': {'upper_limit': 50, 'value': 5},
-             'coarse': {'value': 10}}
-
-        def filter_tick_text(data, spacing=1):
-            return [str(data[i]) if i % spacing == 0 else ' '
-                    for i in range(len(data))]
-
-        def granular_tick_division(data, division=None):
-            n = len(data)
-            if division is None:
-                division = tick_division_dict
-            if n <= division['fine']['upper_limit']:
-                result = filter_tick_text(data, division['fine']['value'])
-            elif division['fine']['upper_limit'] < n \
-                    <= division['medium']['upper_limit']:
-                result = \
-                    filter_tick_text(data, division['medium']['value'])
-            elif division['medium']['upper_limit'] < n \
-                    <= division['medium_coarse']['upper_limit']:
-                result = filter_tick_text(
-                    data, division['medium_coarse']['value'])
-            else:
-                result = \
-                    filter_tick_text(data, division['coarse']['value'])
-            return result
-
-        # y_tick_labels[-1] = str(n_y - 1)
-
-        x_axis_dict = copy.deepcopy(base_axis_dict)
-        x_axis_dict['title'] = x_key + ' / ' + local_data[x_key]['units']
-        x_axis_dict['tickvals'] = local_data[x_key]['value']
-        x_axis_dict['ticktext'] = \
-            granular_tick_division(local_data[x_key]['value'])
-
-        y_axis_dict = copy.deepcopy(base_axis_dict)
-        y_axis_dict['title'] = y_key + ' / ' + local_data[y_key]['units']
-        y_axis_dict['tickvals'] = yvalues
-        y_axis_dict['ticktext'] = granular_tick_division(range(n_y))
-
-        z_axis_dict = copy.deepcopy(base_axis_dict)
-        z_axis_dict['title'] = z_title
-        # z_axis_dict['tickvals'] = zvalues
-
-        layout = go.Layout(
-            font=font_props['large'],
-            # title='Local Results in Heat Map',
-            titlefont=font_props['large'],
-            xaxis=x_axis_dict,
-            yaxis=y_axis_dict,
-            margin={'l': 75, 'r': 20, 't': 10, 'b': 20},
-            height=height
-        )
-        scene = dict(
-            xaxis=x_axis_dict,
-            yaxis=y_axis_dict,
-            zaxis=z_axis_dict)
-
-        heatmap = \
-            go.Surface(z=zvalues, x=xvalues, y=yvalues,  # xgap=1, ygap=1,
-                       colorbar={
-                           'tickfont': font_props['large'],
-                           'title': {
-                               'text': z_title,
-                               'font': {'size': font_props['large']['size']},
-                               'side': 'right'},
-                           # 'height': height - 300
-                           'lenmode': 'fraction',
-                           'len': 0.75
-                       })
-
-        fig = go.Figure(data=heatmap, layout=layout)
-        fig.update_layout(scene=scene)
+    fig = go.Figure(data=heatmap, layout=layout)
+    fig.update_layout(scene=scene)
 
     return fig
 
@@ -1699,115 +1724,115 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                       clear_all_clicks, restyle_data, results):
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
-    if drop1 is None or results is None:
-        raise PreventUpdate
+    # if drop1 is None or results is None:
+    #     raise PreventUpdate
+    # else:
+    # Read results
+    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    local_data = result_set["local_data"]
+
+    fig = go.Figure()
+
+    default_x_key = 'Number'
+    x_key = local_data[drop1].get('xkey', default_x_key)
+
+    if drop2 is None:
+        y_title = drop1 + ' / ' + local_data[drop1]['units']
     else:
-        # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+        y_title = drop1 + ' - ' + drop2 + ' / ' \
+                  + local_data[drop1][drop2]['units']
 
-        result_set = results.iloc[0]
+    if x_key == default_x_key:
+        x_title = x_key + ' / -'
+    else:
+        x_title = x_key + ' / ' + local_data[x_key]['units']
 
-        local_data = result_set["local_data"]
+    if 'Error' in y_title:
+        y_scale = 'log'
+    else:
+        y_scale = 'linear'
 
-        fig = go.Figure()
+    layout = go.Layout(
+        font={'color': 'black', 'family': 'Arial'},
+        # title='Local Results in Heat Map',
+        titlefont={'size': 11, 'color': 'black'},
+        xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+               'title': x_title},
+        yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+               'title': y_title},
+        margin={'l': 100, 'r': 20, 't': 20, 'b': 20},
+        yaxis_type=y_scale)
 
-        default_x_key = 'Number'
-        x_key = local_data[drop1].get('xkey', default_x_key)
+    fig.update_layout(layout)
 
-        if drop2 is None:
-            y_title = drop1 + ' / ' + local_data[drop1]['units']
-        else:
-            y_title = drop1 + ' - ' + drop2 + ' / ' \
-                      + local_data[drop1][drop2]['units']
+    if 'value' in local_data[drop1]:
+        yvalues = np.asarray(local_data[drop1]['value'])
+    elif drop2 is not None:
+        yvalues = np.asarray(local_data[drop1][drop2]['value'])
+    else:
+        raise PreventUpdate
 
-        if x_key == default_x_key:
-            x_title = x_key + ' / -'
-        else:
-            x_title = x_key + ' / ' + local_data[x_key]['units']
+    n_y = np.asarray(yvalues).shape[-1]
+    if x_key in local_data:
+        xvalues = np.asarray(local_data[x_key]['value'])
+        if len(xvalues) == n_y + 1:
+            xvalues = ip.interpolate_1d(xvalues)
+    else:
+        xvalues = np.asarray(list(range(n_y)))
 
-        if 'Error' in y_title:
-            y_scale = 'log'
-        else:
-            y_scale = 'linear'
+    if xvalues.ndim > 1:
+        xvalues = xvalues[0]
 
-        layout = go.Layout(
-            font={'color': 'black', 'family': 'Arial'},
-            # title='Local Results in Heat Map',
-            titlefont={'size': 11, 'color': 'black'},
-            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': x_title},
-            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-                   'title': y_title},
-            margin={'l': 100, 'r': 20, 't': 20, 'b': 20},
-            yaxis_type=y_scale)
+    if yvalues.ndim == 1:
+        yvalues = [yvalues]
+    cells = {}
+    for num, yval in enumerate(yvalues):
+        fig.add_trace(go.Scatter(x=xvalues, y=yval,
+                                 mode='lines+markers',
+                                 name='Cell {}'.format(num)))
+        cells[num] = {'name': 'Cell {}'.format(num), 'data': yval}
 
-        fig.update_layout(layout)
+    options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
+               for k in cells]
+    value = ['Cell {}'.format(str(i)) for i in range(n_y)]
 
-        if 'value' in local_data[drop1]:
-            yvalues = np.asarray(local_data[drop1]['value'])
-        elif drop2 is not None:
-            yvalues = np.asarray(local_data[drop1][drop2]['value'])
-        else:
-            raise PreventUpdate
-
-        n_y = np.asarray(yvalues).shape[-1]
-        if x_key in local_data:
-            xvalues = np.asarray(local_data[x_key]['value'])
-            if len(xvalues) == n_y + 1:
-                xvalues = ip.interpolate_1d(xvalues)
-        else:
-            xvalues = np.asarray(list(range(n_y)))
-
-        if xvalues.ndim > 1:
-            xvalues = xvalues[0]
-
-        if yvalues.ndim == 1:
-            yvalues = [yvalues]
-        cells = {}
-        for num, yval in enumerate(yvalues):
-            fig.add_trace(go.Scatter(x=xvalues, y=yval,
-                                     mode='lines+markers',
-                                     name='Cell {}'.format(num)))
-            cells[num] = {'name': 'Cell {}'.format(num), 'data': yval}
-
-        options = [{'label': cells[k]['name'], 'value': cells[k]['name']}
-                   for k in cells]
-        value = ['Cell {}'.format(str(i)) for i in range(n_y)]
-
-        if checklist is None:
+    if checklist is None:
+        return fig, cells, options, value
+    else:
+        if 'clear_all_button.n_clicks' in ctx_triggered:
+            fig.for_each_trace(
+                lambda trace: trace.update(visible='legendonly'))
+            return fig, cells, options, []
+        elif 'data_checklist.value' in ctx_triggered:
+            fig.for_each_trace(
+                lambda trace: trace.update(
+                    visible=True) if trace.name in checklist
+                else trace.update(visible='legendonly'))
+            return fig, cells, options, checklist
+        elif 'line_graph.restyleData' in ctx_triggered:
+            read = restyle_data[0]['visible']
+            if len(read) == 1:
+                cell_name = cells[restyle_data[1][0]]['name']
+                if read[0] is True:  # lose (legendonly)
+                    checklist.append(cell_name)
+                else:
+                    if cell_name in checklist:
+                        checklist.remove(cell_name)
+                value = [val for val in value if val in checklist]
+            else:
+                value = [value[i] for i in range(n_y)
+                         if read[i] is True]
+            fig.for_each_trace(
+                lambda trace: trace.update(
+                    visible=True) if trace.name in value
+                else trace.update(visible='legendonly'))
+            # fig.plotly_restyle(restyle_data[0])
             return fig, cells, options, value
         else:
-            if 'clear_all_button.n_clicks' in ctx_triggered:
-                fig.for_each_trace(
-                    lambda trace: trace.update(visible='legendonly'))
-                return fig, cells, options, []
-            elif 'data_checklist.value' in ctx_triggered:
-                fig.for_each_trace(
-                    lambda trace: trace.update(
-                        visible=True) if trace.name in checklist
-                    else trace.update(visible='legendonly'))
-                return fig, cells, options, checklist
-            elif 'line_graph.restyleData' in ctx_triggered:
-                read = restyle_data[0]['visible']
-                if len(read) == 1:
-                    cell_name = cells[restyle_data[1][0]]['name']
-                    if read[0] is True:  # lose (legendonly)
-                        checklist.append(cell_name)
-                    else:
-                        if cell_name in checklist:
-                            checklist.remove(cell_name)
-                    value = [val for val in value if val in checklist]
-                else:
-                    value = [value[i] for i in range(n_y)
-                             if read[i] is True]
-                fig.for_each_trace(
-                    lambda trace: trace.update(
-                        visible=True) if trace.name in value
-                    else trace.update(visible='legendonly'))
-                # fig.plotly_restyle(restyle_data[0])
-                return fig, cells, options, value
-            else:
-                return fig, cells, options, value
+            return fig, cells, options, value
 
 
 @app.callback(
@@ -1831,76 +1856,76 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
     ctx = dash.callback_context
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
 
-    if data_checklist is None or results is None:
-        raise PreventUpdate
+    # if data_checklist is None or results is None:
+    #     raise PreventUpdate
+    # else:
+    # Read results
+    results = df.read_data(ctx.states["df_result_data_store.data"])
+
+    result_set = results.iloc[0]
+
+    local_data = result_set["local_data"]
+    digit_list = \
+        sorted([int(re.sub('[^0-9\.]', '', inside))
+                for inside in data_checklist])
+
+    x_key = 'Channel Location'
+
+    index = [{'id': x_key, 'name': x_key,
+              'deletable': True}]
+    columns = [{'deletable': True, 'renamable': True,
+                'selectable': True, 'name': 'Cell {}'.format(d),
+                'id': 'Cell {}'.format(d)} for d in digit_list]
+    # list with nested dict
+
+    xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
+    data = [{**{x_key: cell},
+             **{cells_data[k]['name']: cells_data[k]['data'][num]
+                for k in cells_data}}
+            for num, cell in enumerate(xvalues)]  # list with nested dict
+
+    if append_check is None:
+        appended = 0
     else:
-        # Read results
-        results = df.read_data(ctx.states["df_result_data_store.data"])
+        appended = append_check
 
-        result_set = results.iloc[0]
-
-        local_data = result_set["local_data"]
-        digit_list = \
-            sorted([int(re.sub('[^0-9\.]', '', inside))
-                    for inside in data_checklist])
-
-        x_key = 'Channel Location'
-
-        index = [{'id': x_key, 'name': x_key,
-                  'deletable': True}]
-        columns = [{'deletable': True, 'renamable': True,
-                    'selectable': True, 'name': 'Cell {}'.format(d),
-                    'id': 'Cell {}'.format(d)} for d in digit_list]
-        # list with nested dict
-
-        xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
-        data = [{**{x_key: cell},
-                 **{cells_data[k]['name']: cells_data[k]['data'][num]
-                    for k in cells_data}}
-                for num, cell in enumerate(xvalues)]  # list with nested dict
-
-        if append_check is None:
-            appended = 0
+    if 'export_b.n_clicks' in ctx_triggered:
+        return index + columns, data, 'csv', appended
+    elif 'clear_table_b.n_clicks' in ctx_triggered:
+        return [], [], 'none', appended
+    elif 'append_b.n_clicks' in ctx_triggered:
+        if n1 is None or table_data == [] or table_columns == [] or \
+                ctx_triggered == 'clear_table_b.n_clicks':
+            raise PreventUpdate
         else:
-            appended = append_check
+            appended += 1
+            app_columns = \
+                [{'deletable': True, 'renamable': True,
+                  'selectable': True, 'name': 'Cell {}'.format(d),
+                  'id': 'Cell {}'.format(d) + '-' + str(appended)}
+                 for d in digit_list]
+            new_columns = table_columns + app_columns
+            app_datas = \
+                [{**{x_key: cell},
+                  **{cells_data[k]['name'] + '-' + str(appended):
+                         cells_data[k]['data'][num]
+                     for k in cells_data}}
+                 for num, cell in enumerate(xvalues)]
+            new_data_list = []
+            new_data = \
+                [{**table_data[i], **app_datas[i]}
+                 if table_data[i][x_key] == app_datas[i][x_key]
+                 else new_data_list.extend([table_data[i], app_datas[i]])
+                 for i in range(len(app_datas))]
+            new_data = list(filter(None.__ne__, new_data))
+            new_data.extend(new_data_list)
 
-        if 'export_b.n_clicks' in ctx_triggered:
-            return index + columns, data, 'csv', appended
-        elif 'clear_table_b.n_clicks' in ctx_triggered:
-            return [], [], 'none', appended
-        elif 'append_b.n_clicks' in ctx_triggered:
-            if n1 is None or table_data == [] or table_columns == [] or \
-                    ctx_triggered == 'clear_table_b.n_clicks':
-                raise PreventUpdate
-            else:
-                appended += 1
-                app_columns = \
-                    [{'deletable': True, 'renamable': True,
-                      'selectable': True, 'name': 'Cell {}'.format(d),
-                      'id': 'Cell {}'.format(d) + '-' + str(appended)}
-                     for d in digit_list]
-                new_columns = table_columns + app_columns
-                app_datas = \
-                    [{**{x_key: cell},
-                      **{cells_data[k]['name'] + '-' + str(appended):
-                             cells_data[k]['data'][num]
-                         for k in cells_data}}
-                     for num, cell in enumerate(xvalues)]
-                new_data_list = []
-                new_data = \
-                    [{**table_data[i], **app_datas[i]}
-                     if table_data[i][x_key] == app_datas[i][x_key]
-                     else new_data_list.extend([table_data[i], app_datas[i]])
-                     for i in range(len(app_datas))]
-                new_data = list(filter(None.__ne__, new_data))
-                new_data.extend(new_data_list)
-
-                return new_columns, new_data, 'csv', appended
+            return new_columns, new_data, 'csv', appended
+    else:
+        if n1 is None or table_columns == []:
+            return table_columns, table_data, 'none', appended
         else:
-            if n1 is None or table_columns == []:
-                return table_columns, table_data, 'none', appended
-            else:
-                return table_columns, table_data, 'csv', appended
+            return table_columns, table_data, 'csv', appended
 
 
 @app.callback(
