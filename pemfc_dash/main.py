@@ -440,8 +440,7 @@ app.layout = dbc.Container([
 
 
 def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
-                        mode="single",
-                        table_input=None) -> pd.DataFrame:
+                        mode="single", table_input=None) -> pd.DataFrame:
     """
     Function to create parameter sets.
     - variation of single parameter - ok

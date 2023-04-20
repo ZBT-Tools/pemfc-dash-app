@@ -328,23 +328,3 @@ def compile_data(**kwargs):
         else:
             dash_dict[k]['value'] = c_v[0]
     return dict(dash_dict)
-
-# def parse_contents(contents):
-#     content_type, content_string = contents.split(',')
-#
-#     decoded = base64.b64decode(content_string)
-#     try:
-#         j_file = json.load(io.StringIO(decoded.decode('utf-8')))
-#         source_dict = copy.deepcopy(gui.input.main_frame_dicts)
-#         target_dict = copy.deepcopy(input_dicts.sim_dict)
-#
-#         settings, name_lists = \
-#             gui.data_transfer.gui_to_sim_transfer(source_dict, target_dict)
-#         js_out = {'-'.join(n): glom(j_file, '.'.join(n)) for
-#                   n in name_lists if 'loss' not in n[-1] and 'directory' not
-#                   in n[-1] and 'calc_current_density' not in n[-1] and
-#                   'calc_temperature' not in n[-1]}
-#         return js_out
-#     except Exception as e:
-#         return f'Error {e}'
-# return f'{e}: There was an error processing this file.'
