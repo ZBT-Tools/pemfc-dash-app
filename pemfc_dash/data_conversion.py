@@ -9,7 +9,7 @@ import collections
 from glom import glom
 import pandas as pd
 
-from . import layout_functions as dl
+from .layout import layout_functions as dl
 
 
 def store_data(data):

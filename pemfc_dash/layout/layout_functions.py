@@ -3,7 +3,7 @@ from dash import html
 from dash import dcc
 import copy
 
-from . import data_conversion as dc
+from pemfc_dash import data_conversion as dc
 
 ID_LIST = []  # Keep track with generated IDs
 CONTAINER_LIST = []
