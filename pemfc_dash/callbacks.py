@@ -174,8 +174,8 @@ def initialization(dummy, value_list: list, multivalue_list: list,
         export_headers='display',
         style_table={'height': '300px', 'overflowY': 'auto'}
     )
-    return new_value_list, new_multivalue_list, \
-           base_settings, df_input_store, table
+    return new_value_list, new_multivalue_list, base_settings, \
+        df_input_store, table
 
 
 @app.callback(
@@ -1104,19 +1104,11 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                for k in cells]
     value = ['Cell {}'.format(str(i)) for i in range(n_y)]
 
-    if checklist is None:
-        return fig, cells, options, value
-    else:
+    if checklist is not None:
         if 'clear_all_button.n_clicks' in ctx_triggered:
-            fig.for_each_trace(
-                lambda trace: trace.update(visible='legendonly'))
-            return fig, cells, options, []
+            value = []
         elif 'data_checklist.value' in ctx_triggered:
-            fig.for_each_trace(
-                lambda trace: trace.update(
-                    visible=True) if trace.name in checklist
-                else trace.update(visible='legendonly'))
-            return fig, cells, options, checklist
+            value = checklist
         elif 'line_graph.restyleData' in ctx_triggered:
             read = restyle_data[0]['visible']
             if len(read) == 1:
@@ -1130,14 +1122,14 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
             else:
                 value = [value[i] for i in range(n_y)
                          if read[i] is True]
-            fig.for_each_trace(
-                lambda trace: trace.update(
-                    visible=True) if trace.name in value
-                else trace.update(visible='legendonly'))
+
+        fig.for_each_trace(
+            lambda trace: trace.update(
+                visible=True) if trace.name in value
+            else trace.update(visible='legendonly'))
             # fig.plotly_restyle(restyle_data[0])
-            return fig, cells, options, value
-        else:
-            return fig, cells, options, value
+
+    return fig, cells, options, value
 
 
 @app.callback(
@@ -1156,7 +1148,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
      State('append_check', 'data')],
     prevent_initial_call=True
 )
-def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
+def export_data(n1, n2, n3, data_checklist, cells_data, results,
                   table_columns, table_data, append_check):
     ctx = dash.callback_context
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
@@ -1263,25 +1255,25 @@ def activate_column(input1, input2):
             list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
                 list_state[18 + num] = list_state[30 + num] = False
             if input2[3 + num] == 'circular':
-                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
-                    False, True, True
+                list_state[6 + num], list_state[9 + num], \
+                    list_state[12 + num] =  False, True, True
             else:
-                list_state[6 + num], list_state[9 + num], list_state[12 + num] = \
-                    True, False, False
+                list_state[6 + num], list_state[9 + num], \
+                    list_state[12 + num] = True, False, False
             if input2[18 + num] == 'circular':
-                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
-                    False, True, True
+                list_state[21 + num], list_state[24 + num], \
+                    list_state[27 + num] = False, True, True
             else:
-                list_state[21 + num], list_state[24 + num], list_state[27 + num] = \
-                    True, False, False
+                list_state[21 + num], list_state[24 + num], \
+                    list_state[27 + num] = True, False, False
     return list_state
 
 
 @app.callback(
     Output({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
            'style'),
-    Input({'type': ALL, 'id': ALL, 'specifier':
-        'checklist_activate_cooling'}, 'value'),
+    Input({'type': ALL, 'id': ALL, 'specifier': 'checklist_activate_cooling'},
+          'value'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
           'id'),
     State({'type': 'container', 'id': ALL, 'specifier': 'disabled_cooling'},
