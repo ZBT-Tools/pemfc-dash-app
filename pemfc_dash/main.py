@@ -1449,10 +1449,10 @@ def global_outputs_table(*args):
 
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     global_result_dict = result_set["global_data"]
+    if global_result_dict is None:
+        raise PreventUpdate
     names = list(global_result_dict.keys())
     values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
@@ -1480,13 +1480,12 @@ def get_dropdown_options_heatmap(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
     options = \
         [{'label': key, 'value': key} for key in local_data
          if 'xkey' in local_data[key]
@@ -1507,13 +1506,13 @@ def get_dropdown_options_line_graph(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
+
     options = [{'label': key, 'value': key} for key in local_data]
     value = options[0]['value']
     return options, value
@@ -1591,10 +1590,10 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
 
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     if 'value' in local_data[dropdown_key]:
         zvalues = local_data[dropdown_key]['value']
@@ -1737,10 +1736,10 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
     # else:
     # Read results
     results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     fig = go.Figure()
 
@@ -1869,10 +1868,11 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
     # else:
     # Read results
     results = df.read_data(ctx.states["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
+
     digit_list = \
         sorted([int(re.sub('[^0-9\.]', '', inside))
                 for inside in data_checklist])
