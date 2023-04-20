@@ -978,7 +978,8 @@ def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_stat
      State("pemfc_settings_file", "data"),
      State('modal', 'is_open')],
     prevent_initial_call=True)
-def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings, modal_state):
+def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
+                                   settings, modal_state):
     """
     @param btn:
     @param inputs: 
@@ -1446,9 +1447,11 @@ def global_outputs_table(*args):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
     global_result_dict = result_set["global_data"]
     if global_result_dict is None:
@@ -1481,7 +1484,10 @@ def get_dropdown_options_heatmap(results):
     if dropdown triggered callback, select this row.
     """
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
     local_data = result_set["local_data"]
     if local_data is None:
@@ -1507,7 +1513,10 @@ def get_dropdown_options_line_graph(results):
     if dropdown triggered callback, select this row.
     """
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
     local_data = result_set["local_data"]
     if local_data is None:
@@ -1589,7 +1598,10 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
     # else:
 
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
     local_data = result_set["local_data"]
     if local_data is None:
@@ -1731,11 +1743,12 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                       clear_all_clicks, restyle_data, results):
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
-    # if drop1 is None or results is None:
-    #     raise PreventUpdate
-    # else:
+
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
     local_data = result_set["local_data"]
     if local_data is None:
@@ -1777,7 +1790,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 
     if 'value' in local_data[drop1]:
         yvalues = np.asarray(local_data[drop1]['value'])
-    elif drop2 is not None:
+    elif drop2 is not None and 'value' in local_data[drop1][drop2]:
         yvalues = np.asarray(local_data[drop1][drop2]['value'])
     else:
         raise PreventUpdate
