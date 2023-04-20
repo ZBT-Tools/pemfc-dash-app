@@ -9,7 +9,7 @@ import collections
 from glom import glom
 import pandas as pd
 
-from . import dash_layout as dl
+from . import layout_functions as dl
 
 
 def store_data(data):
@@ -114,7 +114,7 @@ def multi_inputs(dicts):
     return dict_list
 
 
-def parse_contents(contents) -> dict:
+def parse_contents(contents, filename='json'):
     """
     #ToDo: rework
 
@@ -129,7 +129,17 @@ def parse_contents(contents) -> dict:
     """
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
-    return json.load(io.StringIO(decoded.decode('utf-8')))
+    if 'csv' in filename:
+        # Assume that the user uploaded a CSV file
+        return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+    elif 'xls' in filename:
+        # Assume that the user uploaded an excel file
+        return pd.read_excel(io.BytesIO(decoded))
+    elif 'json' in filename:
+        return json.load(io.StringIO(decoded.decode('utf-8')))
+    else:
+        raise NotImplementedError('No parsing for provided file type '
+                                  'implemented')
 
 
 def settings_to_dash_gui(settings: dict) -> (dict, list):
