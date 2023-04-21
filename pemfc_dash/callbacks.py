@@ -505,7 +505,7 @@ def update_studytable(contents, filename, modal_state):
         if contents is None:
             return [{}], []
         df = dc.parse_contents(contents, filename)
-        return df.to_dict('records'), [{"name": i, "id": i} for i in dc.columns], None, None, None
+        return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], None, None, None
     except Exception as E:
         modal_title, modal_body = mf.modal_process('error-study-file')
         return None, None, modal_title, modal_body, not modal_state

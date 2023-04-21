@@ -4,7 +4,7 @@ from pemfc import main_app
 
 
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
-        -> (pd.DataFrame, bool):
+        -> (pd.DataFrame, bool, str, str):
     """
     API to actual simulation backend, which is here the function main in the
     pemfc module (github.com/zbt-tools/pemfc-core). The input settings are given
@@ -35,9 +35,24 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
     input_table["successful_run"] = result_table.apply(
         lambda x: True if (isinstance(x[0], list)) else False)
 
-    all_successfull = True if input_table["successful_run"].all() else False
+    if input_table["successful_run"].all():
+        all_successfull = True
+        err_modal = None
+        err_msg = None
+    elif input_table["successful_run"].any():
+        all_successfull = False
+        err_modal = 'any-simulation-error'
+        # Read first error message
+        err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
+    else:
+        all_successfull = False
+        if len(result_table) == 1:
+            err_modal = 'simulation-error'
+        else:
+            err_modal = 'all-simulation-error'
+        err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
 
     if not return_unsuccessful:
         input_table = input_table.loc[input_table["successful_run"], :]
 
-    return input_table, all_successfull
+    return input_table, all_successfull, err_modal, err_msg
