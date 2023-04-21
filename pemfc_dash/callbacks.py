@@ -5,7 +5,6 @@ from dash import dash_table
 import numpy as np
 import pandas as pd
 import pickle
-import re
 import copy
 import sys
 import json
@@ -15,7 +14,6 @@ from dash_extensions.enrich import Output, Input, State, ALL, dcc, \
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-# import plotly.express as px
 
 from . import data_conversion as dc, modal_functions as mf, \
     study_functions as sf, simulation_api as sim
@@ -31,7 +29,7 @@ from .dash_app import app
 tqdm.pandas()
 
 
-# Callback functions (all other  functions organized in important modules
+# Callback functions (all other  functions organized in important modules)
 # -----------------------------------------------------------------------------
 @app.callback(
     Output('pbar', 'value'),
@@ -301,14 +299,18 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
     Output('df_input_store', 'data'),
     Output('signal', 'data'),
     Output("spinner_run_single", 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State("pemfc_settings_file", "data")],
+     State("pemfc_settings_file", "data"),
+     State('modal', 'is_open')],
     prevent_initial_call=True)
-def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
+def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
     """
     Changelog:
 
@@ -316,37 +318,59 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
     try:
         # Read pemfc settings.json from store
         settings = dc.read_data(settings)
+
         # Read data from input fields and save input in dict/dataframe
         # (one row "nominal")
         df_input = dc.process_inputs(inputs, inputs2, ids, ids2,
                                      returntype="DataFrame")
         df_input_raw = df_input.copy()
+
         # Create complete setting dict, append it in additional column
         # "settings" to df_input
         df_input = dc.create_settings(df_input, settings)
+
         # Run simulation
-        df_result, _ = sim.run_simulation(df_input)
+        df_result, _, err_modal, err_msg = sim.run_simulation(df_input)
+
         # Save results
         df_result_store = dc.store_data(df_result)
         df_input_store = dc.store_data(df_input_raw)
-        return df_result_store, df_input_store, n_click, ""
+
+        if err_modal is not None:
+            modal_title, modal_body = mf.modal_process(err_modal, error=err_msg)
+            modal_state = not modal_state
+        else:
+            modal_title = None
+            modal_body = None
+
+        return df_result_store, df_input_store, "", \
+            modal_title, modal_body, modal_state
+
     except Exception as E:
+        modal_state = not modal_state
         modal_title, modal_body = \
-            mf.modal_process('input-error', error=repr(E))
+            mf.modal_process('other-error', error=repr(E))
+        return None, None, "", \
+            modal_title, modal_body, modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State("pemfc_settings_file", "data")],
+     State('pemfc_settings_file', 'data'),
+     State('modal', 'is_open')],
     prevent_initial_call=True)
-def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
+                                   settings, modal_state):
     """
 
     #ToDO:
@@ -360,113 +384,140 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     @param settings:
     @return:
     """
+    # Number of refinement steps
+    n_refinements = 10
 
-    # Default number of refinements
-    n_refinements = 5
+    try:
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+        # Read pemfc settings.json from store
+        settings = dc.read_data(settings)
 
-    # Read pemfc settings.json from store
-    settings = dc.read_data(settings)
+        # Read data from input fields and save input in dict/dataframe
+        # (one row "nominal")
+        df_input = dc.process_inputs(inputs, inputs2, ids, ids2,
+                                     returntype="DataFrame")
+        df_input_backup = df_input.copy()
 
-    # Read data from input fields and save input in dict/dataframe
-    # (one row "nominal")
-    df_input = dc.process_inputs(inputs, inputs2, ids, ids2,
-                                 returntype="DataFrame")
-    df_input_backup = df_input.copy()
+        # Ensure DataFrame with double bracket
+        # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+        df_input_single = df_input.loc[["nominal"], :]
+        max_i = sf.find_max_current_density(df_input_single, df_input, settings)
 
-    # Ensure DataFrame with double bracket
-    # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
-    df_input_single = df_input.loc[["nominal"], :]
-    max_i = sf.find_max_current_density(df_input_single, df_input, settings)
+        # Reset solver settings
+        df_input = df_input_backup.copy()
 
-    # Reset solver settings
-    df_input = df_input_backup.copy()
+        # Prepare & calculate initial points
+        df_results = sf.uicalc_prepare_initcalc(
+            input_df=df_input, i_limits=[1, max_i],
+            settings=settings)
+        df_results, success, _, _ = sim.run_simulation(df_results)
 
-    # Prepare & calculate initial points
-    df_results = \
-        sf.uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i],
-                                   settings=settings)
-    df_results, success = sim.run_simulation(df_results)
+        # First refinement steps
+        for _ in range(n_refinements):
+            df_refine = sf.uicalc_prepare_refinement(
+                data_df=df_results, input_df=df_input, settings=settings)
+            df_refine, success, _, _ = sim.run_simulation(
+                df_refine, return_unsuccessful=False)
+            df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
-    # First refinement steps
-    for _ in range(n_refinements):
-        df_refine = sf.uicalc_prepare_refinement(
-            data_df=df_results, input_df=df_input, settings=settings)
-        df_refine, success = sim.run_simulation(
-            df_refine, return_unsuccessful=False)
-        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+        # Save results
+        results = dc.store_data(df_results)
+        df_input_store = dc.store_data(df_input_backup)
 
-    # Save results
-    results = dc.store_data(df_results)
-    df_input_store = dc.store_data(df_input_backup)
-
-    # Close process bar files
-    file_prog.close()
-    sys.stderr = std_err_backup
-    return results, df_input_store, "."
+        # Close process bar files
+        file_prog.close()
+        sys.stderr = std_err_backup
+        return results, df_input_store, ".", None, None, None
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            mf.modal_process('ui-error', error=repr(E))
+        return None, None, "", modal_title, modal_body, modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
     State("pemfc_settings_file", "data"),
+    State('modal', 'is_open'),
     prevent_initial_call=True)
-def run_refine_ui(inp, state, state2, settings):
+def run_refine_ui(inp, state, state2, settings, modal_state):
     # Number of refinement steps
     n_refinements = 5
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+    try:
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Read pemfc settings.json from store
-    settings = dc.read_data(settings)
+        # Read pemfc settings.json from store
+        settings = dc.read_data(settings)
 
-    # State-Store access returns None, I don't know why (FKL), workaround:
-    df_results = dc.read_data(ctx.states["df_result_data_store.data"])
-    df_nominal = dc.read_data(ctx.states["df_input_store.data"])
+        # State-Store access returns None, I don't know why (FKL), workaround:
+        df_results = dc.read_data(ctx.states["df_result_data_store.data"])
+        df_nominal = dc.read_data(ctx.states["df_input_store.data"])
 
-    # Refinement loop
-    for _ in range(n_refinements):
-        df_refine = sf.uicalc_prepare_refinement(
-            data_df=df_results, input_df=df_nominal, settings=settings)
-        df_refine, success = sim.run_simulation(
-            df_refine, return_unsuccessful=False)
-        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+        # Refinement loop
+        for _ in range(n_refinements):
+            df_refine = sf.uicalc_prepare_refinement(
+                data_df=df_results, input_df=df_nominal, settings=settings)
+            df_refine, success, _, _ = sim.run_simulation(
+                df_refine, return_unsuccessful=False)
+            df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
-    # Save results
-    results = dc.store_data(df_results)
+        # Save results
+        results = dc.store_data(df_results)
 
-    # Close process bar files
-    file_prog.close()
-    sys.stderr = std_err_backup
-    return results, ""
+        # Close process bar files
+        file_prog.close()
+        sys.stderr = std_err_backup
+
+        return results, "", None, None, None
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            mf.modal_process('ui-error', error=repr(E))
+        return None, "", modal_title, modal_body, modal_state
 
 
 @app.callback(Output('study_data_table', 'data'),
               Output('study_data_table', 'columns'),
+              Output('modal-title', 'children'),
+              Output('modal-body', 'children'),
+              Output('modal', 'is_open'),
               Input('datatable-upload', 'contents'),
               State('datatable-upload', 'filename'),
+              State('modal', 'is_open'),
               prevent_initial_call=True)
-def update_studytable(contents, filename):
-    if contents is None:
-        return [{}], []
-    df = dc.parse_contents(contents, filename)
-    return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns]
+def update_studytable(contents, filename, modal_state):
+    try:
+        if contents is None:
+            return [{}], []
+        df = dc.parse_contents(contents, filename)
+        return df.to_dict('records'), [{"name": i, "id": i} for i in dc.columns], None, None, None
+    except Exception as E:
+        modal_title, modal_body = mf.modal_process('error-study-file')
+        return None, None, modal_title, modal_body, not modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_study", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -476,9 +527,10 @@ def update_studytable(contents, filename):
     State("study_data_table", "data"),
     State("check_calc_ui", "value"),
     State("check_study_type", "value"),
+    State('modal', 'is_open'),
     prevent_initial_call=True)
 def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
-              check_calc_ui, check_study_type):
+              check_calc_ui, check_study_type, modal_state):
     """
     #ToDO Documentation
 
@@ -489,97 +541,116 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
     check_calc_ui:    Checkbox, if complete
     check_study_type:
     """
-    variation_mode = "dash_table"
+    err_modal = None
+    err_msg = None
+    try:
+        variation_mode = "dash_table"
 
-    # Calculation of polarization curve for each dataset?
-    if isinstance(check_calc_ui, list):
-        if "calc_ui" in check_calc_ui:
-            ui_calculation = True
+        # Calculation of polarization curve for each dataset?
+        if isinstance(check_calc_ui, list):
+            if "calc_ui" in check_calc_ui:
+                ui_calculation = True
+            else:
+                ui_calculation = False
         else:
             ui_calculation = False
-    else:
-        ui_calculation = False
-    n_refinements = 15
 
-    mode = check_study_type
+        # Number of refinement steps for ui calculation
+        n_refinements = 10
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+        mode = check_study_type
 
-    # Read pemfc settings.json from store
-    settings = dc.read_data(settings)
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Read data from input fields and save input in dict (legacy)
-    # / pd.DataDrame (one row with index "nominal")
-    df_input = dc.process_inputs(
-        inputs, inputs2, ids, ids2, returntype="DataFrame")
-    df_input_backup = df_input.copy()
+        # Read pemfc settings.json from store
+        settings = dc.read_data(settings)
 
-    # Create multiple parameter sets
-    if variation_mode == "dash_table":
-        data = sf.variation_parameter(
-            df_input, keep_nominal=False, mode=mode, table_input=tabledata)
-    else:
-        data = sf.variation_parameter(
-            df_input, keep_nominal=False, mode=mode, table_input=None)
-    varpars = list(data["variation_parameter"].unique())
+        # Read data from input fields and save input in dict (legacy)
+        # / pd.DataDrame (one row with index "nominal")
+        df_input = dc.process_inputs(
+            inputs, inputs2, ids, ids2, returntype="DataFrame")
+        df_input_backup = df_input.copy()
 
-    if not ui_calculation:
-        # Create complete setting dict & append it in additional column
-        # "settings" to df_input
-        data = dc.create_settings(data, settings, input_cols=df_input.columns)
-        # Run Simulation
-        results, success = sim.run_simulation(data)
-        results = dc.store_data(results)
+        # Create multiple parameter sets
+        if variation_mode == "dash_table":
+            data = sf.variation_parameter(
+                df_input, keep_nominal=False, mode=mode, table_input=tabledata)
+        else:
+            data = sf.variation_parameter(
+                df_input, keep_nominal=False, mode=mode, table_input=None)
+        varpars = list(data["variation_parameter"].unique())
 
-    else:  # ... calculate pol. curve for each parameter set
-        result_data = pd.DataFrame(columns=data.columns)
+        if not ui_calculation:
+            # Create complete setting dict & append it in additional column
+            # "settings" to df_input
+            data = dc.create_settings(
+                data, settings, input_cols=df_input.columns)
+            # Run Simulation
+            results, success, err_modal, err_msg = sim.run_simulation(data)
+            results = dc.store_data(results)
 
-        # grouped_data = data.groupby(varpars, sort=False)
-        # for _, group in grouped_data:
-        for i in range(0, len(data)):
-            # Ensure DataFrame with double bracket
-            # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
-            # df_input_single = df_input.loc[[:], :]
-            max_i = \
-                sf.find_max_current_density(data.iloc[[i]], df_input, settings)
+        else:  # ... calculate pol. curve for each parameter set
+            result_data = pd.DataFrame(columns=data.columns)
 
-            # # Reset solver settings
-            # df_input = df_input_backup.copy()
+            # grouped_data = data.groupby(varpars, sort=False)
+            # for _, group in grouped_data:
+            for i in range(0, len(data)):
+                try:
+                    # Ensure DataFrame with double bracket
+                    # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+                    # df_input_single = df_input.loc[[:], :]
+                    max_i = sf.find_max_current_density(
+                        data.iloc[[i]], df_input, settings)
 
-            success = False
-            while (not success) and (max_i > 5000):
-                # Prepare & calculate initial points
-                df_results = sf.uicalc_prepare_initcalc(
-                    input_df=data.iloc[[i]], i_limits=[1, max_i],
-                    settings=settings, input_cols=df_input.columns)
-                df_results, success = sim.run_simulation(df_results)
-                max_i -= 2000
+                    # # Reset solver settings
+                    # df_input = df_input_backup.copy()
 
-            if not success:
-                continue
+                    success = False
 
-                # First refinement steps
-            for _ in range(n_refinements):
-                df_refine = sf.uicalc_prepare_refinement(
-                    input_df=df_input, data_df=df_results, settings=settings)
-                df_refine, success = sim.run_simulation(
-                    df_refine, return_unsuccessful=False)
-                df_results = pd.concat(
-                    [df_results, df_refine], ignore_index=True)
+                    # Prepare & calculate initial points
+                    df_results = sf.uicalc_prepare_initcalc(
+                        input_df=data.iloc[[i]], i_limits=[1, max_i],
+                        settings=settings, input_cols=df_input.columns)
+                    df_results, success, _, _ = sim.run_simulation(df_results)
 
-            result_data = pd.concat([result_data, df_results], ignore_index=True)
+                    if not success:
+                        continue
 
-        results = dc.store_data(result_data)
+                    # First refinement steps
+                    for _ in range(n_refinements):
+                        df_refine = sf.uicalc_prepare_refinement(
+                            input_df=df_input, data_df=df_results, settings=settings)
+                        df_refine, success, _, _ = sim.run_simulation(
+                            df_refine, return_unsuccessful=False)
+                        df_results = pd.concat(
+                            [df_results, df_refine], ignore_index=True)
 
-    df_input_store = dc.store_data(df_input_backup)
+                    result_data = pd.concat([result_data, df_results], ignore_index=True)
+                except Exception as E:
+                    err_modal = "generic-study-error"
+                    pass
 
-    file_prog.close()
-    sys.stderr = std_err_backup
+            results = dc.store_data(result_data)
 
-    return results, df_input_store, "."
+        df_input_store = dc.store_data(df_input_backup)
+
+        file_prog.close()
+        sys.stderr = std_err_backup
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            mf.modal_process("generic-study-error", error=repr(E))
+        return None, None, "", modal_title, modal_body, modal_state
+
+    if err_modal is not None:
+        modal_state = not modal_state
+    modal_title, modal_body = \
+        mf.modal_process(err_modal, error=repr(err_msg))
+
+    return results, df_input_store, '', modal_title, modal_body, modal_state
 
 
 @app.callback(
@@ -701,7 +772,7 @@ def figure_ui(inp1, inp2, dfinp):
 
                     setname = setname[:-6]
 
-            except:
+            except Exception as E:
                 setname = "tbd"
                 # Add figure title
                 fig.update_layout()
@@ -757,13 +828,15 @@ def global_outputs_table(*args):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
     result_set = results.iloc[0]
-
     global_result_dict = result_set["global_data"]
+    if global_result_dict is None:
+        raise PreventUpdate
     names = list(global_result_dict.keys())
     values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
@@ -791,13 +864,15 @@ def get_dropdown_options_heatmap(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
     options = \
         [{'label': key, 'value': key} for key in local_data
          if 'xkey' in local_data[key]
@@ -818,16 +893,32 @@ def get_dropdown_options_line_graph(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
+
     options = [{'label': key, 'value': key} for key in local_data]
     value = options[0]['value']
     return options, value
+
+
+def conditional_dropdown_menu(dropdown_value, data):
+    results = dc.read_data(data)
+    result_set = results.iloc[0]
+    local_data = result_set["local_data"]
+    if 'value' in local_data[dropdown_value]:
+        return [], None, {'visibility': 'hidden'}
+    else:
+        options = [{'label': key, 'value': key} for key in
+                   local_data[dropdown_value]]
+        value = options[0]['value']
+        return options, value, {'visibility': 'visible'}
 
 
 @app.callback(
@@ -849,7 +940,7 @@ def get_dropdown_options_heatmap_2(dropdown_key, results):
         if results is None:
             raise PreventUpdate
         else:
-            return lf.conditional_dropdown_menu(dropdown_key, results)
+            return conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
@@ -872,14 +963,14 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
         if results is None:
             raise PreventUpdate
         else:
-            return lf.conditional_dropdown_menu(dropdown_key, results)
+            return conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
     Output("heatmap_graph", "figure"),
     [Input('dropdown_heatmap', 'value'),
-     Input('dropdown_heatmap_2', 'value')],
-    Input('df_result_data_store', 'data'),
+     Input('dropdown_heatmap_2', 'value'),
+     Input('df_result_data_store', 'data')],
     prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
@@ -888,11 +979,14 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
     # else:
 
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     if 'value' in local_data[dropdown_key]:
         zvalues = local_data[dropdown_key]['value']
@@ -1030,15 +1124,16 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                       clear_all_clicks, restyle_data, results):
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
-    # if drop1 is None or results is None:
-    #     raise PreventUpdate
-    # else:
+
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     fig = go.Figure()
 
@@ -1076,7 +1171,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 
     if 'value' in local_data[drop1]:
         yvalues = np.asarray(local_data[drop1]['value'])
-    elif drop2 is not None:
+    elif drop2 is not None and 'value' in local_data[drop1][drop2]:
         yvalues = np.asarray(local_data[drop1][drop2]['value'])
     else:
         raise PreventUpdate
