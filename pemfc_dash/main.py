@@ -36,21 +36,21 @@ app.layout = dbc.Container([
 
     # empty Div to trigger javascript file for graph resizing
     html.Div(id="output-clientside"),
-    # modal for any warning
+    # Modal for any warning
     mf.create_modal(),
 
-    # Load header design row
+    # Load html elements for header row
     header,
-
+    # Load html elements for left menu and right results columns
     html.Div([  # MIDDLE
         menu_column,
         result_column
         ],
         className="row",
         style={'justify-content': 'space-evenly'}),
+    # Load html elements for bottom row
+    bottom],
 
-    bottom
-],
     id="mainContainer",
     # className='twelve columns',
     fluid=True,
