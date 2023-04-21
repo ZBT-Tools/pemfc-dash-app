@@ -12,7 +12,6 @@ import re
 import copy
 import sys
 import json
-from glom import glom
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, html, dcc, \
     ServersideOutput, ctx
@@ -594,7 +593,7 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         -> (pd.DataFrame, bool):
     """
-    - Run input_table rows, catch exceptions of single calculations
+    - Run input_table rows, catch exceptions for single calculations
       https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
     - Append result columns to input_table
     - Return DataFrame
@@ -635,7 +634,7 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
     prevent_initial_call=True)
 def cbf_progress_bar(*args) -> (float, str):
     """
-    # https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+    https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
     """
 
     try:
@@ -1406,10 +1405,12 @@ def get_dropdown_options_heatmap(results):
     result_set = results.iloc[0]
 
     local_data = result_set["local_data"]
-    values = [{'label': key, 'value': key} for key in local_data
-              if 'xkey' in local_data[key]
-              and local_data[key]['xkey'] == 'Channel Location']
-    return values, 'Current Density'
+    options = \
+        [{'label': key, 'value': key} for key in local_data
+         if 'xkey' in local_data[key]
+         and local_data[key]['xkey'] == 'Channel Location']
+    value = options[0]['value']
+    return options, value
 
 
 @app.callback(
@@ -1431,8 +1432,22 @@ def get_dropdown_options_line_graph(results):
     result_set = results.iloc[0]
 
     local_data = result_set["local_data"]
-    values = [{'label': key, 'value': key} for key in local_data]
-    return values, 'Current Density'
+    options = [{'label': key, 'value': key} for key in local_data]
+    value = options[0]['value']
+    return options, value
+
+
+def conditional_dropdown_menu(dropdown_value, data):
+    results = df.read_data(data)
+    result_set = results.iloc[0]
+    local_data = result_set["local_data"]
+    if 'value' in local_data[dropdown_value]:
+        return [], None, {'visibility': 'hidden'}
+    else:
+        options = [{'label': key, 'value': key} for key in
+                   local_data[dropdown_value]]
+        value = options[0]['value']
+        return options, value, {'visibility': 'visible'}
 
 
 @app.callback(
@@ -1443,48 +1458,41 @@ def get_dropdown_options_line_graph(results):
      Input('df_result_data_store', 'data')]
 )
 def get_dropdown_options_heatmap_2(dropdown_key, results):
-    if dropdown_key is None or results is None:
+    # if dropdown_key is None or results is None:
+    #     raise PreventUpdate
+    # else:
+    # Read results
+    if dropdown_key is None:
         raise PreventUpdate
     else:
-        # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
-        result_set = results.iloc[0]
-        local_data = result_set["local_data"]
-        if 'value' in local_data[dropdown_key]:
-            return [], None, {'visibility': 'hidden'}
+        results = ctx.inputs["df_result_data_store.data"]
+        if results is None:
+            raise PreventUpdate
         else:
-            options = [{'label': key, 'value': key} for key in
-                       local_data[dropdown_key]]
-            value = options[0]['value']
-            return options, value, {'visibility': 'visible'}
+            return conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
     [Output('dropdown_line2', 'options'),
      Output('dropdown_line2', 'value'),
      Output('dropdown_line2', 'style')],
-    Input('dropdown_line', 'value'),
-    Input('df_result_data_store', 'data'),
+    [Input('dropdown_line', 'value'),
+     Input('df_result_data_store', 'data')],
     prevent_initial_call=True
 )
 def get_dropdown_options_line_graph_2(dropdown_key, results):
-    if dropdown_key is None or results is None:
+    # if dropdown_key is None or results is None:
+    #     raise PreventUpdate
+    # else:
+    # Read results
+    if dropdown_key is None:
         raise PreventUpdate
     else:
-        # Read results
-        results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
-        result_set = results.iloc[0]
-
-        local_data = result_set["local_data"]
-        if 'value' in local_data[dropdown_key]:
-            return [], None, {'visibility': 'hidden'}
+        results = ctx.inputs["df_result_data_store.data"]
+        if results is None:
+            raise PreventUpdate
         else:
-            options = [{'label': key, 'value': key} for key in
-                       local_data[dropdown_key]]
-            value = options[0]['value']
-            return options, value, {'visibility': 'visible'}
+            return conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
