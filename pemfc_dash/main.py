@@ -66,7 +66,6 @@ app.layout = dbc.Container([
     dcc.Store(id='df_result_data_store'),
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
-    dcc.Store(id='signal'),
 
     # Dummy div for initialization
     # (Read available input parameters, create study table)
@@ -309,7 +308,7 @@ app.layout = dbc.Container([
                             dcc.Dropdown(id='dropdown_heatmap_2',
                                          className='dropdown_input',
                                          style={'visibility': 'hidden'}),
-                            id='div_results_dropdown_2', )],
+                            id='div_results_dropdown_2',)],
                     style={'display': 'flex',
                            'flex-direction': 'row',
                            'flex-wrap': 'wrap',
@@ -569,9 +568,9 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
 
     data_backup = data.copy()
 
-    while not success:
+    while (not success) and (u_min < data["stack-cell_number"].iloc[0] * 0.7):
         data = data_backup.copy()
-        u_min += 0.05
+        u_min += 0.05 * data["stack-cell_number"].iloc[0]
 
         # Change solver settings temporarily to voltage control
         data.loc[:, "simulation-operation_control"] = "Voltage"
@@ -582,15 +581,17 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
         data = create_settings(data, settings, input_cols=df_input.columns)
 
         # Run simulation
-        df_result, success = run_simulation(data)
+        df_result, success, _, _ = run_simulation(data)
 
-    max_i = df_result["global_data"].iloc[0]["Average Current Density"]["value"]
-
+    if success:
+        max_i = df_result["global_data"].iloc[0]["Average Current Density"]["value"]
+    else:
+        max_i = None
     return max_i
 
 
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
-        -> (pd.DataFrame, bool):
+        -> (pd.DataFrame, bool, str, str):
     """
     - Run input_table rows, catch exceptions for single calculations
       https://stackoverflow.com/questions/22847304/exception-handling-in-pandas-apply-function
@@ -617,12 +618,27 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
     input_table["successful_run"] = result_table.apply(
         lambda x: True if (isinstance(x[0], list)) else False)
 
-    all_successfull = True if input_table["successful_run"].all() else False
+    if input_table["successful_run"].all():
+        all_successfull = True
+        err_modal = None
+        err_msg = None
+    elif input_table["successful_run"].any():
+        all_successfull = False
+        err_modal = 'any-simulation-error'
+        # Read first error message
+        err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
+    else:
+        all_successfull = False
+        if len(result_table) == 1:
+            err_modal = 'simulation-error'
+        else:
+            err_modal = 'all-simulation-error'
+        err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
 
     if not return_unsuccessful:
         input_table = input_table.loc[input_table["successful_run"], :]
 
-    return input_table, all_successfull
+    return input_table, all_successfull, err_modal, err_msg
 
 
 @app.callback(
@@ -890,16 +906,19 @@ def cbf_save_settings(n_clicks, val1, val2, ids, ids2):
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
-    Output('signal', 'data'),
     Output("spinner_run_single", 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State("pemfc_settings_file", "data")],
+     State("pemfc_settings_file", "data"),
+     State('modal', 'is_open')],
     prevent_initial_call=True)
-def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
+def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
     """
     Changelog:
 
@@ -919,37 +938,49 @@ def cbf_run_single_cal(n_click, inputs, inputs2, ids, ids2, settings):
         df_input = create_settings(df_input, settings)
 
         # Run simulation
-        df_result, _ = run_simulation(df_input)
+        df_result, _, err_modal, err_msg = run_simulation(df_input)
 
         # Save results
         df_result_store = df.store_data(df_result)
         df_input_store = df.store_data(df_input_raw)
 
-        return df_result_store, df_input_store, n_click, ""
+        if err_modal is not None:
+            modal_title, modal_body = dm.modal_process(err_modal, error=err_msg)
+            modal_state = not modal_state
+        else:
+            modal_title = None
+            modal_body = None
+
+        return df_result_store, df_input_store, "", \
+            modal_title, modal_body, modal_state
 
     except Exception as E:
+        modal_state = not modal_state
         modal_title, modal_body = \
-            dm.modal_process('input-error', error=repr(E))
+            dm.modal_process('other-error', error=repr(E))
+        return None, None, "", \
+            modal_title, modal_body, modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State("pemfc_settings_file", "data")],
+     State("pemfc_settings_file", "data"),
+     State('modal', 'is_open')],
     prevent_initial_call=True)
-def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
+def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
+                                   settings, modal_state):
     """
-
-    #ToDO: 
-        - Error handling: Handle None in results.
-
-    @param btn: 
+    @param btn:
     @param inputs: 
     @param inputs2: 
     @param ids: 
@@ -957,93 +988,110 @@ def cbf_run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2, settings):
     @param settings:
     @return: 
     """
-
+    # Number of refinement steps
     n_refinements = 10
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+    try:
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Read pemfc settings.json from store
-    settings = df.read_data(settings)
+        # Read pemfc settings.json from store
+        settings = df.read_data(settings)
 
-    # Read data from input fields and save input in dict/dataframe
-    # (one row "nominal")
-    df_input = df.process_inputs(inputs, inputs2, ids, ids2,
-                                 returntype="DataFrame")
-    df_input_backup = df_input.copy()
+        # Read data from input fields and save input in dict/dataframe
+        # (one row "nominal")
+        df_input = df.process_inputs(inputs, inputs2, ids, ids2,
+                                     returntype="DataFrame")
+        df_input_backup = df_input.copy()
 
-    # Ensure DataFrame with double bracket
-    # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
-    df_input_single = df_input.loc[["nominal"], :]
-    max_i = find_max_current_density(df_input_single, df_input, settings)
+        # Ensure DataFrame with double bracket
+        # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+        df_input_single = df_input.loc[["nominal"], :]
+        max_i = find_max_current_density(df_input_single, df_input, settings)
 
-    # Reset solver settings
-    df_input = df_input_backup.copy()
+        # Reset solver settings
+        df_input = df_input_backup.copy()
 
-    # Prepare & calculate initial points
-    df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i],
-                                         settings=settings)
-    df_results, success = run_simulation(df_results)
+        # Prepare & calculate initial points
+        df_results = uicalc_prepare_initcalc(input_df=df_input, i_limits=[1, max_i],
+                                             settings=settings)
+        df_results, success, _, _ = run_simulation(df_results)
 
-    # First refinement steps
-    for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(
-            data_df=df_results, input_df=df_input, settings=settings)
-        df_refine, success = run_simulation(
-            df_refine, return_unsuccessful=False)
-        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+        # First refinement steps
+        for _ in range(n_refinements):
+            df_refine = uicalc_prepare_refinement(
+                data_df=df_results, input_df=df_input, settings=settings)
+            df_refine, success, _, _ = run_simulation(
+                df_refine, return_unsuccessful=False)
+            df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
-    # Save results
-    results = df.store_data(df_results)
-    df_input_store = df.store_data(df_input_backup)
+        # Save results
+        results = df.store_data(df_results)
+        df_input_store = df.store_data(df_input_backup)
 
-    # Close process bar files
-    file_prog.close()
-    sys.stderr = std_err_backup
-    return results, df_input_store, "."
+        # Close process bar files
+        file_prog.close()
+        sys.stderr = std_err_backup
+        return results, df_input_store, ".", None, None, None
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            dm.modal_process('ui-error', error=repr(E))
+        return None, None, "", modal_title, modal_body, modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
     State("pemfc_settings_file", "data"),
+    State('modal', 'is_open'),
     prevent_initial_call=True)
-def cbf_run_refine_ui(inp, state, state2, settings):
+def cbf_run_refine_ui(inp, state, state2, settings, modal_state):
     # Number of refinement steps
     n_refinements = 5
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+    try:
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Read pemfc settings.json from store
-    settings = df.read_data(settings)
+        # Read pemfc settings.json from store
+        settings = df.read_data(settings)
 
-    # State-Store access returns None, I don't know why (FKL), workaround:
-    df_results = df.read_data(ctx.states["df_result_data_store.data"])
-    df_nominal = df.read_data(ctx.states["df_input_store.data"])
+        # State-Store access returns None, I don't know why (FKL), workaround:
+        df_results = df.read_data(ctx.states["df_result_data_store.data"])
+        df_nominal = df.read_data(ctx.states["df_input_store.data"])
 
-    # Refinement loop
-    for _ in range(n_refinements):
-        df_refine = uicalc_prepare_refinement(
-            data_df=df_results, input_df=df_nominal, settings=settings)
-        df_refine, success = run_simulation(
-            df_refine, return_unsuccessful=False)
-        df_results = pd.concat([df_results, df_refine], ignore_index=True)
+        # Refinement loop
+        for _ in range(n_refinements):
+            df_refine = uicalc_prepare_refinement(
+                data_df=df_results, input_df=df_nominal, settings=settings)
+            df_refine, success, _, _ = run_simulation(
+                df_refine, return_unsuccessful=False)
+            df_results = pd.concat([df_results, df_refine], ignore_index=True)
 
-    # Save results
-    results = df.store_data(df_results)
+        # Save results
+        results = df.store_data(df_results)
 
-    # Close process bar files
-    file_prog.close()
-    sys.stderr = std_err_backup
-    return results, ""
+        # Close process bar files
+        file_prog.close()
+        sys.stderr = std_err_backup
+
+        return results, "", None, None, None
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            dm.modal_process('ui-error', error=repr(E))
+        return None, "", modal_title, modal_body, modal_state
 
 
 def parse_contents(contents, filename):
@@ -1060,20 +1108,31 @@ def parse_contents(contents, filename):
 
 @app.callback(Output('study_data_table', 'data'),
               Output('study_data_table', 'columns'),
+              Output('modal-title', 'children'),
+              Output('modal-body', 'children'),
+              Output('modal', 'is_open'),
               Input('datatable-upload', 'contents'),
               State('datatable-upload', 'filename'),
+              State('modal', 'is_open'),
               prevent_initial_call=True)
-def cbf_update_studytable(contents, filename):
-    if contents is None:
-        return [{}], []
-    df = parse_contents(contents, filename)
-    return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns]
+def cbf_update_studytable(contents, filename, modal_state):
+    try:
+        if contents is None:
+            return [{}], []
+        df = parse_contents(contents, filename)
+        return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], None, None, None
+    except Exception as E:
+        modal_title, modal_body = dm.modal_process('error-study-file')
+        return None, None, modal_title, modal_body, not modal_state
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
+    Output('modal-title', 'children'),
+    Output('modal-body', 'children'),
+    Output('modal', 'is_open'),
     Input("btn_study", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -1083,9 +1142,10 @@ def cbf_update_studytable(contents, filename):
     State("study_data_table", "data"),
     State("check_calc_ui", "value"),
     State("check_study_type", "value"),
+    State('modal', 'is_open'),
     prevent_initial_call=True)
 def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
-                  check_calc_ui, check_study_type):
+                  check_calc_ui, check_study_type, modal_state):
     """
     #ToDO Documentation
 
@@ -1096,96 +1156,114 @@ def cbf_run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
     check_calc_ui:    Checkbox, if complete
     check_study_type:
     """
-    variation_mode = "dash_table"
+    err_modal = None
+    err_msg = None
+    try:
+        variation_mode = "dash_table"
 
-    # Calculation of polarization curve for each dataset?
-    if isinstance(check_calc_ui, list):
-        if "calc_ui" in check_calc_ui:
-            ui_calculation = True
+        # Calculation of polarization curve for each dataset?
+        if isinstance(check_calc_ui, list):
+            if "calc_ui" in check_calc_ui:
+                ui_calculation = True
+            else:
+                ui_calculation = False
         else:
             ui_calculation = False
-    else:
-        ui_calculation = False
-    n_refinements = 15
 
-    mode = check_study_type
+        # Number of refinement steps for ui calculation
+        n_refinements = 10
 
-    # Progress bar init
-    std_err_backup = sys.stderr
-    file_prog = open('progress.txt', 'w')
-    sys.stderr = file_prog
+        mode = check_study_type
 
-    # Read pemfc settings.json from store
-    settings = df.read_data(settings)
+        # Progress bar init
+        std_err_backup = sys.stderr
+        file_prog = open('progress.txt', 'w')
+        sys.stderr = file_prog
 
-    # Read data from input fields and save input in dict (legacy)
-    # / pd.DataDrame (one row with index "nominal")
-    df_input = df.process_inputs(
-        inputs, inputs2, ids, ids2, returntype="DataFrame")
-    df_input_backup = df_input.copy()
+        # Read pemfc settings.json from store
+        settings = df.read_data(settings)
 
-    # Create multiple parameter sets
-    if variation_mode == "dash_table":
-        data = variation_parameter(
-            df_input, keep_nominal=False, mode=mode, table_input=tabledata)
-    else:
-        data = variation_parameter(
-            df_input, keep_nominal=False, mode=mode, table_input=None)
-    varpars = list(data["variation_parameter"].unique())
+        # Read data from input fields and save input in dict (legacy)
+        # / pd.DataDrame (one row with index "nominal")
+        df_input = df.process_inputs(
+            inputs, inputs2, ids, ids2, returntype="DataFrame")
+        df_input_backup = df_input.copy()
 
-    if not ui_calculation:
-        # Create complete setting dict & append it in additional column
-        # "settings" to df_input
-        data = create_settings(data, settings, input_cols=df_input.columns)
-        # Run Simulation
-        results, success = run_simulation(data)
-        results = df.store_data(results)
+        # Create multiple parameter sets
+        if variation_mode == "dash_table":
+            data = variation_parameter(
+                df_input, keep_nominal=False, mode=mode, table_input=tabledata)
+        else:
+            data = variation_parameter(
+                df_input, keep_nominal=False, mode=mode, table_input=None)
+        varpars = list(data["variation_parameter"].unique())
 
-    else:  # ... calculate pol. curve for each parameter set
-        result_data = pd.DataFrame(columns=data.columns)
+        if not ui_calculation:
+            # Create complete setting dict & append it in additional column
+            # "settings" to df_input
+            data = create_settings(data, settings, input_cols=df_input.columns)
+            # Run Simulation
+            results, success, err_modal, err_msg = run_simulation(data)
+            results = df.store_data(results)
 
-        # grouped_data = data.groupby(varpars, sort=False)
-        # for _, group in grouped_data:
-        for i in range(0, len(data)):
-            # Ensure DataFrame with double bracket
-            # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
-            # df_input_single = df_input.loc[[:], :]
-            max_i = find_max_current_density(data.iloc[[i]], df_input, settings)
+        else:  # ... calculate pol. curve for each parameter set
+            result_data = pd.DataFrame(columns=data.columns)
 
-            # # Reset solver settings
-            # df_input = df_input_backup.copy()
+            # grouped_data = data.groupby(varpars, sort=False)
+            # for _, group in grouped_data:
+            for i in range(0, len(data)):
+                try:
+                    # Ensure DataFrame with double bracket
+                    # https://stackoverflow.com/questions/20383647/pandas-selecting-by-label-sometimes-return-series-sometimes-returns-dataframe
+                    # df_input_single = df_input.loc[[:], :]
+                    max_i = find_max_current_density(data.iloc[[i]], df_input, settings)
 
-            success = False
-            while (not success) and (max_i > 5000):
-                # Prepare & calculate initial points
-                df_results = uicalc_prepare_initcalc(
-                    input_df=data.iloc[[i]], i_limits=[1, max_i],
-                    settings=settings, input_cols=df_input.columns)
-                df_results, success = run_simulation(df_results)
-                max_i -= 2000
+                    # # Reset solver settings
+                    # df_input = df_input_backup.copy()
 
-            if not success:
-                continue
+                    success = False
 
-                # First refinement steps
-            for _ in range(n_refinements):
-                df_refine = uicalc_prepare_refinement(
-                    input_df=df_input, data_df=df_results, settings=settings)
-                df_refine, success = run_simulation(
-                    df_refine, return_unsuccessful=False)
-                df_results = pd.concat(
-                    [df_results, df_refine], ignore_index=True)
+                    # Prepare & calculate initial points
+                    df_results = uicalc_prepare_initcalc(
+                        input_df=data.iloc[[i]], i_limits=[1, max_i],
+                        settings=settings, input_cols=df_input.columns)
+                    df_results, success, _, _ = run_simulation(df_results)
 
-            result_data = pd.concat([result_data, df_results], ignore_index=True)
+                    if not success:
+                        continue
 
-        results = df.store_data(result_data)
+                    # First refinement steps
+                    for _ in range(n_refinements):
+                        df_refine = uicalc_prepare_refinement(
+                            input_df=df_input, data_df=df_results, settings=settings)
+                        df_refine, success, _, _ = run_simulation(
+                            df_refine, return_unsuccessful=False)
+                        df_results = pd.concat(
+                            [df_results, df_refine], ignore_index=True)
 
-    df_input_store = df.store_data(df_input_backup)
+                    result_data = pd.concat([result_data, df_results], ignore_index=True)
+                except:
+                    err_modal = "generic-study-error"
+                    pass
 
-    file_prog.close()
-    sys.stderr = std_err_backup
+            results = df.store_data(result_data)
 
-    return results, df_input_store, "."
+        df_input_store = df.store_data(df_input_backup)
+
+        file_prog.close()
+        sys.stderr = std_err_backup
+    except Exception as E:
+        modal_state = not modal_state
+        modal_title, modal_body = \
+            dm.modal_process("generic-study-error", error=repr(E))
+        return None, None, "", modal_title, modal_body, modal_state
+
+    if err_modal is not None:
+        modal_state = not modal_state
+    modal_title, modal_body = \
+        dm.modal_process(err_modal, error=repr(err_msg))
+
+    return results, df_input_store, "", modal_title, modal_body, modal_state
 
 
 @app.callback(
@@ -1228,125 +1306,130 @@ def cbf_figure_ui(inp1, inp2, dfinp):
     """
 
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-    df_nominal = df.read_data(ctx.states["df_input_store.data"])
-    results = results.loc[results["successful_run"] == True, :]
-    results = results.drop(columns=['local_data'])
+    try:
+        # Read results
+        results = df.read_data(ctx.inputs["df_result_data_store.data"])
+        df_nominal = df.read_data(ctx.states["df_input_store.data"])
+        results = results.loc[results["successful_run"] == True, :]
+        results = results.drop(columns=['local_data'])
 
-    # Create figure with secondary y-axis
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Check for identical parameters, varying current density and voltage only
-    group_columns = list(df_nominal.columns)
-    group_columns.remove('simulation-current_density')
-    group_columns.remove('simulation-average_cell_voltage')
+        # Check for identical parameters, varying current density and voltage only
+        group_columns = list(df_nominal.columns)
+        group_columns.remove('simulation-current_density')
+        group_columns.remove('simulation-average_cell_voltage')
 
-    # Filter columns from results with NA or None values
-    na_columns = results.isna().any()
-    na_columns = na_columns[na_columns == True]
-    drop_labels = list(na_columns.index)
-    group_columns = [item for item in group_columns if item not in drop_labels]
+        # Filter columns from results with NA or None values
+        na_columns = results.isna().any()
+        na_columns = na_columns[na_columns == True]
+        drop_labels = list(na_columns.index)
+        group_columns = [item for item in group_columns if item not in drop_labels]
 
-    # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
-    # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
-    # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
-    # results_red = results.loc[:, df_nominal.columns].copy()
-    results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
-    grouped = results.groupby(group_columns, sort=False)
+        # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
+        # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
+        # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
+        # results_red = results.loc[:, df_nominal.columns].copy()
+        results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
+        grouped = results.groupby(group_columns, sort=False)
 
-    for _, group in grouped:
-        group.sort_values(
-            "simulation-current_density", ignore_index=True, inplace=True)
-        group["Current Density"] = group["global_data"].apply(
-            lambda x: x["Average Current Density"]["value"] if (x is not None) else None)
-        group["Voltage"] = group["global_data"].apply(
-            lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
-        group["Power"] = group["global_data"].apply(
-            lambda x: x["Stack Power"]["value"] if (x is not None) else None)
+        for _, group in grouped:
+            group.sort_values(
+                "simulation-current_density", ignore_index=True, inplace=True)
+            group["Current Density"] = group["global_data"].apply(
+                lambda x: x["Average Current Density"]["value"] if (x is not None) else None)
+            group["Voltage"] = group["global_data"].apply(
+                lambda x: x["Stack Voltage"]["value"] if (x is not None) else None)
+            group["Power"] = group["global_data"].apply(
+                lambda x: x["Stack Power"]["value"] if (x is not None) else None)
 
-        # Add traces
-        if "variation_parameter" in group.columns:
-            # Variation parameter can be one parameter or multiple parameter
-            # separated by ",".
-            varpar = group["variation_parameter"][0]
-            try:
-                if varpar.find(',') == -1:  # no param separator -> one param
-                    setname = f"{varpar}: {group[varpar][0]}"
+            # Add traces
+            if "variation_parameter" in group.columns:
+                # Variation parameter can be one parameter or multiple parameter
+                # separated by ",".
+                varpar = group["variation_parameter"][0]
+                try:
+                    if varpar.find(',') == -1:  # no param separator -> one param
+                        setname = f"{varpar}: {group[varpar][0]}"
+                        # Add figure title
+                        fig.update_layout(title_text=f"Current-Voltage Curve")
+                    else:  # parameter separator found, multiple parameter...
+                        list_varpar = [par for par in varpar.split(',')]
+                        if len(list_varpar) > 3:  # don't plot legend
+                            fig.update_layout(showlegend=False,
+                                              title_text="Current-Voltage Curve")
+                            setname = ""
+                            for vp in list_varpar:
+                                if isinstance(group[vp][0], tuple):
+                                    setname += \
+                                        f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
+                                    setname += \
+                                        f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                                else:
+                                    setname += \
+                                        f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
+
+                        else:
+                            fig.update_layout(
+                                title_text=f"Current-Voltage Curve, "
+                                           f"Variation parameter: <br> "
+                                           f"{[par for par in varpar.split(',')]}")
+                            setname = ""
+                            for n, vp in enumerate(list_varpar):
+                                if isinstance(group[vp][0], tuple):
+                                    setname += \
+                                        f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
+                                    setname += \
+                                        f'{Decimal(group[vp][0][1]):.3E}] , <br>'
+                                else:
+                                    setname += f'{Decimal(group[vp][0]):.3E} , <br>'
+
+                        setname = setname[:-6]
+
+                except:
+                    setname = "tbd"
                     # Add figure title
-                    fig.update_layout(title_text=f"Current-Voltage Curve")
-                else:  # parameter separator found, multiple parameter...
-                    list_varpar = [par for par in varpar.split(',')]
-                    if len(list_varpar) > 3:  # don't plot legend
-                        fig.update_layout(showlegend=False,
-                                          title_text="Current-Voltage Curve")
-                        setname = ""
-                        for vp in list_varpar:
-                            if isinstance(group[vp][0], tuple):
-                                setname += \
-                                    f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += \
-                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
-                            else:
-                                setname += \
-                                    f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
+                    fig.update_layout()
 
-                    else:
-                        fig.update_layout(
-                            title_text=f"Current-Voltage Curve, "
-                                       f"Variation parameter: <br> "
-                                       f"{[par for par in varpar.split(',')]}")
-                        setname = ""
-                        for n, vp in enumerate(list_varpar):
-                            if isinstance(group[vp][0], tuple):
-                                setname += \
-                                    f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += \
-                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
-                            else:
-                                setname += f'{Decimal(group[vp][0]):.3E} , <br>'
-
-                    setname = setname[:-6]
-
-            except:
-                setname = "tbd"
+            else:
                 # Add figure title
                 fig.update_layout()
+                setname = ""
 
-        else:
-            # Add figure title
-            fig.update_layout()
-            setname = ""
+            if len(group) > 1:
+                fig.add_trace(
+                    go.Scatter(x=list(group["Current Density"]),
+                               y=list(group["Voltage"]), name=f"{setname}",
+                               mode='lines+markers'), secondary_y=False)
+            else:
+                fig.add_trace(
+                    go.Scatter(x=list(group["Current Density"]),
+                               y=list(group["Voltage"]), name=f"{setname}",
+                               mode='markers'), secondary_y=False)
 
-        if len(group) > 1:
-            fig.add_trace(
-                go.Scatter(x=list(group["Current Density"]),
-                           y=list(group["Voltage"]), name=f"{setname}",
-                           mode='lines+markers'), secondary_y=False)
-        else:
-            fig.add_trace(
-                go.Scatter(x=list(group["Current Density"]),
-                           y=list(group["Voltage"]), name=f"{setname}",
-                           mode='markers'), secondary_y=False)
+        # # Set x-axis title
+        # fig.update_xaxes(title_text="Current Density [A/m²]")
+        #
+        # # Set y-axes titles
+        # fig.update_yaxes(title_text="Voltage [V]", secondary_y=False)
+        # fig.update_yaxes(title_text="Power [W]", secondary_y=True)
 
-    # # Set x-axis title
-    # fig.update_xaxes(title_text="Current Density [A/m²]")
-    #
-    # # Set y-axes titles
-    # fig.update_yaxes(title_text="Voltage [V]", secondary_y=False)
-    # fig.update_yaxes(title_text="Power [W]", secondary_y=True)
+        x_title = 'Current Density / A/m²'
+        y_title = 'Voltage / V'
+        layout = go.Layout(
+            font={'color': 'black', 'family': 'Arial'},
+            # title='Local Results in Heat Map',
+            titlefont={'size': 11, 'color': 'black'},
+            xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': x_title},
+            yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+                   'title': y_title},
+            margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
+        fig.update_layout(layout, hoverlabel=dict(namelength=-1))
 
-    x_title = 'Current Density / A/m²'
-    y_title = 'Voltage / V'
-    layout = go.Layout(
-        font={'color': 'black', 'family': 'Arial'},
-        # title='Local Results in Heat Map',
-        titlefont={'size': 11, 'color': 'black'},
-        xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-               'title': x_title},
-        yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
-               'title': y_title},
-        margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
-    fig.update_layout(layout, hoverlabel=dict(namelength=-1))
+    except Exception as E:
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
     return fig
 
 
@@ -1363,13 +1446,15 @@ def global_outputs_table(*args):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
-
     global_result_dict = result_set["global_data"]
+    if global_result_dict is None:
+        raise PreventUpdate
     names = list(global_result_dict.keys())
     values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
@@ -1397,13 +1482,15 @@ def get_dropdown_options_heatmap(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
     options = \
         [{'label': key, 'value': key} for key in local_data
          if 'xkey' in local_data[key]
@@ -1424,13 +1511,16 @@ def get_dropdown_options_line_graph(results):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
-
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
+
     options = [{'label': key, 'value': key} for key in local_data]
     value = options[0]['value']
     return options, value
@@ -1497,8 +1587,8 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
 @app.callback(
     Output("heatmap_graph", "figure"),
     [Input('dropdown_heatmap', 'value'),
-     Input('dropdown_heatmap_2', 'value')],
-    Input('df_result_data_store', 'data'),
+     Input('dropdown_heatmap_2', 'value'),
+     Input('df_result_data_store', 'data')],
     prevent_initial_call=True
 )
 def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
@@ -1507,11 +1597,14 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
     # else:
 
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     if 'value' in local_data[dropdown_key]:
         zvalues = local_data[dropdown_key]['value']
@@ -1649,15 +1742,16 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
                       clear_all_clicks, restyle_data, results):
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
-    # if drop1 is None or results is None:
-    #     raise PreventUpdate
-    # else:
+
     # Read results
-    results = df.read_data(ctx.inputs["df_result_data_store.data"])
-
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = df.read_data(results)
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
 
     fig = go.Figure()
 
@@ -1695,7 +1789,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
 
     if 'value' in local_data[drop1]:
         yvalues = np.asarray(local_data[drop1]['value'])
-    elif drop2 is not None:
+    elif drop2 is not None and 'value' in local_data[drop1][drop2]:
         yvalues = np.asarray(local_data[drop1][drop2]['value'])
     else:
         raise PreventUpdate
@@ -1786,10 +1880,11 @@ def list_to_table(n1, n2, n3, data_checklist, cells_data, results,
     # else:
     # Read results
     results = df.read_data(ctx.states["df_result_data_store.data"])
-
     result_set = results.iloc[0]
-
     local_data = result_set["local_data"]
+    if local_data is None:
+        raise PreventUpdate
+
     digit_list = \
         sorted([int(re.sub('[^0-9\.]', '', inside))
                 for inside in data_checklist])
