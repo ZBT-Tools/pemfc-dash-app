@@ -270,7 +270,8 @@ def sub_frame(sub_frame_dict):
 
             div_child = [html.Div(children=sub_frame_dict['title'],
                                   className=f'title {bold}')]
-        div_child.extend([sub_frame(subframe) for subframe in sub_frame_dict['sub_frame_dicts']])
+        div_child.extend([sub_frame(subframe) for subframe in
+                          sub_frame_dict['sub_frame_dicts']])
 
         return html.Div(div_child, style=border, className=cname)
 

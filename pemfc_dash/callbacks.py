@@ -64,17 +64,17 @@ def progress_bar(*args) -> (float, str):
 @app.callback(
     Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
     Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
-    Output("pemfc_settings_file", "data"),
+    Output('pemfc_settings_file', 'data'),
     Output('df_input_store', 'data'),
-    Output("study_table", "children"),
-    Input("initial_dummy", "children"),
+    Output('study_table', 'children'),
+    Input('initial_dummy', 'children'),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id')]
 )
 def initialization(dummy, value_list: list, multivalue_list: list,
-                       id_list: list, multivalue_id_list: list):
+                   id_list: list, multivalue_id_list: list):
     """
     Initialization
     """
@@ -191,10 +191,11 @@ def initialization(dummy, value_list: list, multivalue_list: list,
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'id'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'id'),
-     State('modal', 'is_open')]
+     State('modal', 'is_open')],
+    prevent_initial_call=True
 )
 def load_settings(contents, filename, value, multival, ids, ids_multival,
-                      modal_state):
+                  modal_state):
     if contents is None:
         raise PreventUpdate
     else:
@@ -1022,8 +1023,8 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
      Input('data_checklist', 'value'),
      Input('select_all_button', 'n_clicks'),
      Input('clear_all_button', 'n_clicks'),
-     Input('line_graph', 'restyleData')],
-    Input('df_result_data_store', 'data'),
+     Input('line_graph', 'restyleData'),
+     Input('df_result_data_store', 'data')],
     prevent_initial_call=True
 )
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
@@ -1084,7 +1085,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
     if x_key in local_data:
         xvalues = np.asarray(local_data[x_key]['value'])
         if len(xvalues) == n_y + 1:
-            xvalues = ip.interpolate_1d(xvalues)
+            xvalues = np.round(ip.interpolate_1d(xvalues), 8)
     else:
         xvalues = np.asarray(list(range(n_y)))
 
@@ -1113,7 +1114,7 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
             read = restyle_data[0]['visible']
             if len(read) == 1:
                 cell_name = cells[restyle_data[1][0]]['name']
-                if read[0] is True:  # lose (legendonly)
+                if read[0] is True:
                     checklist.append(cell_name)
                 else:
                     if cell_name in checklist:
@@ -1122,107 +1123,40 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
             else:
                 value = [value[i] for i in range(n_y)
                          if read[i] is True]
-
         fig.for_each_trace(
             lambda trace: trace.update(
                 visible=True) if trace.name in value
             else trace.update(visible='legendonly'))
-            # fig.plotly_restyle(restyle_data[0])
-
     return fig, cells, options, value
 
 
 @app.callback(
-    [Output('table', 'columns'),
-     Output('table', 'data'),
-     Output('table', 'export_format'),
-     Output('append_check', 'data')],
-    [Input('export_b', 'n_clicks'),  # button1
-     Input('append_b', 'n_clicks'),  # button2
-     Input('clear_table_b', 'n_clicks')],
-    [State('data_checklist', 'value'),  # from display
-     State('cells_data', 'data'),  # from line graph
-     State('df_result_data_store', 'data'),
-     State('table', 'columns'),
-     State('table', 'data'),
-     State('append_check', 'data')],
+    Output("savefile-data", "data"),
+    Input('export_csv', 'n_clicks'),
+    State('line_graph', 'figure'),
     prevent_initial_call=True
 )
-def export_data(n1, n2, n3, data_checklist, cells_data, results,
-                  table_columns, table_data, append_check):
-    ctx = dash.callback_context
-    ctx_triggered = dash.callback_context.triggered[0]['prop_id']
+def export_data(n_clicks, fig):
 
-    # if data_checklist is None or results is None:
-    #     raise PreventUpdate
-    # else:
-    # Read results
-    results = dc.read_data(ctx.states["df_result_data_store.data"])
+    # Get all data in figure
+    data = fig['data']
+    # Filter only visible data
+    visible_data = [item for item in data if item['visible'] is True]
+    # Format as Pandas DataFrame
+    first_header_row = [fig['layout']['xaxis']['title']['text']] \
+        + [fig['layout']['yaxis']['title']['text']
+           for i in range(len(visible_data))]
+    second_header_row = [''] + [item['name'] for item in visible_data]
 
-    result_set = results.iloc[0]
+    pure_data = np.asarray(
+        [visible_data[0]['x']]
+        + [item['y'] for item in visible_data]).transpose()
+    df = pd.DataFrame(
+        pure_data,
+        columns=pd.MultiIndex.from_arrays(
+            [first_header_row, second_header_row]))
 
-    local_data = result_set["local_data"]
-    digit_list = \
-        sorted([int(re.sub('[^0-9\.]', '', inside))
-                for inside in data_checklist])
-
-    x_key = 'Channel Location'
-
-    index = [{'id': x_key, 'name': x_key,
-              'deletable': True}]
-    columns = [{'deletable': True, 'renamable': True,
-                'selectable': True, 'name': 'Cell {}'.format(d),
-                'id': 'Cell {}'.format(d)} for d in digit_list]
-    # list with nested dict
-
-    xvalues = ip.interpolate_1d(np.asarray(local_data[x_key]['value']))
-    data = [{**{x_key: cell},
-             **{cells_data[k]['name']: cells_data[k]['data'][num]
-                for k in cells_data}}
-            for num, cell in enumerate(xvalues)]  # list with nested dict
-
-    if append_check is None:
-        appended = 0
-    else:
-        appended = append_check
-
-    if 'export_b.n_clicks' in ctx_triggered:
-        return index + columns, data, 'csv', appended
-    elif 'clear_table_b.n_clicks' in ctx_triggered:
-        return [], [], 'none', appended
-    elif 'append_b.n_clicks' in ctx_triggered:
-        if n1 is None or table_data == [] or table_columns == [] or \
-                ctx_triggered == 'clear_table_b.n_clicks':
-            raise PreventUpdate
-        else:
-            appended += 1
-            app_columns = \
-                [{'deletable': True, 'renamable': True,
-                  'selectable': True, 'name': 'Cell {}'.format(d),
-                  'id': 'Cell {}'.format(d) + '-' + str(appended)}
-                 for d in digit_list]
-            new_columns = table_columns + app_columns
-            app_datas = \
-                [{**{x_key: cell},
-                  **{cells_data[k]['name'] + '-' + str(appended):
-                         cells_data[k]['data'][num]
-                     for k in cells_data}}
-                 for num, cell in enumerate(xvalues)]
-            new_data_list = []
-            new_data = \
-                [{**table_data[i], **app_datas[i]}
-                 if table_data[i][x_key] == app_datas[i][x_key]
-                 else new_data_list.extend([table_data[i], app_datas[i]])
-                 for i in range(len(app_datas))]
-            new_data = list(filter(None.__ne__, new_data))
-            new_data.extend(new_data_list)
-
-            return new_columns, new_data, 'csv', appended
-    else:
-        if n1 is None or table_columns == []:
-            return table_columns, table_data, 'none', appended
-        else:
-            return table_columns, table_data, 'csv', appended
+    return dcc.send_data_frame(df.to_csv, "results.csv")
 
 
 @app.callback(
@@ -1256,7 +1190,7 @@ def activate_column(input1, input2):
                 list_state[18 + num] = list_state[30 + num] = False
             if input2[3 + num] == 'circular':
                 list_state[6 + num], list_state[9 + num], \
-                    list_state[12 + num] =  False, True, True
+                    list_state[12 + num] = False, True, True
             else:
                 list_state[6 + num], list_state[9 + num], \
                     list_state[12 + num] = True, False, False

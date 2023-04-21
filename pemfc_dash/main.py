@@ -1,5 +1,4 @@
 from dash_extensions.enrich import html, dcc
-from dash import dash_table as dt
 import dash_bootstrap_components as dbc
 from . import modal_functions as mf
 from pemfc_dash.dash_app import app
@@ -9,8 +8,7 @@ server = app.server
 app._favicon = 'logo-zbt.ico'
 app.title = 'PEMFC Model'
 
-
-# import layout components
+# Import layout components
 from pemfc_dash.layout.header import header
 from pemfc_dash.layout.menu_column import menu_column
 from pemfc_dash.layout.result_column import result_column
@@ -31,6 +29,7 @@ app.layout = dbc.Container([
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
     dcc.Store(id='signal'),
+    dcc.Store(id='cells_data'),
     # Dummy div for initialization
     # (Read available input parameters, create study table)
     html.Div(id="initial_dummy"),

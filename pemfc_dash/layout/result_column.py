@@ -69,8 +69,7 @@ result_column = html.Div([
         ),
         html.Div([
             html.Div(
-                [dcc.Store(id='append_check'),
-                 html.Div(
+                [html.Div(
                      [html.Div(
                          children=dbc.DropdownMenu(
                              id='checklist_dropdown',
@@ -94,21 +93,15 @@ result_column = html.Div([
                          html.Button('Select All',
                                      id='select_all_button',
                                      className='local_data_buttons'),
-                         html.Button('Export to Table',
-                                     id='export_b',
+                         html.Button('Export',
+                                     id='export_csv',
                                      className='local_data_buttons'),
-                         html.Button('Append to Table',
-                                     id='append_b',
-                                     className='local_data_buttons'),
-                         html.Button('Clear Table',
-                                     id='clear_table_b',
-                                     className='local_data_buttons')],
+                         dcc.Download(id="savefile-data")],
                      style={'display': 'flex',
                             'flex-wrap': 'wrap',
                             'margin-bottom': '5px'})],
-                # style={'width': '200px'}
-            ),
-            dcc.Store(id='cells_data')],
+            # style={'width': '200px'}
+            )],
             style={'display': 'flex', 'flex-direction': 'column',
                    'justify-content': 'left'}),
         dbc.Spinner(dcc.Graph(id='line_graph'),
