@@ -28,7 +28,6 @@ app.layout = dbc.Container([
     dcc.Store(id='df_result_data_store'),
     dcc.Store(id='df_input_store'),
     dcc.Store(id='variation_parameter'),
-    dcc.Store(id='signal'),
     dcc.Store(id='cells_data'),
     # Dummy div for initialization
     # (Read available input parameters, create study table)

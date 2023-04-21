@@ -297,7 +297,6 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
-    Output('signal', 'data'),
     Output("spinner_run_single", 'children'),
     Output('modal-title', 'children'),
     Output('modal-body', 'children'),
