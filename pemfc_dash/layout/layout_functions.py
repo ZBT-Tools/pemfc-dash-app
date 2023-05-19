@@ -112,7 +112,6 @@ def id_val_gui_to_dash(label, ids, vals, number, type, inp_type='input'):
         inp_type: "input" or "multiinput"
 
     """
-
     if ids:
         # Create single ids by joining list elements with "-"
         # Example:
