@@ -40,7 +40,7 @@ def create_settings(df_data: pd.DataFrame, settings,
                     input_cols=None) -> pd.DataFrame:
     # Create settings dictionary
     # If "input_cols" are given, only those will be used from "df_data".
-    # Usecase: df_data can contain additional columns as study information that needs
+    # Use case: df_data can contain additional columns as study information that needs
     # to be excluded from settings dict
     # -----------------------------------------------------------------------
     # Create object columns
@@ -120,10 +120,12 @@ def parse_contents(contents, filename='json'):
 
     Used in parsing contents from JSON file and process parsed data
     for each components
-    (parsed data has to be in the order of initialised Dash IDs) #ToDo: check & rework
+    (parsed data has to be in the order of initialised Dash IDs)
+    #ToDo: check & rework
 
     contents:
-    contents is a base64 encoded string that contains the files contents, no matter what type of file:
+    contents is a base64 encoded string that contains the files contents,
+    no matter what type of file:
      text files, images, .zip files, Excel spreadsheets, etc.
      [https://dash.plotly.com/dash-core-components/upload]
     """
@@ -133,7 +135,7 @@ def parse_contents(contents, filename='json'):
         # Assume that the user uploaded a CSV file
         return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     elif 'xls' in filename:
-        # Assume that the user uploaded an excel file
+        # Assume that the user uploaded an Excel file
         return pd.read_excel(io.BytesIO(decoded))
     elif 'json' in filename:
         return json.load(io.StringIO(decoded.decode('utf-8')))
@@ -182,15 +184,15 @@ def update_gui_lists(id_value_dict: dict,
         if k in id_match:
             if isinstance(v, list):
                 for num, val in enumerate(v):
-                    dict_ids_multival[k + f'_{num}'] = check_ifbool(val)
+                    dict_ids_multival[k + f'_{num}'] = check_if_bool(val)
             else:
-                dict_ids[k] = check_ifbool(v)
+                dict_ids[k] = check_if_bool(v)
         else:
             continue
     return list(dict_ids.values()), list(dict_ids_multival.values())
 
 
-def check_ifbool(val):
+def check_if_bool(val):
     """
     Used for dcc.Checklist components when receiving value from its
     tkinter.CheckButton counterparts
@@ -327,7 +329,7 @@ def dash_kwarg(inputs):
 def compile_data(**kwargs):
     """
     DEPRECATED
-    Used in compiling data from each components into a dcc.Store for each Tab
+    Used in compiling data from each component into a dcc.Store for each Tab
     """
     dash_dict = collections.defaultdict(dict)
     for k, v in kwargs.items():
