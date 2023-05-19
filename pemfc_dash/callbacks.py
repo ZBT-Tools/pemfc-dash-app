@@ -180,9 +180,7 @@ def initialization(dummy, value_list: list, multivalue_list: list,
     [Output({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      Output({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
      Output('upload-file', 'contents'),
-     Output('modal-title', 'children'),
-     Output('modal-body', 'children'),
-     Output('modal', 'is_open')],
+     Output('modal_store', 'data')],
     Input('upload-file', 'contents'),
     [State('upload-file', 'filename'),
      State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -295,12 +293,25 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
 
 
 @app.callback(
+    [Output('modal-title', 'children'),
+     Output('modal-body', 'children'),
+     Output('modal', 'is_open')],
+    Input('modal_store', 'data'),
+    prevent_initial_call=True)
+def convert_modal_input(modal_data):
+    if modal_data is None:
+        raise PreventUpdate
+    modal_title = modal_data['modal_title']
+    modal_body = modal_data['modal_body']
+    modal_state = modal_data['modal_state']
+    return modal_title, modal_body, modal_state
+
+
+@app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output("spinner_run_single", 'children'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    Output('modal_store', 'data'),
     Input("run_button", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -342,24 +353,30 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
             modal_title = None
             modal_body = None
 
-        return df_result_store, df_input_store, "", \
-            modal_title, modal_body, modal_state
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': modal_state}
+        return df_result_store, df_input_store, "", modal_input
 
     except Exception as E:
+
         modal_state = not modal_state
         modal_title, modal_body = \
             mf.modal_process('other-error', error=repr(E))
-        return None, None, "", \
-            modal_title, modal_body, modal_state
+
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': modal_state}
+        return None, None, "", modal_input
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    Output('modal_store', 'data'),
     Input("btn_init_ui", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -369,7 +386,7 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
      State('modal', 'is_open')],
     prevent_initial_call=True)
 def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
-                                   settings, modal_state):
+                               settings, modal_state):
     """
 
     #ToDO:
@@ -430,20 +447,28 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
         # Close process bar files
         file_prog.close()
         sys.stderr = std_err_backup
-        return results, df_input_store, ".", None, None, None
+
+        # Save modal input in a dict
+        modal_input = {'modal_title': None,
+                       'modal_body': None,
+                       'modal_state': None}
+        return results, df_input_store, ".", modal_input
     except Exception as E:
         modal_state = not modal_state
         modal_title, modal_body = \
             mf.modal_process('ui-error', error=repr(E))
-        return None, None, "", modal_title, modal_body, modal_state
+
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': modal_state}
+        return None, None, "", modal_input
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    Output('modal_store', 'data'),
     Input("btn_refine_ui", "n_clicks"),
     State('df_result_data_store', 'data'),
     State('df_input_store', 'data'),
@@ -482,19 +507,26 @@ def run_refine_ui(inp, state, state2, settings, modal_state):
         file_prog.close()
         sys.stderr = std_err_backup
 
-        return results, "", None, None, None
+        # Save modal input in a dict
+        modal_input = {'modal_title': None,
+                       'modal_body': None,
+                       'modal_state': None}
+        return results, "", modal_input
     except Exception as E:
         modal_state = not modal_state
         modal_title, modal_body = \
             mf.modal_process('ui-error', error=repr(E))
-        return None, "", modal_title, modal_body, modal_state
+
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': modal_state}
+        return None, "", modal_input
 
 
 @app.callback(Output('study_data_table', 'data'),
               Output('study_data_table', 'columns'),
-              Output('modal-title', 'children'),
-              Output('modal-body', 'children'),
-              Output('modal', 'is_open'),
+              Output('modal_store', 'data'),
               Input('datatable-upload', 'contents'),
               State('datatable-upload', 'filename'),
               State('modal', 'is_open'),
@@ -504,19 +536,27 @@ def update_studytable(contents, filename, modal_state):
         if contents is None:
             return [{}], []
         df = dc.parse_contents(contents, filename)
-        return df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], None, None, None
+        # Save modal input in a dict
+        modal_input = {'modal_title': None,
+                       'modal_body': None,
+                       'modal_state': None}
+        return df.to_dict('records'), \
+            [{"name": i, "id": i} for i in df.columns], modal_input
     except Exception as E:
         modal_title, modal_body = mf.modal_process('error-study-file')
-        return None, None, modal_title, modal_body, not modal_state
+
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': not modal_state}
+        return None, None, modal_input
 
 
 @app.callback(
     ServersideOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
-    Output('modal-title', 'children'),
-    Output('modal-body', 'children'),
-    Output('modal', 'is_open'),
+    Output('modal_store', 'data'),
     Input("btn_study", "n_clicks"),
     [State({'type': 'input', 'id': ALL, 'specifier': ALL}, 'value'),
      State({'type': 'multiinput', 'id': ALL, 'specifier': ALL}, 'value'),
@@ -621,13 +661,15 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
                     # First refinement steps
                     for _ in range(n_refinements):
                         df_refine = sf.uicalc_prepare_refinement(
-                            input_df=df_input, data_df=df_results, settings=settings)
+                            input_df=df_input, data_df=df_results,
+                            settings=settings)
                         df_refine, success, _, _ = sim.run_simulation(
                             df_refine, return_unsuccessful=False)
                         df_results = pd.concat(
                             [df_results, df_refine], ignore_index=True)
 
-                    result_data = pd.concat([result_data, df_results], ignore_index=True)
+                    result_data = pd.concat([result_data, df_results],
+                                            ignore_index=True)
                 except Exception as E:
                     err_modal = "generic-study-error"
                     pass
@@ -642,14 +684,22 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
         modal_state = not modal_state
         modal_title, modal_body = \
             mf.modal_process("generic-study-error", error=repr(E))
-        return None, None, "", modal_title, modal_body, modal_state
+        # Save modal input in a dict
+        modal_input = {'modal_title': modal_title,
+                       'modal_body': modal_body,
+                       'modal_state': modal_state}
+        return None, None, "", modal_input
 
     if err_modal is not None:
         modal_state = not modal_state
     modal_title, modal_body = \
         mf.modal_process(err_modal, error=repr(err_msg))
 
-    return results, df_input_store, '', modal_title, modal_body, modal_state
+    # Save modal input in a dict
+    modal_input = {'modal_title': modal_title,
+                   'modal_body': modal_body,
+                   'modal_state': modal_state}
+    return results, df_input_store, '', modal_input
 
 
 @app.callback(
