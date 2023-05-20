@@ -907,19 +907,6 @@ def get_dropdown_options_line_graph(results):
     return options, value
 
 
-def conditional_dropdown_menu(dropdown_value, data):
-    results = dc.read_data(data)
-    result_set = results.iloc[0]
-    local_data = result_set["local_data"]
-    if 'value' in local_data[dropdown_value]:
-        return [], None, {'visibility': 'hidden'}
-    else:
-        options = [{'label': key, 'value': key} for key in
-                   local_data[dropdown_value]]
-        value = options[0]['value']
-        return options, value, {'visibility': 'visible'}
-
-
 @app.callback(
     [Output('dropdown_heatmap_2', 'options'),
      Output('dropdown_heatmap_2', 'value'),
@@ -939,7 +926,7 @@ def get_dropdown_options_heatmap_2(dropdown_key, results):
         if results is None:
             raise PreventUpdate
         else:
-            return conditional_dropdown_menu(dropdown_key, results)
+            return lf.conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
@@ -962,7 +949,7 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
         if results is None:
             raise PreventUpdate
         else:
-            return conditional_dropdown_menu(dropdown_key, results)
+            return lf.conditional_dropdown_menu(dropdown_key, results)
 
 
 @app.callback(
