@@ -30,7 +30,7 @@ try:
         caching_backend = FileSystemStore(cache_dir=store_dir)
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
-except ImportError:
+except (ImportError, AttributeError):
     store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
     clear_cache(store_dir)
     caching_backend = FileSystemStore(cache_dir=store_dir)
