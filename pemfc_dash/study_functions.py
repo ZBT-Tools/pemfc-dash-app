@@ -243,7 +243,7 @@ def find_max_current_density(data: pd.DataFrame, df_input, settings):
         data = dc.create_settings(data, settings, input_cols=df_input.columns)
 
         # Run simulation
-        df_result, success = sim.run_simulation(data)
+        df_result, success, _, _ = sim.run_simulation(data)
 
     max_i = df_result["global_data"].iloc[0]["Average Current Density"]["value"]
 
