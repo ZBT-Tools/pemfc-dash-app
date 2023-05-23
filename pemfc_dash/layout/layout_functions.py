@@ -3,6 +3,8 @@ from dash import html
 from dash import dcc
 import copy
 
+from pemfc_dash import data_conversion as dc
+
 ID_LIST = []  # Keep track with generated IDs
 CONTAINER_LIST = []
 
@@ -267,7 +269,8 @@ def sub_frame(sub_frame_dict):
 
             div_child = [html.Div(children=sub_frame_dict['title'],
                                   className=f'title {bold}')]
-        div_child.extend([sub_frame(subframe) for subframe in sub_frame_dict['sub_frame_dicts']])
+        div_child.extend([sub_frame(subframe) for subframe in
+                          sub_frame_dict['sub_frame_dicts']])
 
         return html.Div(div_child, style=border, className=cname)
 
@@ -460,6 +463,19 @@ def row_input(label='', ids='', value='', type='', dimensions='', options='',
         inputs = html.Div()
 
     return inputs
+
+
+def conditional_dropdown_menu(dropdown_value, data):
+    results = dc.read_data(data)
+    result_set = results.iloc[0]
+    local_data = result_set["local_data"]
+    if 'value' in local_data[dropdown_value]:
+        return [], None, {'visibility': 'hidden'}
+    else:
+        options = [{'label': key, 'value': key} for key in
+                   local_data[dropdown_value]]
+        value = options[0]['value']
+        return options, value, {'visibility': 'visible'}
 
 
 graph_font_props = {'small': {'size': 12, 'color': 'black', 'family': 'Arial'},
