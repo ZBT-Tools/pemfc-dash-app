@@ -3,17 +3,19 @@ import dash_bootstrap_components as dbc
 from . import modal_functions as mf
 from pemfc_dash.dash_app import app
 
-server = app.server
-
-app._favicon = 'logo-zbt.ico'
-app.title = 'PEMFC Model'
-
 # Import layout components
 from pemfc_dash.layout.header import header
 from pemfc_dash.layout.menu_column import menu_column
 from pemfc_dash.layout.result_column import result_column
 from pemfc_dash.layout.bottom import bottom
 
+# Import callbacks
+from . import callbacks
+
+server = app.server
+
+app._favicon = 'logo-zbt.ico'
+app.title = 'PEMFC Model'
 
 # App layout
 # -----------------------------------------------------------------------------
@@ -45,7 +47,7 @@ app.layout = dbc.Container([
     html.Div([  # MIDDLE
         menu_column,
         result_column
-        ],
+    ],
         className="row",
         style={'justify-content': 'space-evenly'}),
     # Load html elements for bottom row
@@ -58,7 +60,9 @@ app.layout = dbc.Container([
 
 # Import callback functions
 # -----------------------------------------------------------------------------
-from . import callbacks
+# Callbacks are imported at top of this file
+# from . import callbacks
+
 
 if __name__ == "__main__":
     app.run_server(debug=True, use_reloader=False)
