@@ -1,12 +1,20 @@
 version: "3.9"
+networks:
+  myapp-network:
 services:
   web:
     build: .
+    networks:
+      - myapp-network
     ports:
-      - "8000:5000"
+      - "8000:8000"
     volumes:
       - .:/app
     environment:
       FLASK_ENV: development
   redis:
     image: "redis:alpine"
+    networks:
+      - myapp-network
+    expose:
+      - "6379"

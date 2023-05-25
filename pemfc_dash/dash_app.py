@@ -15,6 +15,12 @@ def clear_cache(path):
     os.makedirs(path)
 
 
+def make_file_system_store(file_path='temp/file_system_store'):
+    store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
+    clear_cache(store_dir)
+    return FileSystemStore(cache_dir=store_dir)
+
+
 try:
     import pemfc_dash.redis_credentials as rc
     caching_backend = RedisStore(
@@ -25,15 +31,15 @@ try:
     try:
         caching_backend.delete('test')
     except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
-        store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
-        clear_cache(store_dir)
-        caching_backend = FileSystemStore(cache_dir=store_dir)
+        caching_backend = make_file_system_store()
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
 except (ImportError, AttributeError):
-    store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
-    clear_cache(store_dir)
-    caching_backend = FileSystemStore(cache_dir=store_dir)
+    caching_backend = RedisStore(host='redis', port=6379)
+    try:
+        caching_backend.delete('test')
+    except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
+        caching_backend = make_file_system_store()
 
 
 # from celery import Celery
