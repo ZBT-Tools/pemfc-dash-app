@@ -10,7 +10,7 @@ import sys
 import json
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, dcc, \
-    ServersideOutput, ctx
+    EnrichedOutput, ctx
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -308,7 +308,7 @@ def convert_modal_input(modal_data):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output("spinner_run_single", 'children'),
     Output('modal_store', 'data'),
@@ -373,7 +373,7 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
     Output('modal_store', 'data'),
@@ -466,7 +466,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
     Output('modal_store', 'data'),
     Input("btn_refine_ui", "n_clicks"),
@@ -553,7 +553,7 @@ def update_studytable(contents, filename, modal_state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
     Output('modal_store', 'data'),
@@ -717,7 +717,7 @@ def save_results(inp, state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Input("load_res", "contents"),
     prevent_initial_call=True)
 def load_results(content):
