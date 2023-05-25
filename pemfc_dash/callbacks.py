@@ -208,26 +208,38 @@ def load_settings(contents, filename, value, multival, ids, ids_multival,
                 if not error_list:
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = mf.modal_process('loaded')
-                    return new_value_list, new_multivalue_list, \
-                        None, modal_title, modal_body, not modal_state
+                    # Save modal input in a dict
+                    modal_input = {'modal_title': modal_title,
+                                   'modal_body': modal_body,
+                                   'modal_state': not modal_state}
+                    return new_value_list, new_multivalue_list, None, modal_input
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
                         mf.modal_process('id-not-loaded', error_list)
-                    return new_value_list, new_multivalue_list, \
-                        None, modal_title, modal_body, not modal_state
+                    # Save modal input in a dict
+                    modal_input = {'modal_title': modal_title,
+                                   'modal_body': modal_body,
+                                   'modal_state': not modal_state}
+                    return new_value_list, new_multivalue_list, None, modal_input
             except Exception as E:
                 # Error / JSON file cannot be processed; return old value
                 modal_title, modal_body = \
                     mf.modal_process('error', error=repr(E))
-                return value, multival, None, modal_title, modal_body, \
-                    not modal_state
+                # Save modal input in a dict
+                modal_input = {'modal_title': modal_title,
+                               'modal_body': modal_body,
+                               'modal_state': not modal_state}
+                return value, multival, None, modal_input
         else:
             # Not JSON file; return old value
             modal_title, modal_body = mf.modal_process('wrong-file')
-            return value, multival, None, modal_title, modal_body, \
-                not modal_state
+            # Save modal input in a dict
+            modal_input = {'modal_title': modal_title,
+                           'modal_body': modal_body,
+                           'modal_state': not modal_state}
+            return value, multival, None, modal_input
 
 
 @app.callback(
