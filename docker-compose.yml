@@ -1,9 +1,11 @@
 version: "3.9"
-
+#networks:
+#  myapp-network:
 services:
   web:
     build: .
-
+#    networks:
+#      - myapp-network
     ports:
       - "8000:5000"
     volumes:
