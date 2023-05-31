@@ -1225,12 +1225,13 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
         raise PreventUpdate
 
     n_y = np.asarray(yvalues).shape[0]
+    n_x = np.asarray(yvalues).shape[-1]
     if x_key in local_data:
         xvalues = np.asarray(local_data[x_key]['value'])
         if len(xvalues) == n_y + 1:
             xvalues = np.round(ip.interpolate_1d(xvalues), 8)
     else:
-        xvalues = np.asarray(list(range(n_y)))
+        xvalues = np.asarray(list(range(n_x)))
 
     if xvalues.ndim > 1:
         xvalues = xvalues[0]
