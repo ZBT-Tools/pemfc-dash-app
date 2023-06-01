@@ -3,7 +3,7 @@ import numpy as np
 import ast
 from itertools import product
 
-from pemfc_gui import data_transfer
+import data_transfer
 
 from . import data_conversion as dc
 from . import simulation_api as sim
@@ -89,13 +89,13 @@ def uicalc_prepare_refinement(
     # Create settings out of (only) input columns
     new_data_df_red = new_data_df.loc[:, input_df.columns]
     # For legacy: Create "input_data"-dict,
-    # as required for data_transfer.gui_to_sim_transfer()
+    # as required for data_transfer.dict_transfer()
     new_data_df['input_data'] = new_data_df_red.apply(
         lambda row: {i: {'sim_name': i.split('-'), 'value': v}
                      for i, v in zip(row.index, row.values)}, axis=1)
 
     new_data_df['settings'] = new_data_df['input_data'].apply(
-        lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+        lambda x: data_transfer.dict_transfer(x, settings)[0])
 
     return new_data_df
 

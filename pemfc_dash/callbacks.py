@@ -21,7 +21,7 @@ from .layout import layout_functions as lf
 
 import pemfc
 from pemfc.src import interpolation as ip
-from pemfc_gui import data_transfer
+import data_transfer
 from tqdm import tqdm
 from decimal import Decimal
 from .dash_app import app
@@ -298,7 +298,7 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
         with open(os.path.join('settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
-        settings, _ = data_transfer.gui_to_sim_transfer(input_data, settings)
+        settings, _ = data_transfer.dict_transfer(input_data, settings)
 
         return dict(content=json.dumps(settings, indent=2),
                     filename='settings.json')

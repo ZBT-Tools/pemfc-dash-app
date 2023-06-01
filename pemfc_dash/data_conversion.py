@@ -1,5 +1,5 @@
 from functools import wraps
-from pemfc_gui import data_transfer
+import data_transfer
 import base64
 import io
 import json
@@ -59,7 +59,7 @@ def create_settings(df_data: pd.DataFrame, settings,
                      for i, v in zip(row.index, row.values)}, axis=1)
 
     df_temp['settings'] = df_temp['input_data'].apply(
-        lambda x: data_transfer.gui_to_sim_transfer(x, settings)[0])
+        lambda x: data_transfer.dict_transfer(x, settings)[0])
     data = df_data.join(df_temp)
 
     return data
