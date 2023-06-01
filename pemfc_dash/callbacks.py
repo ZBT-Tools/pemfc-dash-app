@@ -10,7 +10,7 @@ import sys
 import json
 import dash
 from dash_extensions.enrich import Output, Input, State, ALL, dcc, \
-    ServersideOutput, ctx
+    EnrichedOutput, ctx
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -208,26 +208,38 @@ def load_settings(contents, filename, value, multival, ids, ids_multival,
                 if not error_list:
                     # All JSON settings match Dash IDs
                     modal_title, modal_body = mf.modal_process('loaded')
-                    return new_value_list, new_multivalue_list, \
-                        None, modal_title, modal_body, not modal_state
+                    # Save modal input in a dict
+                    modal_input = {'modal_title': modal_title,
+                                   'modal_body': modal_body,
+                                   'modal_state': not modal_state}
+                    return new_value_list, new_multivalue_list, None, modal_input
                 else:
                     # Some JSON settings do not match Dash IDs; return values
                     # that matched with Dash IDs
                     modal_title, modal_body = \
                         mf.modal_process('id-not-loaded', error_list)
-                    return new_value_list, new_multivalue_list, \
-                        None, modal_title, modal_body, not modal_state
+                    # Save modal input in a dict
+                    modal_input = {'modal_title': modal_title,
+                                   'modal_body': modal_body,
+                                   'modal_state': not modal_state}
+                    return new_value_list, new_multivalue_list, None, modal_input
             except Exception as E:
                 # Error / JSON file cannot be processed; return old value
                 modal_title, modal_body = \
                     mf.modal_process('error', error=repr(E))
-                return value, multival, None, modal_title, modal_body, \
-                    not modal_state
+                # Save modal input in a dict
+                modal_input = {'modal_title': modal_title,
+                               'modal_body': modal_body,
+                               'modal_state': not modal_state}
+                return value, multival, None, modal_input
         else:
             # Not JSON file; return old value
             modal_title, modal_body = mf.modal_process('wrong-file')
-            return value, multival, None, modal_title, modal_body, \
-                not modal_state
+            # Save modal input in a dict
+            modal_input = {'modal_title': modal_title,
+                           'modal_body': modal_body,
+                           'modal_state': not modal_state}
+            return value, multival, None, modal_input
 
 
 @app.callback(
@@ -308,7 +320,7 @@ def convert_modal_input(modal_data):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output("spinner_run_single", 'children'),
     Output('modal_store', 'data'),
@@ -373,7 +385,7 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_ui', 'children'),
     Output('modal_store', 'data'),
@@ -466,7 +478,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('spinner_uirefine', 'children'),
     Output('modal_store', 'data'),
     Input("btn_refine_ui", "n_clicks"),
@@ -553,7 +565,7 @@ def update_studytable(contents, filename, modal_state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
     Output('spinner_study', 'children'),
     Output('modal_store', 'data'),
@@ -717,7 +729,7 @@ def save_results(inp, state):
 
 
 @app.callback(
-    ServersideOutput('df_result_data_store', 'data'),
+    EnrichedOutput('df_result_data_store', 'data'),
     Input("load_res", "contents"),
     prevent_initial_call=True)
 def load_results(content):
@@ -1212,13 +1224,14 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
     else:
         raise PreventUpdate
 
-    n_y = np.asarray(yvalues).shape[-1]
+    n_y = np.asarray(yvalues).shape[0]
+    n_x = np.asarray(yvalues).shape[-1]
     if x_key in local_data:
         xvalues = np.asarray(local_data[x_key]['value'])
         if len(xvalues) == n_y + 1:
             xvalues = np.round(ip.interpolate_1d(xvalues), 8)
     else:
-        xvalues = np.asarray(list(range(n_y)))
+        xvalues = np.asarray(list(range(n_x)))
 
     if xvalues.ndim > 1:
         xvalues = xvalues[0]

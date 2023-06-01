@@ -6,7 +6,7 @@ import os
 import redis
 import shutil
 from dash_extensions.enrich import DashProxy, MultiplexerTransform, \
-    ServersideOutputTransform, RedisStore, FileSystemStore
+    ServersideOutputTransform, RedisBackend, FileSystemBackend
 
 
 def clear_cache(path):
@@ -15,9 +15,15 @@ def clear_cache(path):
     os.makedirs(path)
 
 
+def make_file_system_store(file_path='temp/file_system_store'):
+    store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
+    clear_cache(store_dir)
+    return FileSystemBackend(cache_dir=store_dir)
+
+
 try:
     import pemfc_dash.redis_credentials as rc
-    caching_backend = RedisStore(
+    caching_backend = RedisBackend(
         host=rc.HOST_NAME,
         password=rc.PASSWORD,
         port=rc.PORT,
@@ -25,15 +31,15 @@ try:
     try:
         caching_backend.delete('test')
     except (redis.exceptions.ConnectionError, ConnectionRefusedError) as E:
-        store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
-        clear_cache(store_dir)
-        caching_backend = FileSystemStore(cache_dir=store_dir)
+        caching_backend = make_file_system_store()
     except (redis.exceptions.ResponseError, redis.exceptions.RedisError):
         pass
-except (ImportError, AttributeError):
-    store_dir = os.path.join(os.getcwd(), 'temp/file_system_store')
-    clear_cache(store_dir)
-    caching_backend = FileSystemStore(cache_dir=store_dir)
+except (ImportError, AttributeError) as E:
+    caching_backend = RedisBackend(host='redis', port=6379)
+    try:
+        caching_backend.delete('test')
+    except (redis.exceptions.ConnectionError, ConnectionRefusedError, ImportError) as E:
+        caching_backend = make_file_system_store()
 
 
 # from celery import Celery
@@ -58,7 +64,7 @@ external_stylesheets = [bs_5_css]
 app = DashProxy(__name__, external_stylesheets=external_stylesheets,
                 suppress_callback_exceptions=True,
                 transforms=[MultiplexerTransform(),
-                            ServersideOutputTransform(backend=caching_backend)])
+                            ServersideOutputTransform(backends=[caching_backend])])
 
 # app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
 #                 long_callback_manager=long_callback_manager,
