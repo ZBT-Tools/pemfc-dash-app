@@ -2,7 +2,7 @@ name: dash_app
 channels:
     - conda-forge
 dependencies:
-    - python>=3.11
+    - python==3.11.3
     - pandas
     - numpy
     - scipy
@@ -25,5 +25,6 @@ dependencies:
         - jsonpickle
         - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
         - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
+        - git+https://github.com/ZBT-Tools/data-transfer.git@master#egg=data_transfer
 
 

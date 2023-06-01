@@ -1,5 +1,5 @@
 from functools import wraps
-from pemfc_gui import data_transfer
+import data_transfer
 import base64
 import io
 import json
