@@ -187,9 +187,12 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
         # (from GUI)
         for parname, attr in var_parameter.items():
             for val in attr["values"]:
+
                 inp = df_input.copy()
-                inp.loc["nominal", parname] = val
-                inp.loc["nominal", "variation_parameter"] = parname
+                inp.at["nominal", parname] = val
+                inp["variation_parameter"] = None
+                inp["variation_parameter"] = inp["variation_parameter"].astype(object)
+                inp.at["nominal", "variation_parameter"] = [parname]
                 data = pd.concat([data, inp], ignore_index=True)
 
     elif mode == "full":
@@ -202,7 +205,10 @@ def variation_parameter(df_input: pd.DataFrame, keep_nominal=False,
 
         for combination in parameter_combinations:
             inp = df_input.copy()
-            inp.loc["nominal", "variation_parameter"] = parameter_names_string
+            inp["variation_parameter"] = None
+            inp["variation_parameter"] = inp["variation_parameter"].astype(object)
+            #df['B'] = df['B'].astype(object)
+            inp.at["nominal", "variation_parameter"] = parameter_names
             for par, val in zip(parameter_names,
                                 combination):
                 inp.at["nominal", par] = val

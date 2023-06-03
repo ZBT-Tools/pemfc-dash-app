@@ -11,8 +11,12 @@ result_column = html.Div([
         className='pretty_container',
         style={'overflow': 'auto'}),
     html.Div(
-        [html.Div('Global Results (for Study only first dataset shown)',
+        [html.Div('Result Selection',
                   className='title'),
+         dcc.Dropdown(
+             id='dropdown_result_set',
+             placeholder='Select Result Set',
+             className='dropdown_input'),
          dt.DataTable(id='global_data_table',
                       editable=True,
                       column_selectable='multi')],
@@ -70,37 +74,37 @@ result_column = html.Div([
         html.Div([
             html.Div(
                 [html.Div(
-                     [html.Div(
-                         children=dbc.DropdownMenu(
-                             id='checklist_dropdown',
-                             children=[
-                                 dbc.Checklist(
-                                     id='data_checklist',
-                                     # input_checked_class_name='checkbox',
-                                     style={'max-height': '400px',
-                                            'overflow': 'auto'})],
-                             toggle_style={
-                                 'textTransform': 'none',
-                                 'background': '#fff',
-                                 'border': '#ccc',
-                                 'letter-spacing': '0',
-                                 'font-size': '11px'},
-                             align_end=True,
-                             toggle_class_name='dropdown_input',
-                             label="Select Cells"), ),
-                         html.Button('Clear All', id='clear_all_button',
-                                     className='local_data_buttons'),
-                         html.Button('Select All',
-                                     id='select_all_button',
-                                     className='local_data_buttons'),
-                         html.Button('Export',
-                                     id='export_csv',
-                                     className='local_data_buttons'),
-                         dcc.Download(id="savefile-data")],
-                     style={'display': 'flex',
-                            'flex-wrap': 'wrap',
-                            'margin-bottom': '5px'})],
-            # style={'width': '200px'}
+                    [html.Div(
+                        children=dbc.DropdownMenu(
+                            id='checklist_dropdown',
+                            children=[
+                                dbc.Checklist(
+                                    id='data_checklist',
+                                    # input_checked_class_name='checkbox',
+                                    style={'max-height': '400px',
+                                           'overflow': 'auto'})],
+                            toggle_style={
+                                'textTransform': 'none',
+                                'background': '#fff',
+                                'border': '#ccc',
+                                'letter-spacing': '0',
+                                'font-size': '11px'},
+                            align_end=True,
+                            toggle_class_name='dropdown_input',
+                            label="Select Cells"), ),
+                        html.Button('Clear All', id='clear_all_button',
+                                    className='local_data_buttons'),
+                        html.Button('Select All',
+                                    id='select_all_button',
+                                    className='local_data_buttons'),
+                        html.Button('Export',
+                                    id='export_csv',
+                                    className='local_data_buttons'),
+                        dcc.Download(id="savefile-data")],
+                    style={'display': 'flex',
+                           'flex-wrap': 'wrap',
+                           'margin-bottom': '5px'})],
+                # style={'width': '200px'}
             )],
             style={'display': 'flex', 'flex-direction': 'column',
                    'justify-content': 'left'}),
