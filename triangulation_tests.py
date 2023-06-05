@@ -74,17 +74,17 @@ if __name__ == "__main__":
         np.c_[tri.points,
         [results[(results[:, 0] == k) & (results[:, 1] == v), 2][0] for k, v in tri.points]]
 
-    # Refinement loop
+    # Refinement
     # -----------------
     # For each triangle calc max diff, find n largest
     # Points forming trinangle: tri.simplices, index is trangle number  n_t,p1,p2,p3
     # Coordinates of points in tri.points                               n_p, x,y
     # coords_results (tri.points with additional z column)              x,y,z
 
-    # Identify n triangles to refine
+    # Identify triangles to refine
     triangles_indices_to_refine = calc_max_diff_triangles(tri.simplices,coords_results)
 
-    # Calculate new coordinates for to be refined triangles
+    # Calculate new points
     calc_new_points(tri.simplices,tri.points,triangles_indices_to_refine)
 
     # Add new points to overall data
