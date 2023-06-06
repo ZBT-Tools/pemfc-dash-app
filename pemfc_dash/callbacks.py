@@ -25,6 +25,7 @@ import data_transfer
 from tqdm import tqdm
 from decimal import Decimal
 from .dash_app import app
+from natsort import natsorted
 
 tqdm.pandas()
 
@@ -354,6 +355,9 @@ def run_single_cal(n_click, inputs, inputs2, ids, ids2, settings, modal_state):
         # Run simulation
         df_result, _, err_modal, err_msg = sim.run_simulation(df_input)
 
+        # Add parameter set name(s)
+        df_result["set_name"] = "nominal"
+
         # Save results
         df_result_store = dc.store_data(df_result)
         df_input_store = dc.store_data(df_input_raw)
@@ -410,6 +414,7 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
     @param ids:
     @param ids2:
     @param settings:
+    @param modal_state
     @return:
     """
     # Number of refinement steps
@@ -451,6 +456,11 @@ def run_initial_ui_calculation(btn, inputs, inputs2, ids, ids2,
             df_refine, success, _, _ = sim.run_simulation(
                 df_refine, return_unsuccessful=False)
             df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+        # Add parameter set name(s)
+        df_results["set_name"] = "Current Density:" + "\t" + \
+                                 df_results[["simulation-current_density"]].astype(float).round(
+                                     1).astype(str) + " A/m²"
 
         # Save results
         results = dc.store_data(df_results)
@@ -511,6 +521,11 @@ def run_refine_ui(inp, state, state2, settings, modal_state):
             df_refine, success, _, _ = sim.run_simulation(
                 df_refine, return_unsuccessful=False)
             df_results = pd.concat([df_results, df_refine], ignore_index=True)
+
+        # Add parameter set name(s)
+        df_results["set_name"] = "Current Density:" + "\t" + \
+                                 df_results[["simulation-current_density"]].astype(float).round(
+                                     1).astype(str) + " A/m²"
 
         # Save results
         results = dc.store_data(df_results)
@@ -594,10 +609,11 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
     """
     err_modal = None
     err_msg = None
-    try:
-        variation_mode = "dash_table"
 
-        # Calculation of polarization curve for each dataset?
+    variation_mode = "dash_table"  # default
+
+    try:
+        # Calculation of polarization curve for each dataset
         if isinstance(check_calc_ui, list):
             if "calc_ui" in check_calc_ui:
                 ui_calculation = True
@@ -632,7 +648,6 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
         else:
             data = sf.variation_parameter(
                 df_input, keep_nominal=False, mode=mode, table_input=None)
-        varpars = list(data["variation_parameter"].unique())
 
         if not ui_calculation:
             # Create complete setting dict & append it in additional column
@@ -641,13 +656,17 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
                 data, settings, input_cols=df_input.columns)
             # Run Simulation
             results, success, err_modal, err_msg = sim.run_simulation(data)
-            results = dc.store_data(results)
+
+            # Add parameter set name(s)
+            results["set_name"] = \
+                results.apply(lambda row: ', '.join(f"{varpar}: " +
+                                                    str(float(row[varpar])) for varpar in
+                                                    row['variation_parameter']),
+                              axis=1)
 
         else:  # ... calculate pol. curve for each parameter set
-            result_data = pd.DataFrame(columns=data.columns)
+            results = pd.DataFrame(columns=data.columns)
 
-            # grouped_data = data.groupby(varpars, sort=False)
-            # for _, group in grouped_data:
             for i in range(0, len(data)):
                 try:
                     # Ensure DataFrame with double bracket
@@ -680,13 +699,26 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
                         df_results = pd.concat(
                             [df_results, df_refine], ignore_index=True)
 
-                    result_data = pd.concat([result_data, df_results],
-                                            ignore_index=True)
+                    results = pd.concat([results, df_results],
+                                        ignore_index=True)
+
                 except Exception as E:
                     err_modal = "generic-study-error"
                     pass
 
-            results = dc.store_data(result_data)
+            # Add parameter set name(s)
+            results["set_name"] = \
+                results.apply(lambda row: ', '.join(f"{varpar}: " +
+                                                    str(float(row[varpar])) for
+                                                    varpar in
+                                                    row['variation_parameter']) +
+                                          ",    Current Density: " +
+                                          str(round(float(
+                                              row['simulation-current_density']),
+                                              1)) + " A/m²",
+                              axis=1)
+
+        results = dc.store_data(results)
 
         df_input_store = dc.store_data(df_input_backup)
 
@@ -753,6 +785,15 @@ def figure_ui(inp1, inp2, dfinp):
     current density. Those points will be connected and have identical color
     """
 
+    def pretty_format(val):
+        """
+        Formats float values
+        """
+        if isinstance(val, float):
+            return f"{Decimal(val):.3E}"
+        else:
+            return val
+
     # Read results
     results = dc.read_data(ctx.inputs["df_result_data_store.data"])
     df_nominal = dc.read_data(ctx.states["df_input_store.data"])
@@ -762,7 +803,7 @@ def figure_ui(inp1, inp2, dfinp):
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Check for identical parameters, varying current density and voltage only
+    # Check for identical parameter, (w/ varying current density and voltage input values)
     group_columns = list(df_nominal.columns)
     group_columns.remove('simulation-current_density')
     group_columns.remove('simulation-average_cell_voltage')
@@ -773,10 +814,11 @@ def figure_ui(inp1, inp2, dfinp):
     drop_labels = list(na_columns.index)
     group_columns = [item for item in group_columns if item not in drop_labels]
 
-    # Groupby fails, as data contains lists, which are not hashable, therefore conversion to tuple
-    # see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while-using-df-groupby-apply
-    # see https://stackoverflow.com/questions/51052416/pandas-dataframe-groupby-into-list-with-list-in-cell-data
-    # results_red = results.loc[:, df_nominal.columns].copy()
+    # Groupby fails when data columns contain lists, as lists are not hashable, therefore conversion
+    # to tuple see https://stackoverflow.com/questions/52225301/error-unhashable-type-list-while
+    # -using-df-groupby-apply see https://stackoverflow.com/questions/51052416/pandas-dataframe
+    # -groupby-into-list-with-list-in-cell-data results_red = results.loc[:,
+    # df_nominal.columns].copy()
     results = results.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
     grouped = results.groupby(group_columns, sort=False)
 
@@ -792,55 +834,37 @@ def figure_ui(inp1, inp2, dfinp):
 
         # Add traces
         if "variation_parameter" in group.columns:
-            # Variation parameter can be one parameter or multiple parameter
-            # separated by ",".
-            varpar = group["variation_parameter"][0]
+            # If variation parameter column is available, results were produced by study
+            # calculation.
+
             try:
-                if varpar.find(',') == -1:  # no param separator -> one param
-                    setname = f"{varpar}: {group[varpar][0]}"
-                    # Add figure title
-                    fig.update_layout(title_text=f"Current-Voltage Curve")
-                else:  # parameter separator found, multiple parameter...
-                    list_varpar = [par for par in varpar.split(',')]
-                    if len(list_varpar) > 3:  # don't plot legend
-                        fig.update_layout(showlegend=False,
-                                          title_text="Current-Voltage Curve")
-                        setname = ""
-                        for vp in list_varpar:
-                            if isinstance(group[vp][0], tuple):
-                                setname += \
-                                    f'{vp}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += \
-                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
-                            else:
-                                setname += \
-                                    f'{vp}:{Decimal(group[vp][0]):.3E} , <br>'
+                varpar = group["variation_parameter"][0]
+                if len(varpar) == 1:
+                    setname = f"{varpar[0]}: {pretty_format(group[varpar[0]][0])}"
 
-                    else:
+                else:
+                    if len(varpar) > 2:  # don't plot legend for large number of parameters
                         fig.update_layout(
-                            title_text=f"Current-Voltage Curve, "
-                                       f"Variation parameter: <br> "
-                                       f"{[par for par in varpar.split(',')]}")
-                        setname = ""
-                        for n, vp in enumerate(list_varpar):
-                            if isinstance(group[vp][0], tuple):
-                                setname += \
-                                    f'par{n}:[{Decimal(group[vp][0][0]):.3E}, '
-                                setname += \
-                                    f'{Decimal(group[vp][0][1]):.3E}] , <br>'
-                            else:
-                                setname += f'{Decimal(group[vp][0]):.3E} , <br>'
-
+                            title_text=f"Variation parameter: <br> {varpar}",
+                            showlegend=False, )
+                    setname = ""
+                    for vp in varpar:
+                        if isinstance(group[vp][0], tuple):
+                            setname += \
+                                f'{vp}:[{pretty_format(group[vp][0][0])}, '
+                            setname += \
+                                f'{pretty_format(group[vp][0][1])}] , <br>'
+                        else:
+                            setname += \
+                                f'{vp}:{pretty_format(group[vp][0])} , <br>'
                     setname = setname[:-6]
 
             except Exception as E:
                 setname = "tbd"
-                # Add figure title
-                fig.update_layout()
 
         else:
+            # Single calculation, no naming required.
             # Add figure title
-            fig.update_layout()
             setname = ""
 
         if len(group) > 1:
@@ -854,19 +878,11 @@ def figure_ui(inp1, inp2, dfinp):
                            y=list(group["Voltage"]), name=f"{setname}",
                            mode='markers'), secondary_y=False)
 
-    # # Set x-axis title
-    # fig.update_xaxes(title_text="Current Density [A/m²]")
-    #
-    # # Set y-axes titles
-    # fig.update_yaxes(title_text="Voltage [V]", secondary_y=False)
-    # fig.update_yaxes(title_text="Power [W]", secondary_y=True)
-
     x_title = 'Current Density / A/m²'
     y_title = 'Voltage / V'
     layout = go.Layout(
         font={'color': 'black', 'family': 'Arial'},
-        # title='Local Results in Heat Map',
-        titlefont={'size': 11, 'color': 'black'},
+        titlefont={'size': 12, 'color': 'black'},
         xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
                'title': x_title},
         yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
@@ -877,13 +893,39 @@ def figure_ui(inp1, inp2, dfinp):
 
 
 @app.callback(
+    [Output('dropdown_result_set', 'options'),
+     Output('dropdown_result_set', 'value')],
+    Input('df_result_data_store', 'data'),
+    State('df_input_store', 'data'),
+    prevent_initial_call=True
+)
+def get_dropdown_options_result_selection(results, states):
+    """
+    If storage triggered callback, use first result row,
+    if dropdown triggered callback, select this row.
+    """
+
+    if results is None:
+        raise PreventUpdate
+
+    # Read results
+    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
+
+    result_set_names = natsorted(list(results["set_name"]))
+    value = result_set_names[0]
+
+    return result_set_names, value
+
+
+@app.callback(
     [Output('global_data_table', 'columns'),
      Output('global_data_table', 'data'),
      Output('global_data_table', 'export_format')],
     Input('df_result_data_store', 'data'),
+    Input('dropdown_result_set', 'value'),
     prevent_initial_call=True
 )
-def global_outputs_table(*args):
+def global_outputs_table(inp, selection):
     """
     ToDo: Add additional input.
     If storage triggered callback, use first result row,
@@ -891,11 +933,10 @@ def global_outputs_table(*args):
     """
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
-    if results is None:
+    if (results is None) or (selection is None):
         raise PreventUpdate
     results = dc.read_data(results)
-    result_set = results.iloc[0]
-    global_result_dict = result_set["global_data"]
+    global_result_dict = results.loc[results.set_name == selection, "global_data"].iloc[0]
     if global_result_dict is None:
         raise PreventUpdate
     names = list(global_result_dict.keys())
@@ -1016,23 +1057,23 @@ def get_dropdown_options_line_graph_2(dropdown_key, results):
 
 @app.callback(
     Output("heatmap_graph", "figure"),
-    [Input('dropdown_heatmap', 'value'),
-     Input('dropdown_heatmap_2', 'value'),
-     Input('df_result_data_store', 'data')],
+    Input('dropdown_heatmap', 'value'),
+    Input('dropdown_heatmap_2', 'value'),
+    Input('df_result_data_store', 'data'),
+    Input('dropdown_result_set', 'value'),
     prevent_initial_call=True
 )
-def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
+def update_heatmap_graph(dropdown_key, dropdown_key_2, results, selection):
     # if dropdown_key is None or results is None:
     #     raise PreventUpdate
     # else:
 
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
-    if results is None:
+    if (results is None) or (selection is None):
         raise PreventUpdate
     results = dc.read_data(results)
-    result_set = results.iloc[0]
-    local_data = result_set["local_data"]
+    local_data = results.loc[results.set_name == selection, "local_data"].iloc[0]
     if local_data is None:
         raise PreventUpdate
 
@@ -1166,20 +1207,20 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results):
      Input('select_all_button', 'n_clicks'),
      Input('clear_all_button', 'n_clicks'),
      Input('line_graph', 'restyleData'),
-     Input('df_result_data_store', 'data')],
+     Input('df_result_data_store', 'data'),
+     Input('dropdown_result_set', 'value'), ],
     prevent_initial_call=True
 )
 def update_line_graph(drop1, drop2, checklist, select_all_clicks,
-                      clear_all_clicks, restyle_data, results):
+                      clear_all_clicks, restyle_data, results, selection):
     ctx_triggered = dash.callback_context.triggered[0]['prop_id']
 
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
-    if results is None:
+    if (results is None) or (selection is None):
         raise PreventUpdate
     results = dc.read_data(results)
-    result_set = results.iloc[0]
-    local_data = result_set["local_data"]
+    local_data = results.loc[results.set_name == selection, "local_data"].iloc[0]
     if local_data is None:
         raise PreventUpdate
 
@@ -1281,15 +1322,14 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
     prevent_initial_call=True
 )
 def export_data(n_clicks, fig):
-
     # Get all data in figure
     data = fig['data']
     # Filter only visible data
     visible_data = [item for item in data if item['visible'] is True]
     # Format as Pandas DataFrame
     first_header_row = [fig['layout']['xaxis']['title']['text']] \
-        + [fig['layout']['yaxis']['title']['text']
-           for i in range(len(visible_data))]
+                       + [fig['layout']['yaxis']['title']['text']
+                          for i in range(len(visible_data))]
     second_header_row = [''] + [item['name'] for item in visible_data]
 
     pure_data = np.asarray(

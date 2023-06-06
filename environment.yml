@@ -17,6 +17,7 @@ dependencies:
     - tqdm
     - pip
     - openpyxl
+    - natsort
     - pip:
         - redis
         - gunicorn

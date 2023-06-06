@@ -17,3 +17,4 @@ pandas
 openpyxl
 jsonpickle
 tqdm
+natsort
