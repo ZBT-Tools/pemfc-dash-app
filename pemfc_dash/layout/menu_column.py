@@ -170,6 +170,6 @@ menu_column = html.Div([  # LEFT MIDDLE / (Menu Column)
         # See: https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
         html.Div([
             html.Div([pbar, timer_progress])],
-            className='neat-spacing')], style={'flex': '1'},
+            className='neat-spacing', hidden='hidden')], style={'flex': '1'},
         id='progress_bar', className='pretty_container')],
     id="left-column", className='col-12 col-lg-4 mb-2')
