@@ -42,4 +42,4 @@ COPY . ./
 # CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:server
 
 # specifically for docker-compose
-CMD exec gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 0 app:server
+CMD exec gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 0 app:server
