@@ -35,6 +35,10 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
     input_table["successful_run"] = result_table.apply(
         lambda x: True if (isinstance(x[0], list)) else False)
 
+    # Add convergence column to input_table
+    input_table["converged"] = input_table.apply(
+        lambda x: x["global_data"]["Convergence"] if input_table["successful_run"] else None)
+
     if input_table["successful_run"].all():
         all_successfull = True
         err_modal = None
