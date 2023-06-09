@@ -48,6 +48,23 @@ def modal_process(error_type, error=''):
                       html.Div(style=space),
                       html.Div(error, style=space)]},
 
+            'convergence-error':
+                {'title': 'Convergence Error',
+                 'body':
+                     [html.Div("At least one calculation violates convergence limits, "
+                               "please check results carefully!"),
+                      html.Div(style=space),
+                      html.Div(error, style=space)]},
+
+            'simulation-and-convergenve-error':
+                {'title': 'Convergence & Simulation Error',
+                 'body':
+                     [html.Div("At least one simulation returned an error.",
+                               "At least one calculation violates convergence limits, "
+                               "please check results carefully!"),
+                      html.Div(style=space),
+                      html.Div(error, style=space)]},
+
             'ui-error':
                 {'title': 'U-I-Curve Simulation Error',
                  'body':

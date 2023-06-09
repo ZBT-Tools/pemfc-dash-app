@@ -800,6 +800,10 @@ def figure_ui(inp1, inp2, dfinp):
     results = results.loc[results["successful_run"] == True, :]
     results = results.drop(columns=['local_data'])
 
+    # Add marker symbol column for differentiation between converged and non converged results
+    results.loc[results["converged"],"converged_marker"] = 'circle'
+    results.loc[~results["converged"], "converged_marker"] = 'x'
+
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -871,12 +875,18 @@ def figure_ui(inp1, inp2, dfinp):
             fig.add_trace(
                 go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
-                           mode='lines+markers'), secondary_y=False)
+                           mode='lines+markers',
+                           marker=dict(symbol=group.converged_marker,
+                                       size=8)),
+                secondary_y=False)
         else:
             fig.add_trace(
                 go.Scatter(x=list(group["Current Density"]),
                            y=list(group["Voltage"]), name=f"{setname}",
-                           mode='markers'), secondary_y=False)
+                           mode='markers',
+                           marker=dict(symbol=group.converged_marker,
+                                       size=10)),
+                secondary_y=False)
 
     x_title = 'Current Density / A/m²'
     y_title = 'Voltage / V'
@@ -931,6 +941,16 @@ def global_outputs_table(inp, selection):
     If storage triggered callback, use first result row,
     if dropdown triggered callback, select this row.
     """
+
+    def pretty_format(val):
+        """
+        Formats float values
+        """
+        if isinstance(val, float):
+            return f"{Decimal(val):.3E}"
+        else:
+            return val
+
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
     if (results is None) or (selection is None):
@@ -940,7 +960,7 @@ def global_outputs_table(inp, selection):
     if global_result_dict is None:
         raise PreventUpdate
     names = list(global_result_dict.keys())
-    values = [f"{v['value']:.3e}" for k, v in global_result_dict.items()]
+    values = [pretty_format(v['value']) for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
 
     column_names = ['Quantity', 'Value', 'Units']

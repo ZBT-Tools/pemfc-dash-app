@@ -37,7 +37,8 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
 
     # Add convergence column to input_table
     input_table["converged"] = input_table.apply(
-        lambda x: x["global_data"]["Convergence"] if input_table["successful_run"] else None)
+        lambda x: x["global_data"]["Convergence"]["value"] if x["successful_run"] else None,
+        axis = 1)
 
     if input_table["successful_run"].all():
         all_successfull = True
@@ -55,6 +56,15 @@ def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
         else:
             err_modal = 'all-simulation-error'
         err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
+
+    # Check for convergence for successfull calculations
+    if not input_table.loc[input_table["successful_run"], "converged"].all():
+        if err_modal is None:
+            err_modal = "convergence-error"
+            err_msg = ""
+        else:
+            err_modal = "simulation-and-convergenve-error"
+            err_msg = result_table.loc[input_table["successful_run"] == False].iloc[0]
 
     if not return_unsuccessful:
         input_table = input_table.loc[input_table["successful_run"], :]
