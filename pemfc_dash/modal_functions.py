@@ -51,17 +51,17 @@ def modal_process(error_type, error=''):
             'convergence-error':
                 {'title': 'Convergence Error',
                  'body':
-                     [html.Div("At least one calculation violates convergence limits, "
-                               "please check results carefully!"),
+                     [html.Div("At least one calculation violates convergence "
+                               "limits, please check results carefully!"),
                       html.Div(style=space),
                       html.Div(error, style=space)]},
 
-            'simulation-and-convergenve-error':
+            'simulation-and-convergence-error':
                 {'title': 'Convergence & Simulation Error',
                  'body':
                      [html.Div("At least one simulation returned an error.",
-                               "At least one calculation violates convergence limits, "
-                               "please check results carefully!"),
+                               "At least one calculation violates convergence "
+                               "limits, please check results carefully!"),
                       html.Div(style=space),
                       html.Div(error, style=space)]},
 
@@ -79,16 +79,16 @@ def modal_process(error_type, error=''):
                      [html.Div("Data from JSON file has been loaded!"),
                       html.Div(style=space),
                       html.Div("You can click 'Run Simulation' to simulate the "
-                               "loaded parameter or continue to change the loaded "
-                               "parameter value", style=space)]},
+                               "loaded parameter or continue to change the "
+                               "loaded parameter value", style=space)]},
             'id-not-loaded':
                 {'title': 'Attention! Missing value for some component ID!',
                  'body':
                      [html.Div("Data from JSON file has been loaded!"),
                       html.Div(style=space),
-                      html.Div(
-                          "However, Dash's component IDs below could not be found "
-                          "or could not be matched with IDs from JSON file"),
+                      html.Div("However, Dash's component IDs below could not "
+                               "be found or could not be matched with IDs from "
+                               "JSON file"),
                       html.Div(ids_str, style={**space, **bold}),
                       html.Div(style=space),
                       html.Div("You can still simulate the loaded parameter by "
@@ -99,8 +99,8 @@ def modal_process(error_type, error=''):
             'error':
                 {'title': 'Error!',
                  'body': [
-                     html.Div('There has been an error while uploading the JSON '
-                              'file!'),
+                     html.Div('There has been an error while uploading the '
+                              'JSON file!'),
                      html.Div(style=space),
                      html.Div('Please review the JSON file again or try '
                               'using another file!', style=space)],
@@ -115,14 +115,16 @@ def modal_process(error_type, error=''):
             'generic-study-error':
                 {'title': 'Error! ',
                  'body':
-                     [html.Div("Study Errors occured for at least one parameter set. Please check study table "
+                     [html.Div("Study Errors occured for at least one "
+                               "parameter set. Please check study table "
                                "definition carefully.", style=space),
                       html.Div(style=space),
                       html.Div(ids_str, style={**space, **bold})]},
             'error-study-file':
                 {'title': 'Error! ',
                  'body':
-                     [html.Div("Error while uploading study table. Please check study table Excel file carefully."
+                     [html.Div("Error while uploading study table. Please "
+                               "check study table Excel file carefully."
                                , style=space)]},
 
             'other-error':
