@@ -24,8 +24,8 @@ dependencies:
         - dash-extensions>=0.1.1
         - flask-caching>=1.10.1
         - jsonpickle
-        - git+https://github.com/ZBT-Tools/pemfc-core.git@master#egg=pemfc
-        - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master#egg=pemfc_gui
-        - git+https://github.com/ZBT-Tools/data-transfer.git@master#egg=data_transfer
+        - git+https://github.com/ZBT-Tools/pemfc-core.git@master
+        - git+https://github.com/ZBT-Tools/pemfc-tkinter-app.git@master
+        - git+https://github.com/ZBT-Tools/data-transfer.git@master
 
 
