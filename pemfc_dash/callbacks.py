@@ -801,7 +801,7 @@ def figure_ui(inp1, inp2, dfinp):
     results = results.drop(columns=['local_data'])
 
     # Add marker symbol column for differentiation between converged and non converged results
-    results.loc[results["converged"], "converged_marker"] = 'circle'
+    results.loc[results["converged"],"converged_marker"] = 'circle'
     results.loc[~results["converged"], "converged_marker"] = 'x'
 
     # Create figure with secondary y-axis
