@@ -32,32 +32,32 @@ tqdm.pandas()
 
 # Callback functions (all other  functions organized in important modules)
 # -----------------------------------------------------------------------------
-@app.callback(
-    Output('pbar', 'value'),
-    Output('pbar', 'label'),
-    Output('pbar', 'color'),
-    Input('timer_progress', 'n_intervals'),
-    prevent_initial_call=True)
-def progress_bar(*args) -> (float, str):
-    """
-    https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
-    """
-
-    percent = 0.0
-    try:
-        with open('progress.txt', 'r') as file:
-            str_raw = file.read()
-        last_line = list(filter(None, str_raw.split('\n')))[-1]
-        percent = float(last_line.split('%')[0])
-    except FileNotFoundError as E:
-        pass
-    finally:
-        text = f'{percent:.0f}%'
-        if int(percent) == 100:
-            color = "success"
-        else:
-            color = "primary"
-        return percent, text, color
+# @app.callback(
+#     Output('pbar', 'value'),
+#     Output('pbar', 'label'),
+#     Output('pbar', 'color'),
+#     Input('timer_progress', 'n_intervals'),
+#     prevent_initial_call=True)
+# def progress_bar(*args) -> (float, str):
+#     """
+#     https://towardsdatascience.com/long-callbacks-in-dash-web-apps-72fd8de25937
+#     """
+#
+#     percent = 0.0
+#     try:
+#         with open('progress.txt', 'r') as file:
+#             str_raw = file.read()
+#         last_line = list(filter(None, str_raw.split('\n')))[-1]
+#         percent = float(last_line.split('%')[0])
+#     except FileNotFoundError as E:
+#         pass
+#     finally:
+#         text = f'{percent:.0f}%'
+#         if int(percent) == 100:
+#             color = "success"
+#         else:
+#             color = "primary"
+#         return percent, text, color
 
 
 @app.callback(
@@ -795,7 +795,11 @@ def figure_ui(inp1, inp2, dfinp):
             return val
 
     # Read results
-    results = dc.read_data(ctx.inputs["df_result_data_store.data"])
+    results = ctx.inputs["df_result_data_store.data"]
+    if results is None:
+        raise PreventUpdate
+    results = dc.read_data(results)
+
     df_nominal = dc.read_data(ctx.states["df_input_store.data"])
     results = results.loc[results["successful_run"] == True, :]
     results = results.drop(columns=['local_data'])
