@@ -340,3 +340,51 @@ def compile_data(**kwargs):
         else:
             dash_dict[k]['value'] = c_v[0]
     return dict(dash_dict)
+
+
+def generate_set_name(row):
+    """
+    Generates set names.
+    Case distinction is required as value can be numeric or list (for value-pairs as
+    conductivities)
+    """
+    var_pars = row['variation_parameter']
+    setname = ""
+    for vp in var_pars:
+        if isinstance(row[vp], list):
+            setname += f"{vp}: " + str(row[vp]) + ", "
+        else:
+            setname += f"{vp}: " + str(float(row[vp])) + ", "
+
+    return setname[:-2]
+
+
+def generate_ui_set_name(row):
+    """
+    Generates ui_curve set names.
+    Case distinction is required as value can be numeric or list (for value-pairs as
+    conductivities)
+    """
+    var_pars = row['variation_parameter']
+    setname = ""
+    for vp in var_pars:
+        if isinstance(row[vp], list):
+            setname += f"{vp}: " + str(row[vp]) + ", "
+        else:
+            setname += f"{vp}: " + str(float(row[vp])) + ", "
+
+    setname = setname[:-2] + ", Current Density: " + str(round(float(
+        row['simulation-current_density']),
+        1)) + " A/m²"
+
+    return setname
+
+
+def float_to_str_format(val):
+    """
+    Formats float values
+    """
+    if isinstance(val, float):
+        return f"{Decimal(val):.3E}"
+    else:
+        return val

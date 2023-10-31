@@ -579,44 +579,6 @@ def update_studytable(contents, filename, modal_state):
         return None, None, modal_input
 
 
-def _generate_set_name(row):
-    """
-    Generates set names.
-    Case distinction is required as value can be numeric or list (for value-pairs as
-    conductivities)
-    """
-    var_pars = row['variation_parameter']
-    setname = ""
-    for vp in var_pars:
-        if isinstance(row[vp], list):
-            setname = setname + f"{vp}: " + str(row[vp]) + ", "
-        else:
-            setname = setname + f"{vp}: " + str(float(row[vp])) + ", "
-
-    return setname[:-2]
-
-
-def _generate_ui_set_name(row):
-    """
-    Generates ui_curve set names.
-    Case distinction is required as value can be numeric or list (for value-pairs as
-    conductivities)
-    """
-    var_pars = row['variation_parameter']
-    setname = ""
-    for vp in var_pars:
-        if isinstance(row[vp], list):
-            setname = setname + f"{vp}: " + str(row[vp]) + ", "
-        else:
-            setname = setname + f"{vp}: " + str(float(row[vp])) + ", "
-
-    setname = setname[:-2] + ", Current Density: " + str(round(float(
-        row['simulation-current_density']),
-        1)) + " A/m²"
-
-    return setname
-
-
 @app.callback(
     EnrichedOutput('df_result_data_store', 'data'),
     Output('df_input_store', 'data'),
@@ -636,8 +598,6 @@ def _generate_ui_set_name(row):
 def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
               check_calc_ui, check_study_type, modal_state):
     """Study Function
-
-
 
     Args:
         btn (int): The first parameter.
@@ -705,7 +665,7 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
 
             # Add parameter set name(s)
             results["set_name"] = \
-                results.apply(lambda row: _generate_set_name(row), axis=1)
+                results.apply(lambda row: dc.generate_set_name(row), axis=1)
 
         else:  # ... calculate pol. curve for each parameter set
             results = pd.DataFrame(columns=data.columns)
@@ -747,7 +707,7 @@ def run_study(btn, inputs, inputs2, ids, ids2, settings, tabledata,
 
             # Add parameter set name(s)
             results["set_name"] = \
-                results.apply(lambda row: _generate_ui_set_name(row),
+                results.apply(lambda row: dc.generate_ui_set_name(row),
                               axis=1)
 
         results = dc.store_data(results)
@@ -803,16 +763,6 @@ def load_results(content):
     b = pickle.load(io.BytesIO(decoded))
 
     return b
-
-
-def _pretty_format(val):
-    """
-    Formats float values
-    """
-    if isinstance(val, float):
-        return f"{Decimal(val):.3E}"
-    else:
-        return val
 
 
 @app.callback(
@@ -893,12 +843,12 @@ def figure_ui(inp1, inp2, dfinp):
                     for vp in varpar:
                         if isinstance(group[vp][0], tuple):
                             setname += \
-                                f'{vp}:[{_pretty_format(group[vp][0][0])}, '
+                                f'{vp}:[{dc.float_to_str_format(group[vp][0][0])}, '
                             setname += \
-                                f'{_pretty_format(group[vp][0][1])}] , <br>'
+                                f'{dc.float_to_str_format(group[vp][0][1])}] , <br>'
                         else:
                             setname += \
-                                f'{vp}:{_pretty_format(group[vp][0])} , <br>'
+                                f'{vp}:{dc.float_to_str_format(group[vp][0])} , <br>'
                     setname = setname[:-6]
 
             except Exception as E:
@@ -936,7 +886,7 @@ def figure_ui(inp1, inp2, dfinp):
         yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
                'title': y_title},
         margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
-    fig.update_layout(layout, hoverlabel=dict(namelength=-1))
+    fig.update_layout(layout, hoverlabel={"namelength": -1})
     return fig
 
 
