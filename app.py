@@ -1,6 +1,7 @@
 # import pemfc_dash
 # import pemfc_dash.main
-from pemfc_dash.main import app #, celery_app
+from pemfc_dash.main import app  # , celery_app
+
 server = app.server
 # celery_app = celery_app
 if __name__ == "__main__":
