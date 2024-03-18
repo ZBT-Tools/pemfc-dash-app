@@ -71,21 +71,18 @@ def unstringify(val):
     not defining the component as type Number.
     """
     if isinstance(val, str):
-        if '.' in val:
+        if val.isdigit():
+            yield int(val)
+        else:
             try:
                 yield float(val)
             except (ValueError, NameError):
                 yield val
-        else:
-            try:
-                yield int(val)
-            except (ValueError, NameError):
-                yield val
     elif isinstance(val, list):
         try:
-            yield list((float(v) for v in val))
+            yield [float(v) for v in val]
         except ValueError:
-            yield list((v for v in val))
+            yield val
     else:
         yield val
 
