@@ -1,11 +1,10 @@
-from functools import wraps
+from decimal import Decimal
 import data_transfer
 import base64
 import io
 import json
 import pickle
 import jsonpickle
-import collections
 from glom import glom
 import pandas as pd
 
@@ -65,26 +64,26 @@ def create_settings(df_data: pd.DataFrame, settings,
     return data
 
 
-def unstringify(val):
+def unstringify(val: str | list) -> (float | str | list):
     """
     Used to change any str value created by DBC.Input once initialised due to
     not defining the component as type Number.
     """
     if isinstance(val, str):
         if val.isdigit():
-            yield int(val)
+            return int(val)
         else:
             try:
-                yield float(val)
+                return float(val)
             except (ValueError, NameError):
-                yield val
+                return val
     elif isinstance(val, list):
         try:
-            yield [float(v) for v in val]
+            return [float(v) for v in val]
         except ValueError:
-            yield val
+            return val
     else:
-        yield val
+        return val
 
 
 def multi_inputs(dicts):
@@ -218,7 +217,7 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs,
     """
     new_inputs = []
     for val in inputs + multiinputs:
-        new_val = list(unstringify(val))[0]
+        new_val = unstringify(val)
 
         if isinstance(new_val, list):
             if len(new_val) == 0:
@@ -240,10 +239,7 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs,
         return new_dict_data
     elif returntype == "DataFrame":
         df_data = pd.DataFrame()
-        input_data = {}
         for k, v in new_dict_data.items():
-            # input_data[k] = {'sim_name': k.split('-'), 'value': v}
-
             # Info: pd.DataFrame.at instead of .loc, as .at can put lists into
             # df cell.
             # .loc can be used for passing values to more than one cell,
@@ -256,87 +252,87 @@ def process_inputs(inputs, multiinputs, id_inputs, id_multiinputs,
         return df_data
 
 
-def dict_inputs(value='', ids=''):
-    """
-    DEPRECATED
-    Create dictionary from given IDs and values (use def process_inputs)
-    """
-    data = {}
-    if value != '':
-        for id_l, val in zip(ids, value):
-            checked_val = list(unstringify(val))
-            data[id_l['id']] = checked_val[0]
-    else:
-        for val, id_l in enumerate(ids):
-            data[id_l['id']] = val
-    return data
-
-
-def list_dict_inputs(value='', ids=''):
-    """
-    DEPRECATED
-    Create list with nested dictionary from given IDs, and values
-    (use def process_inputs)
-    """
-    data = []
-    if value != '':
-        for id_l, val in zip(ids, value):
-            checked_val = list(unstringify(val))
-            data.append({id_l['id']: checked_val[0]})
-    else:
-        for val, id_l in enumerate(ids):
-            data.append({id_l['id']: val})
-    return data
-
-
-def multival_input(value, input_ids):
-    """
-    DEPRECATED
-    Process IDs-value into nested dictionary with 'sim_name' and 'value' as key
-    for further simulation (restructured under def compute_simulation)
-    """
-    inputs = [list(unstringify(v))[0] for v in value]
-    data_dict = {ids['id']: inp for ids, inp in zip(input_ids, inputs)}
-    set_list = list(set([k[:-2] for k, v in data_dict.items()]))
-    data = {k: [data_dict[k + '-z'], data_dict[k + '-x']] for k in set_list}
-
-    return {k: {'sim_name': k.split('-'), 'value': v} for k, v in data.items()}
-
-
-def dash_kwarg(inputs):
-    """
-    DEPRECATED
-    Used as a decorator to decorate callback functions (def compile_data) to
-    retrieve multiple values from multiple inputs in creating id-value
-    dictionary from given parameter
-    """
-
-    def accept_func(func):
-        @wraps(func)
-        def wrapper(*args):
-            input_names = [item.component_id for item in inputs]
-            kwargs_dict = dict(zip(input_names, args))
-            return func(**kwargs_dict)
-
-        return wrapper
-
-    return accept_func
-
-
-def compile_data(**kwargs):
-    """
-    DEPRECATED
-    Used in compiling data from each component into a dcc.Store for each Tab
-    """
-    dash_dict = collections.defaultdict(dict)
-    for k, v in kwargs.items():
-        t = dash_dict[k]['sim_name'] = k.split("-")
-        c_v = list(unstringify(v))
-        if t[-1] in ['cool_flow', 'cool_ch_bc', 'calc_distribution']:
-            dash_dict[k]['value'] = bool(c_v[0])
-        else:
-            dash_dict[k]['value'] = c_v[0]
-    return dict(dash_dict)
+# def dict_inputs(value='', ids=''):
+#     """
+#     DEPRECATED
+#     Create dictionary from given IDs and values (use def process_inputs)
+#     """
+#     data = {}
+#     if value != '':
+#         for id_l, val in zip(ids, value):
+#             checked_val = unstringify(val)
+#             data[id_l['id']] = checked_val[0]
+#     else:
+#         for val, id_l in enumerate(ids):
+#             data[id_l['id']] = val
+#     return data
+#
+#
+# def list_dict_inputs(value='', ids=''):
+#     """
+#     DEPRECATED
+#     Create list with nested dictionary from given IDs, and values
+#     (use def process_inputs)
+#     """
+#     data = []
+#     if value != '':
+#         for id_l, val in zip(ids, value):
+#             checked_val = unstringify(val)
+#             data.append({id_l['id']: checked_val[0]})
+#     else:
+#         for val, id_l in enumerate(ids):
+#             data.append({id_l['id']: val})
+#     return data
+#
+#
+# def multival_input(value, input_ids):
+#     """
+#     DEPRECATED
+#     Process IDs-value into nested dictionary with 'sim_name' and 'value' as key
+#     for further simulation (restructured under def compute_simulation)
+#     """
+#     inputs = [list(unstringify(v))[0] for v in value]
+#     data_dict = {ids['id']: inp for ids, inp in zip(input_ids, inputs)}
+#     set_list = list(set([k[:-2] for k, v in data_dict.items()]))
+#     data = {k: [data_dict[k + '-z'], data_dict[k + '-x']] for k in set_list}
+#
+#     return {k: {'sim_name': k.split('-'), 'value': v} for k, v in data.items()}
+#
+#
+# def dash_kwarg(inputs):
+#     """
+#     DEPRECATED
+#     Used as a decorator to decorate callback functions (def compile_data) to
+#     retrieve multiple values from multiple inputs in creating id-value
+#     dictionary from given parameter
+#     """
+#
+#     def accept_func(func):
+#         @wraps(func)
+#         def wrapper(*args):
+#             input_names = [item.component_id for item in inputs]
+#             kwargs_dict = dict(zip(input_names, args))
+#             return func(**kwargs_dict)
+#
+#         return wrapper
+#
+#     return accept_func
+#
+#
+# def compile_data(**kwargs):
+#     """
+#     DEPRECATED
+#     Used in compiling data from each component into a dcc.Store for each Tab
+#     """
+#     dash_dict = collections.defaultdict(dict)
+#     for k, v in kwargs.items():
+#         t = dash_dict[k]['sim_name'] = k.split("-")
+#         c_v = list(unstringify(v))
+#         if t[-1] in ['cool_flow', 'cool_ch_bc', 'calc_distribution']:
+#             dash_dict[k]['value'] = bool(c_v[0])
+#         else:
+#             dash_dict[k]['value'] = c_v[0]
+#     return dict(dash_dict)
 
 
 def generate_set_name(row):
