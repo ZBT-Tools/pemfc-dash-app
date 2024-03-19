@@ -77,9 +77,9 @@ def unstringify(val: str | list) -> (float | str | list):
                 return float(val)
             except (ValueError, NameError):
                 return val
-    elif isinstance(val, list):
+    elif isinstance(val, (list, tuple)):
         try:
-            return [float(v) for v in val]
+            return [unstringify(v) for v in val]
         except ValueError:
             return val
     else:
