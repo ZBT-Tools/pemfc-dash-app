@@ -23,7 +23,6 @@ import pemfc
 from pemfc.src import interpolation as ip
 import data_transfer
 from tqdm import tqdm
-from decimal import Decimal
 from .dash_app import app
 from natsort import natsorted
 
@@ -826,16 +825,18 @@ def figure_ui(inp1, inp2, dfinp):
 
         # Add traces
         if "variation_parameter" in group.columns:
-            # If variation parameter column is available, results were produced by study
-            # calculation.
+            # If variation parameter column is available, results were produced
+            # by study calculation.
 
             try:
                 varpar = group["variation_parameter"][0]
                 if len(varpar) == 1:
-                    setname = f"{varpar[0]}: {_pretty_format(group[varpar[0]][0])}"
+                    setname = (f"{varpar[0]}: "
+                               f"{dc.float_to_str_format(group[varpar[0]][0])}")
 
                 else:
-                    if len(varpar) > 2:  # don't plot legend for large number of parameters
+                    if len(varpar) > 2:
+                        # Don't plot legend for large number of parameters
                         fig.update_layout(
                             title_text=f"Variation parameter: <br> {varpar}",
                             showlegend=False, )
@@ -930,25 +931,18 @@ def global_outputs_table(inp, selection):
     if dropdown triggered callback, select this row.
     """
 
-    def pretty_format(val):
-        """
-        Formats float values
-        """
-        if isinstance(val, float):
-            return f"{Decimal(val):.3E}"
-        else:
-            return val
-
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
     if (results is None) or (selection is None):
         raise PreventUpdate
     results = dc.read_data(results)
-    global_result_dict = results.loc[results.set_name == selection, "global_data"].iloc[0]
+    global_result_dict = \
+        results.loc[results.set_name == selection, "global_data"].iloc[0]
     if global_result_dict is None:
         raise PreventUpdate
     names = list(global_result_dict.keys())
-    values = [pretty_format(v['value']) for k, v in global_result_dict.items()]
+    values = [dc.float_to_str_format(v['value'])
+              for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
 
     column_names = ['Quantity', 'Value', 'Units']
