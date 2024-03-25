@@ -1126,7 +1126,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results, selection):
          'coarse': {'value': 10}}
 
     def filter_tick_text(data, spacing=1):
-        return [str(data[i]) if i % spacing == 0 else ' '
+        return [str(round(data[i], 2)) if i % spacing == 0 else ' '
                 for i in range(len(data))]
 
     def granular_tick_division(data, division=None):
@@ -1365,28 +1365,48 @@ def disabled_callback(value):
     Input({'type': ALL, 'id': ALL,
            'specifier': 'checklist_activate_calculation'}, 'value'),
     Input({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'}, 'value'),
-
 )
 def activate_column(input1, input2):
     len_state = len(input2)
-    list_state = [True for x in range(len_state)]  # disable=True for all inputs
+    if (len_state % len(input1)) != 0.0:
+        raise ValueError("length of input2 must be factor of length of input1")
+    list_state = np.asarray([True for x in range(len_state)])  # disable=True for all inputs
+
+    def deactivate_after_id(id: int, key_dict: dict):
+        # Only works like this if the first item in key list activates the opposite of all other
+        # items, and all other entries activate/deactivate the same entries
+        base_true_ids = \
+            [id + (i + 1) * len(input1) for i in range(len(key_dict['values']))
+             if key_dict['values'][i] is True]
+        base_false_ids = \
+            [id + (i + 1) * len(input1) for i in range(len(key_dict['values']))
+             if key_dict['values'][i] is False]
+
+        if input2[id] == key_dict['key']:
+            true_ids = base_true_ids
+            false_ids = base_false_ids
+        else:
+            true_ids = base_false_ids
+            false_ids = base_true_ids
+        return true_ids, false_ids
+
+    dropdown_activation_list = \
+        [{'id': 3, 'key': 'circular', 'values': [False, True, True]},
+         {'id': 15, 'key': 'Constant', 'values': [False, True]},
+         {'id': 24, 'key': 'circular', 'values': [False, True, True]},
+         {'id': 36, 'key': 'Constant', 'values': [False, True]}]
+
     for num, val in enumerate(input1):  # 3 inputs in input1 for 3 rows
         if val == [1]:
-            list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
-                list_state[18 + num] = list_state[30 + num] = False
-            if input2[3 + num] == 'circular':
-                list_state[6 + num], list_state[9 + num], \
-                    list_state[12 + num] = False, True, True
-            else:
-                list_state[6 + num], list_state[9 + num], \
-                    list_state[12 + num] = True, False, False
-            if input2[18 + num] == 'circular':
-                list_state[21 + num], list_state[24 + num], \
-                    list_state[27 + num] = False, True, True
-            else:
-                list_state[21 + num], list_state[24 + num], \
-                    list_state[27 + num] = True, False, False
-    return list_state
+            id_list = [i for i in range(num, len_state, len(input1))]
+            list_state[id_list] = False
+
+            for item_dict in dropdown_activation_list:
+                true_id_list, false_id_list = deactivate_after_id(item_dict['id'] + num, item_dict)
+                list_state[true_id_list] = True
+                list_state[false_id_list] = False
+
+    return list(list_state)
 
 
 @app.callback(
