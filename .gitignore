@@ -13,3 +13,4 @@ pemfc/build
 *.jpg
 *.pickle
 *credentials.py
+/.venv/

@@ -23,7 +23,6 @@ import pemfc
 from pemfc.src import interpolation as ip
 import data_transfer
 from tqdm import tqdm
-from decimal import Decimal
 from .dash_app import app
 from natsort import natsorted
 
@@ -826,16 +825,18 @@ def figure_ui(inp1, inp2, dfinp):
 
         # Add traces
         if "variation_parameter" in group.columns:
-            # If variation parameter column is available, results were produced by study
-            # calculation.
+            # If variation parameter column is available, results were produced
+            # by study calculation.
 
             try:
                 varpar = group["variation_parameter"][0]
                 if len(varpar) == 1:
-                    setname = f"{varpar[0]}: {_pretty_format(group[varpar[0]][0])}"
+                    setname = (f"{varpar[0]}: "
+                               f"{dc.float_to_str_format(group[varpar[0]][0])}")
 
                 else:
-                    if len(varpar) > 2:  # don't plot legend for large number of parameters
+                    if len(varpar) > 2:
+                        # Don't plot legend for large number of parameters
                         fig.update_layout(
                             title_text=f"Variation parameter: <br> {varpar}",
                             showlegend=False, )
@@ -930,25 +931,18 @@ def global_outputs_table(inp, selection):
     if dropdown triggered callback, select this row.
     """
 
-    def pretty_format(val):
-        """
-        Formats float values
-        """
-        if isinstance(val, float):
-            return f"{Decimal(val):.3E}"
-        else:
-            return val
-
     # Read results
     results = ctx.inputs["df_result_data_store.data"]
     if (results is None) or (selection is None):
         raise PreventUpdate
     results = dc.read_data(results)
-    global_result_dict = results.loc[results.set_name == selection, "global_data"].iloc[0]
+    global_result_dict = \
+        results.loc[results.set_name == selection, "global_data"].iloc[0]
     if global_result_dict is None:
         raise PreventUpdate
     names = list(global_result_dict.keys())
-    values = [pretty_format(v['value']) for k, v in global_result_dict.items()]
+    values = [dc.float_to_str_format(v['value'])
+              for k, v in global_result_dict.items()]
     units = [v['units'] for k, v in global_result_dict.items()]
 
     column_names = ['Quantity', 'Value', 'Units']
@@ -1132,7 +1126,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results, selection):
          'coarse': {'value': 10}}
 
     def filter_tick_text(data, spacing=1):
-        return [str(data[i]) if i % spacing == 0 else ' '
+        return [str(round(data[i], 2)) if i % spacing == 0 else ' '
                 for i in range(len(data))]
 
     def granular_tick_division(data, division=None):
@@ -1371,28 +1365,48 @@ def disabled_callback(value):
     Input({'type': ALL, 'id': ALL,
            'specifier': 'checklist_activate_calculation'}, 'value'),
     Input({'type': ALL, 'id': ALL, 'specifier': 'disabled_manifolds'}, 'value'),
-
 )
 def activate_column(input1, input2):
     len_state = len(input2)
-    list_state = [True for x in range(len_state)]  # disable=True for all inputs
+    if (len_state % len(input1)) != 0.0:
+        raise ValueError("length of input2 must be factor of length of input1")
+    list_state = np.asarray([True for x in range(len_state)])  # disable=True for all inputs
+
+    def deactivate_after_id(id: int, key_dict: dict):
+        # Only works like this if the first item in key list activates the opposite of all other
+        # items, and all other entries activate/deactivate the same entries
+        base_true_ids = \
+            [id + (i + 1) * len(input1) for i in range(len(key_dict['values']))
+             if key_dict['values'][i] is True]
+        base_false_ids = \
+            [id + (i + 1) * len(input1) for i in range(len(key_dict['values']))
+             if key_dict['values'][i] is False]
+
+        if input2[id] == key_dict['key']:
+            true_ids = base_true_ids
+            false_ids = base_false_ids
+        else:
+            true_ids = base_false_ids
+            false_ids = base_true_ids
+        return true_ids, false_ids
+
+    dropdown_activation_list = \
+        [{'id': 3, 'key': 'circular', 'values': [False, True, True]},
+         {'id': 15, 'key': 'Constant', 'values': [False, True]},
+         {'id': 24, 'key': 'circular', 'values': [False, True, True]},
+         {'id': 36, 'key': 'Constant', 'values': [False, True]}]
+
     for num, val in enumerate(input1):  # 3 inputs in input1 for 3 rows
         if val == [1]:
-            list_state[0 + num] = list_state[3 + num] = list_state[15 + num] = \
-                list_state[18 + num] = list_state[30 + num] = False
-            if input2[3 + num] == 'circular':
-                list_state[6 + num], list_state[9 + num], \
-                    list_state[12 + num] = False, True, True
-            else:
-                list_state[6 + num], list_state[9 + num], \
-                    list_state[12 + num] = True, False, False
-            if input2[18 + num] == 'circular':
-                list_state[21 + num], list_state[24 + num], \
-                    list_state[27 + num] = False, True, True
-            else:
-                list_state[21 + num], list_state[24 + num], \
-                    list_state[27 + num] = True, False, False
-    return list_state
+            id_list = [i for i in range(num, len_state, len(input1))]
+            list_state[id_list] = False
+
+            for item_dict in dropdown_activation_list:
+                true_id_list, false_id_list = deactivate_after_id(item_dict['id'] + num, item_dict)
+                list_state[true_id_list] = True
+                list_state[false_id_list] = False
+
+    return list(list_state)
 
 
 @app.callback(
