@@ -1,4 +1,4 @@
-FROM python:3.11 AS build
+FROM python:3.12 AS build
 RUN python3 -m venv /venv
 
 # example of a development library package that needs to be installed
@@ -24,7 +24,7 @@ RUN /venv/bin/pip install /project
 
 
 # the second, production stage can be much more lightweight:
-FROM python:3.11-slim AS production
+FROM python:3.12-slim AS production
 COPY --from=build /venv /venv
 
 ENV PATH="/venv/bin:$PATH"
