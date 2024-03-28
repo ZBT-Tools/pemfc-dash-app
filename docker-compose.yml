@@ -4,6 +4,7 @@ networks:
 services:
   web:
     build: .
+    restart: "unless-stopped"
     networks:
       - myapp-network
     ports:
@@ -14,6 +15,7 @@ services:
       FLASK_ENV: development
   redis:
     image: "redis:alpine"
+    restart: "unless-stopped"
     networks:
       - myapp-network
     expose:

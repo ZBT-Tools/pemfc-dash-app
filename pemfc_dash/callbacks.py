@@ -294,7 +294,10 @@ def save_settings(n_clicks, val1, val2, ids, ids2):
 
         # code portion of run_simulation()
         # ------------------------
-
+        # pemfc_base_dir = os.path.dirname(pemfc.__file__)
+        # with open(os.path.join(pemfc_base_dir, 'settings', 'settings.json')) \
+        #         as file:
+        #     base_settings = json.load(file)
         with open(os.path.join('settings', 'settings.json')) \
                 as file:
             settings = json.load(file)
