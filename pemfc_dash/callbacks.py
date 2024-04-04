@@ -786,6 +786,9 @@ def figure_ui(inp1, inp2, dfinp):
         raise PreventUpdate
     results = dc.read_data(results)
 
+    if results['global_data'][-1] is None:
+        raise PreventUpdate
+
     df_nominal = dc.read_data(ctx.states["df_input_store.data"])
     results = results.loc[results["successful_run"] == True, :]
     results = results.drop(columns=['local_data'])
