@@ -469,7 +469,7 @@ def conditional_dropdown_menu(dropdown_value, data):
     results = dc.read_data(data)
     result_set = results.iloc[0]
     local_data = result_set["local_data"]
-    if 'value' in local_data[dropdown_value]:
+    if local_data is None or 'value' in local_data[dropdown_value]:
         return [], None, {'visibility': 'hidden'}
     else:
         options = [{'label': key, 'value': key} for key in
