@@ -887,10 +887,12 @@ def figure_ui(inp1, inp2, dfinp):
     y_title = 'Voltage / V'
     layout = go.Layout(
         font={'color': 'black', 'family': 'Arial'},
-        titlefont={'size': 12, 'color': 'black'},
-        xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+        title={'font': {'size': 11, 'color': 'black'}},
+        #title_font={'size': 11, 'color': 'black'},
+
+        xaxis={'tickfont': {'size': 11}, 'title_font': {'size': 14},
                'title': x_title},
-        yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+        yaxis={'tickfont': {'size': 11}, 'title_font': {'size': 14},
                'title': y_title},
         margin={'l': 100, 'r': 20, 't': 20, 'b': 20})
     fig.update_layout(layout, hoverlabel={"namelength": -1})
@@ -1121,7 +1123,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results, selection):
 
     base_axis_dict = \
         {'tickfont': font_props['medium'],
-         'titlefont': font_props['large'],
+         'title_font': font_props['large'],
          'title': x_key + ' / ' + local_data[x_key]['units'],
          'tickmode': 'array', 'showgrid': True}
 
@@ -1174,7 +1176,7 @@ def update_heatmap_graph(dropdown_key, dropdown_key_2, results, selection):
     layout = go.Layout(
         font=font_props['large'],
         # title='Local Results in Heat Map',
-        titlefont=font_props['large'],
+        # title_font=font_props['large'],
         xaxis=x_axis_dict,
         yaxis=y_axis_dict,
         margin={'l': 75, 'r': 20, 't': 10, 'b': 20},
@@ -1256,10 +1258,10 @@ def update_line_graph(drop1, drop2, checklist, select_all_clicks,
     layout = go.Layout(
         font={'color': 'black', 'family': 'Arial'},
         # title='Local Results in Heat Map',
-        titlefont={'size': 11, 'color': 'black'},
-        xaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+        # title_font={'size': 11, 'color': 'black'},
+        xaxis={'tickfont': {'size': 11}, 'title_font': {'size': 14},
                'title': x_title},
-        yaxis={'tickfont': {'size': 11}, 'titlefont': {'size': 14},
+        yaxis={'tickfont': {'size': 11}, 'title_font': {'size': 14},
                'title': y_title},
         margin={'l': 100, 'r': 20, 't': 20, 'b': 20},
         yaxis_type=y_scale)

@@ -4,7 +4,7 @@ from pemfc import main_app
 
 
 def run_simulation(input_table: pd.DataFrame, return_unsuccessful=True) \
-        -> (pd.DataFrame, bool, str, str):
+        -> tuple[pd.DataFrame, bool, str, str]:
     """
     API to actual simulation backend, which is here the function main in the
     pemfc module (github.com/zbt-tools/pemfc-core). The input settings are given

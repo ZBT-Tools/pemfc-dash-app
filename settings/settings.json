@@ -7,13 +7,13 @@
         "calc_current_density": true
     },
     "simulation": {
-        "maximum_iteration": 500,
+        "maximum_iteration": 200,
         "minimum_iteration": 3,
         "convergence_criteria": 1e-07,
         "underrelaxation_factor": 0.7,
         "current_control": true,
         "operation_control": "Current",
-        "elements": 20,
+        "elements": 10,
         "current_density": 20000.0,
         "average_cell_voltage": 0.5,
         "channel_land_discretization": false
@@ -25,7 +25,7 @@
         "thermoneutral_voltage": 1.25
     },
     "membrane": {
-        "type": "YeWang2007",
+        "type": "Constant",
         "thickness": 1.5e-05,
         "ionic_conductivity": 15.0,
         "basic_resistance": 4.3e-05,
@@ -361,8 +361,8 @@
         "coolant_control": "Temperature Difference"
     },
     "output": {
-        "save_csv": true,
-        "save_plot": true,
+        "save_csv": false,
+        "save_plot": false,
         "show_loss": false,
         "directory": "../output"
     }
