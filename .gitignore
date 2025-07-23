@@ -6,6 +6,7 @@ output/
 build/
 bin/
 .tmp/
+temp/
 pemfc/bin
 pemfc/build
 *.pyc
